@@ -267,3 +267,194 @@ Existing IRC Client
 ```
 
 ---
+
+### 1.4 What is an IRC Server?
+
+An **IRC server** is a program that accepts connections from IRC clients and manages the communication between them.
+
+The server acts as the **central point of the IRC system**. Clients send IRC commands to the server, and the server is responsible for interpreting those 
+commands, checking whether they are valid, executing the requested actions, and sending the appropriate responses.
+
+Unlike the client, which mainly represents the actions of a user, the server must maintain the **current state of the IRC system**.
+
+This includes information such as:
+
+* Which clients are connected and registered.
+* The nickname and username of each client.
+* Which channels exist.
+* Which users belong to each channel.
+* Which users are channel operators.
+* The topic of each channel.
+* The modes enabled on each channel.
+
+For example, imagine that a client wants to join the channel `#42`.
+
+```
+IRC Client
+     │
+     │ JOIN #42 (command)
+     v
+IRC Server
+     │
+     v
+Receives the command
+     │
+     v
+Checks the channel
+     │
+     v
+Checks if the client can join
+     │
+     ├── allowed ──> Add client to #42
+     │
+     └── denied  ──> Send an error
+```
+
+The server does not simply execute everything requested by a client. It must first verify that the request is valid.
+For example, if a regular user tries to kick another user from a channel:
+
+```
+Regular User
+     │
+     │ KICK another user
+     v
+IRC Server
+     │
+     v
+Is this user a channel operator?
+     │
+   ┌─┴─┐
+   │   │
+  Yes  No
+   │   │
+   v   v
+ KICK  Error
+```
+
+Another important responsibility of the server is **forwarding messages**.
+
+Imagine that Maria sends a message to `#42`:
+
+```
+              Maria
+                │
+                │ message to #42
+                v
+           --------------
+           │ IRC Server │
+           --------------
+                │
+                │ finds #42 members
+                v
+               #42
+              /   \
+             v     v
+           Pedro   Ricardo
+```
+
+Maria does not send the message directly to Pedro and Ricardo.
+
+Instead:
+
+1. Maria's IRC client sends the message to the server.
+2. The server receives and interprets the message.
+3. The server identifies `#42` as the target.
+4. The server finds the clients that belong to `#42`.
+5. The server forwards the message to those clients.
+
+The server therefore has several main responsibilities:
+
+```
+IRC Server
+│
+├── Connections
+│   ├── Accept clients
+│   └── Detect disconnections
+│
+├── Clients
+│   ├── Authentication
+│   ├── Registration
+│   ├── Nicknames
+│   └── Usernames
+│
+├── Commands
+│   ├── Receive
+│   ├── Parse
+│   ├── Validate
+│   └── Execute
+│
+├── Channels
+│   ├── Members
+│   ├── Operators
+│   ├── Topics
+│   └── Modes
+│
+└── Communication
+    ├── Private messages
+    └── Channel messages
+```
+
+In `ft_irc`, **this is the component that we have to create**.
+Our program will receive a port and password when it starts:
+
+```
+./ircserv <port> <password>
+            │        │
+            │        └── Password required by clients
+            │
+            └── Port where the server listens
+```
+
+The server then waits for IRC clients to connect:
+
+```
+Start ft_irc
+     │
+     v
+IRC Server
+     │
+     v
+Listen for connections
+     │
+     ├──── Client A connects
+     │
+     ├──── Client B connects
+     │
+     └──── Client C connects
+```
+
+Once connected, clients can send IRC commands and the server processes them according to the IRC protocol.
+The relationship between the two components can be summarized as:
+
+```
+IRC Client
+│
+├── Interacts with the user
+├── Sends IRC commands
+├── Receives IRC responses
+└── Displays messages/responses to the user
+└── Sends requests
+        │
+        │ IRC Protocol
+		|
+        v
+IRC Server
+│
+├── Maintains the IRC state
+├── Validates requests
+├── Receives commands
+├── Executes requested actions/commands
+├── Maintains users and channels
+└── Sends responses/messages back to clients
+```
+
+> **The client requests an action; the server validates, executes, and manages the result.**
+
+> **The client asks; the server processes and decides.**
+
+The **client** represents what the **user wants to do**, while the **server** determines whether that **action is valid and updates the IRC state** accordingly.
+
+In `ft_irc`, our main goal is to build this server so that it can manage **multiple IRC clients at the same time** without one client blocking the others.
+
+---
+
