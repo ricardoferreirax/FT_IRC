@@ -1,3 +1,15 @@
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    Makefile                                           :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2026/09/27 23:34:05 by rmedeiro          #+#    #+#              #
+#    Updated: 2026/09/27 23:36:40 by rmedeiro         ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
+
 NAME = ircserv
 
 CXX = c++
@@ -10,7 +22,7 @@ DEBUG_FLAGS = -g
 OBJ_DIR = .objs
 DBG_DIR = .objs-debug
 
-SRCS = main.cpp
+SRCS = srcs/main.cpp
 
 OBJS = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 DBG_OBJS = $(SRCS:%.cpp=$(DBG_DIR)/%.o)

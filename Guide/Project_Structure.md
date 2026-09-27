@@ -106,12 +106,9 @@ We should agree on these points first:
 ## 3. First Milestone — Working TCP Server
 
 **Goal:** Start a server, accept multiple TCP connections, receive arbitrary bytes without blocking other clients, and disconnect clients safely.
-
 At this stage, we are building the network foundation, **not yet a complete IRC server**.
 
-### 3.1 What we need to understand first
-
-Before implementing this milestone, we should be able to explain:
+### 3.1 What we need to understand
 
 - **IP address:** identifies a machine or network interface.
 - **Port:** identifies the service to contact on that machine.
@@ -123,20 +120,20 @@ Before implementing this milestone, we should be able to explain:
 - **Non-blocking I/O:** an operation should not freeze the server while waiting for one client.
 - **`poll()`:** waits for readiness events on the listening socket and connected client sockets.
 
-
-### 3.2 Suggested implementation order
-
 **Step 1 — Start and validate arguments**
 
-The program accepts the port and password arguments. It should reject missing or invalid startup arguments with a useful error instead of crashing.
+The program accepts the port and password arguments. 
+It should reject missing or invalid startup arguments with a useful error instead of crashing.
 
 **Step 2 — Create the listening socket**
 
-Create and configure a TCP socket, bind it to the chosen port, and start listening. Handle failure at every stage and close resources when startup fails.
+Create and configure a TCP socket, bind it to the chosen port, and start listening. 
+Handle failure at every stage and close resources when startup fails.
 
 **Step 3 — Add the event loop**
 
-Use one `poll()`-based event loop (or the subject's permitted equivalent) to handle the listening socket and connected clients. Keep socket operations non-blocking and follow the subject's exact readiness and I/O restrictions.
+Use one `poll()`-based event loop to handle the listening socket and connected clients. 
+Keep socket operations non-blocking and follow the readiness and I/O restrictions.
 
 **Step 4 — Accept multiple clients**
 
@@ -144,15 +141,18 @@ When the listening socket is ready, accept incoming connections, configure accep
 
 **Step 5 — Read into per-client input buffers**
 
-When a client socket is ready for reading, receive available data and append it to **that client's own input buffer**. Do not assume one read equals one IRC command.
+When a client socket is ready for reading, receive available data and append it to **that client's own input buffer**. 
+Do not assume one read equals one IRC command.
 
 **Step 6 — Extract complete IRC lines**
 
-Identify complete messages using IRC line endings (`\r\n`). Preserve incomplete trailing data until more bytes arrive. At this milestone, logging extracted lines is enough; full command execution comes later.
+Identify complete messages using IRC line endings (`\r\n`). 
+Preserve incomplete trailing data until more bytes arrive. 
 
 **Step 7 — Prepare output buffering**
 
-Store outgoing bytes per client and write them only when the socket is ready. Account for partial writes: an incomplete send must leave the remaining bytes queued.
+Store outgoing bytes per client and write them only when the socket is ready. 
+Account for partial writes: an incomplete send must leave the remaining bytes queued.
 
 **Step 8 — Handle disconnections and errors**
 
@@ -167,7 +167,8 @@ First write:   "NICK Ric"
 Second write:  "ardo\r\n"
 ```
 
-The server may receive these pieces separately or together. It must produce **one complete line**:
+The server may receive these pieces separately or together. 
+It must produce **one complete line**:
 
 ```text
 NICK Ricardo
@@ -175,27 +176,14 @@ NICK Ricardo
 
 It must not process `NICK Ric` prematurely.
 
-### 3.4 Definition of done
-
-- [ ] The server starts with valid arguments and handles invalid ones.
-- [ ] It accepts several simultaneous client connections.
-- [ ] One idle client does not block another.
-- [ ] Each client has an independent input buffer.
-- [ ] Fragmented lines and multiple lines in one read are handled correctly.
-- [ ] Outgoing data can be queued and partially sent without being lost.
-- [ ] Client disconnections do not crash the server.
-- [ ] All relevant socket operations follow the subject's non-blocking and `poll()` rules.
-- [ ] Both teammates can explain the complete connection and event-loop flow.
-
-**Don't move on until this works reliably.** Registration and channels depend on this foundation.
-
 ---
 
 ## 4. Second Milestone — IRC Registration
 
 **Goal:** Turn an accepted TCP connection into a properly registered IRC client.
 
-A TCP connection alone doesn't establish a valid IRC identity. The server must track which clients are connected, what registration information they have supplied, and whether they are allowed to use registered-only IRC functionality.
+A TCP connection alone doesn't establish a valid IRC identity. 
+The server must track which clients are connected, what registration information they have supplied, and whether they are allowed to use registered-only IRC functionality.
 
 ### 4.1 Registration state
 
@@ -217,13 +205,13 @@ Validation
 Registered
 ```
 
-Do not assume registration information always arrives in separate reads or in one fixed command order. Follow the protocol and the subject's required behavior.
-
-### 4.2 Suggested implementation order
+Do not assume registration information always arrives in separate reads or in one fixed command order. 
+Follow the protocol behavior.
 
 **Step 1 — Extend `Client` state**
 
-Store the registration information and status associated with each client. Keep partial registration separate from successful registration.
+Store the registration information and status associated with each client. 
+Keep partial registration separate from successful registration.
 
 **Step 2 — Implement `PASS`**
 
@@ -231,7 +219,8 @@ Validate the server password and handle missing, incorrect, repeated, or otherwi
 
 **Step 3 — Implement `NICK`**
 
-Validate requested nicknames and ensure the same active nickname isn't assigned to two clients. Support the required behavior when an already registered client changes their nickname.
+Validate requested nicknames and ensure the same active nickname isn't assigned to two clients. 
+Support the required behavior when an already registered client changes their nickname.
 
 **Step 4 — Implement `USER`**
 
@@ -239,11 +228,13 @@ Record the required user information and reject invalid or repeated registration
 
 **Step 5 — Complete registration**
 
-Only mark the client registered when all required conditions are satisfied. Send the expected registration replies in the appropriate format.
+Only mark the client registered when all required conditions are satisfied. 
+Send the expected registration replies in the appropriate format.
 
 **Step 6 — Add consistent errors**
 
-Build a small, reusable mechanism for formatting server replies. Avoid hand-assembling slightly different versions of the same numeric reply throughout the project.
+Build a small, reusable mechanism for formatting server replies. 
+Avoid hand-assembling different versions of the same numeric reply throughout the project.
 
 ### 4.3 Example: two clients request the same nickname
 
@@ -253,22 +244,10 @@ Client A ---> NICK Ricardo ---> Accepted
 Client B ---> NICK Ricardo ---> Nickname already in use
 ```
 
-The server must check its shared nickname information. A client cannot decide on its own that a nickname is available.
+The server must check its shared nickname information. 
+A client cannot decide on its own that a nickname is available.
 
-### 4.4 Definition of done
-
-- [ ] A TCP-connected client starts unregistered.
-- [ ] Valid `PASS`, `NICK`, and `USER` information can complete registration.
-- [ ] Invalid passwords are handled appropriately.
-- [ ] Missing and malformed parameters produce appropriate replies.
-- [ ] Duplicate nicknames are rejected.
-- [ ] The required registration replies are sent correctly.
-- [ ] Commands requiring registration are rejected before registration.
-- [ ] Registration works when commands arrive fragmented or combined.
-- [ ] Several clients can register independently without mixing their state.
-- [ ] An existing reference IRC client can complete registration against our server.
-
-**Integration checkpoint:** both teammates should be able to connect using the same reference IRC client and explain why each registration reply is sent.
+**Integration checkpoint:** we should be able to connect using the same reference IRC client and explain why each registration reply is sent.
 
 ---
 
@@ -281,7 +260,6 @@ We should introduce channels only after basic client identity and command proces
 ### 5.1 Start with private messages
 
 Implement `PRIVMSG` to an individual nickname before adding channel broadcasts.
-
 The server needs to:
 
 1. Parse the target and message text.
@@ -307,7 +285,8 @@ Channel #42
 `-- Modes and mode parameters
 ```
 
-Initially, focus on **channel name and membership**. Add administrative state as we approach the final milestone.
+Initially, focus on **channel name and membership**. 
+Add administrative state as we approach the final milestone.
 
 Agree on how to represent membership. For example, a channel can keep references or identifiers for clients owned by the server; it shouldn't accidentally become a second owner of the same client objects.
 
@@ -315,7 +294,8 @@ Agree on how to represent membership. For example, a channel can keep references
 
 When a registered client requests `JOIN #42`, the server must locate or create the channel as appropriate, validate entry conditions, update membership, and send the required protocol messages.
 
-Handle repeated joins and channel membership consistently. Also decide how empty channels are removed and how membership is cleaned up when clients disconnect.
+Handle repeated joins and channel membership consistently. 
+Also decide how empty channels are removed and how membership is cleaned up when clients disconnect.
 
 ### 5.4 Implement channel messaging
 
@@ -351,20 +331,8 @@ By the end of this milestone, the same data structures should support:
 
 Don't duplicate the same membership information in unrelated structures unless we have a clear strategy for keeping it synchronized.
 
-### 5.6 Definition of done
-
-- [ ] Registered users can send private messages to one another.
-- [ ] Unknown nicknames and invalid `PRIVMSG` requests produce appropriate errors.
-- [ ] Clients can join channels using `JOIN`.
-- [ ] Multiple clients can join the same channel.
-- [ ] One client can belong to multiple channels.
-- [ ] Channel messages reach the correct recipients.
-- [ ] Messages aren't accidentally forwarded to unrelated clients.
-- [ ] Repeated joins and invalid membership operations are handled consistently.
-- [ ] Disconnected clients are removed from channel state.
-- [ ] Multiple clients can chat using an existing IRC client.
-
-**Integration checkpoint:** open three IRC clients, register them, join the same channel, and verify that messages arrive correctly. Also test a private message between two of them.
+**Integration checkpoint:** open three IRC clients, register them, join the same channel, and verify that messages arrive correctly. 
+Also test a private message between two of them.
 
 ---
 
@@ -372,12 +340,12 @@ Don't duplicate the same membership information in unrelated structures unless w
 
 **Goal:** Complete the subject's required channel administration, then verify that the server is robust, compatible, and compliant.
 
-This milestone has two parts: **features** and **validation**. We shouldn't leave testing until every feature is finished; each new command should come with its own tests.
+This milestone has two parts: **features** and **validation**. 
+We shouldn't leave testing until every feature is finished; each new command should come with its own tests.
 
 ### 6.1 Channel operators
 
 Introduce or finalize operator membership within each channel.
-
 Operator status is **channel-specific**:
 
 ```text
@@ -465,20 +433,8 @@ Send 2: "VMSG #42 :Hello"
 Send 3: "!\r\n"
 ```
 
-The server should process **one complete command**, not three partial commands. Repeat this type of test after adding commands, because new handlers should never bypass the shared input-buffering logic.
-
-### 6.6 Definition of done
-
-- [ ] All subject-required commands and modes are implemented.
-- [ ] Permission checks use the correct channel context.
-- [ ] Modes can be enabled, disabled, and queried as required.
-- [ ] Successful commands generate the appropriate replies and notifications.
-- [ ] Invalid commands and invalid states generate appropriate errors.
-- [ ] Fragmented and combined messages work across command types.
-- [ ] Disconnects clean up all affected client and channel state.
-- [ ] The server remains responsive with several simultaneous clients.
-- [ ] Tests pass with an existing IRC client and targeted network tests.
-- [ ] The project meets the official subject's compilation and implementation restrictions.
+The server should process **one complete command**, not three partial commands. 
+Repeat this type of test after adding commands, because new handlers should never bypass the shared input-buffering logic.
 
 ---
 
