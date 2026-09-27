@@ -72,8 +72,7 @@ IRC is the **protocol that defines how IRC clients and IRC servers communicate**
 
 ### 1.1 Text-based protocol
 
-IRC is a **text-based protocol**.
-This means clients and servers exchange textual IRC messages rather than complex binary structures.
+IRC is a **text-based protocol**. This means clients and servers exchange textual IRC messages rather than complex binary structures.
 
 ```text
 Client
@@ -122,6 +121,149 @@ Execute Action
        │
        v
 Send Response
+```
+
+---
+
+### 1.2 IRC Uses a Client-Server Architecture
+
+IRC is based on the idea that clients connect to a central server.
+
+```text
+                     ----------------
+                     │  IRC Server  │
+                     ----------------
+                            │
+             -------------------------------
+             │              │              │
+             v              v              v
+        -----------    -----------    -----------
+        │ Client A │  │ Client B  │  | Client C  │
+        -----------    -----------    -----------
+```
+
+The clients are responsible for interacting with the users.
+The server is responsible for coordinating communication between those clients.
+This means that the IRC server acts as an intermediary.
+
+For example, if Client A wants to send a private message to Client B:
+
+```text
+Client A
+   │
+   │ message for Client B
+   v
+IRC Server
+   │
+   │ finds Client B
+   v
+Client B
+```
+
+The message does not normally travel directly from Client A to Client B. The communication is:
+
+```text
+Client A -----> Server -----> Client B
+```
+
+---
+
+### 1.3 What is an IRC Client?
+
+An **IRC client** is a program used by a user to connect to and communicate with an IRC server.
+
+The client acts as an **interface between the user and the server**. The user performs actions through the client, and the client 
+translates those actions into IRC commands that the server can understand.
+
+```text
+                   User
+                    │
+                    │ performs an action
+					|
+                    v
+              --------------
+              │ IRC Client │
+              --------------
+                    │
+                    │ IRC commands
+					|
+                    v
+              --------------
+              │ IRC Server │
+              --------------
+```
+
+The IRC client does not manage the server itself. It simply sends requests to the server and displays the responses it receives.
+The user may perform actions such as:
+
+* Connecting to an IRC server.
+* Choosing or changing a nickname.
+* Joining or leaving a channel.
+* Sending a private message or a message to a channel.
+* Changing a channel topic.
+* Inviting another user.
+* Changing channel modes if they have permission.
+
+For example, imagine that a user wants to join the channel `#42`.
+From the user's perspective:
+
+```text
+User
+ │
+ │ "I want to join #42"
+ v
+IRC Client
+```
+
+The IRC client translates this action into the corresponding IRC command:
+
+```text
+User action
+     │
+     v
+ Join #42
+     │
+     v
+IRC Client
+     │
+     │ JOIN #42 (command)
+     v
+IRC Server
+```
+
+The server receives the command, checks whether the user is allowed to join the channel, and then updates its internal state.
+Another example is sending a message to a channel:
+
+```text
+User writes: "Hello everyone!"
+        │
+        v
+    IRC Client
+        │
+        │ PRIVMSG #42 :Hello everyone! (command)
+        v
+    IRC Server
+        │
+        │ finds the members of #42
+        v
+  Other IRC Clients
+        │
+        v
+Other users see: "Hello everyone!"
+```
+
+In `ft_irc`, **we do not create the IRC client**. We create the server that must be able to communicate correctly with an existing IRC client.
+So the relationship is:
+
+```text
+Existing IRC Client
+        │
+        │ IRC protocol over TCP
+		|
+        v
+---------------------
+│ Our ft_irc Server │
+---------------------
 ```
 
 ---
