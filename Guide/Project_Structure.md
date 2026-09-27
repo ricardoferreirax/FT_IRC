@@ -190,3 +190,309 @@ It must not process `NICK Ric` prematurely.
 **Don't move on until this works reliably.** Registration and channels depend on this foundation.
 
 ---
+
+## 4. Second Milestone — IRC Registration
+
+**Goal:** Turn an accepted TCP connection into a properly registered IRC client.
+
+A TCP connection alone doesn't establish a valid IRC identity. The server must track which clients are connected, what registration information they have supplied, and whether they are allowed to use registered-only IRC functionality.
+
+### 4.1 Registration state
+
+A client can be:
+
+```text
+TCP connected
+     |
+     v
+Not registered
+     |
+     | Required PASS / NICK / USER information
+     v
+Validation
+     |
+     +---- Invalid ---> Appropriate reply; remain unregistered
+     |
+     v
+Registered
+```
+
+Do not assume registration information always arrives in separate reads or in one fixed command order. Follow the protocol and the subject's required behavior.
+
+### 4.2 Suggested implementation order
+
+**Step 1 — Extend `Client` state**
+
+Store the registration information and status associated with each client. Keep partial registration separate from successful registration.
+
+**Step 2 — Implement `PASS`**
+
+Validate the server password and handle missing, incorrect, repeated, or otherwise invalid use according to the relevant rules.
+
+**Step 3 — Implement `NICK`**
+
+Validate requested nicknames and ensure the same active nickname isn't assigned to two clients. Support the required behavior when an already registered client changes their nickname.
+
+**Step 4 — Implement `USER`**
+
+Record the required user information and reject invalid or repeated registration attempts as required.
+
+**Step 5 — Complete registration**
+
+Only mark the client registered when all required conditions are satisfied. Send the expected registration replies in the appropriate format.
+
+**Step 6 — Add consistent errors**
+
+Build a small, reusable mechanism for formatting server replies. Avoid hand-assembling slightly different versions of the same numeric reply throughout the project.
+
+### 4.3 Example: two clients request the same nickname
+
+```text
+Client A ---> NICK Ricardo ---> Accepted
+
+Client B ---> NICK Ricardo ---> Nickname already in use
+```
+
+The server must check its shared nickname information. A client cannot decide on its own that a nickname is available.
+
+### 4.4 Definition of done
+
+- [ ] A TCP-connected client starts unregistered.
+- [ ] Valid `PASS`, `NICK`, and `USER` information can complete registration.
+- [ ] Invalid passwords are handled appropriately.
+- [ ] Missing and malformed parameters produce appropriate replies.
+- [ ] Duplicate nicknames are rejected.
+- [ ] The required registration replies are sent correctly.
+- [ ] Commands requiring registration are rejected before registration.
+- [ ] Registration works when commands arrive fragmented or combined.
+- [ ] Several clients can register independently without mixing their state.
+- [ ] An existing reference IRC client can complete registration against our server.
+
+**Integration checkpoint:** both teammates should be able to connect using the same reference IRC client and explain why each registration reply is sent.
+
+---
+
+## 5. Third Milestone — Messages and Channels
+
+**Goal:** Registered clients can exchange private messages, join channels, and communicate with channel members.
+
+We should introduce channels only after basic client identity and command processing are reliable.
+
+### 5.1 Start with private messages
+
+Implement `PRIVMSG` to an individual nickname before adding channel broadcasts.
+
+The server needs to:
+
+1. Parse the target and message text.
+2. Validate the request.
+3. Find the destination nickname.
+4. Construct the appropriate outgoing IRC message.
+5. Queue the message for the destination client.
+
+This exercises the nickname lookup and outgoing-message path without requiring channel state.
+
+### 5.2 Introduce the `Channel` component
+
+A channel should manage its own relevant state:
+
+```text
+Channel #42
+|
+|-- Name
+|-- Members
+|-- Operators
+|-- Topic
+|-- Invitations
+`-- Modes and mode parameters
+```
+
+Initially, focus on **channel name and membership**. Add administrative state as we approach the final milestone.
+
+Agree on how to represent membership. For example, a channel can keep references or identifiers for clients owned by the server; it shouldn't accidentally become a second owner of the same client objects.
+
+### 5.3 Implement `JOIN`
+
+When a registered client requests `JOIN #42`, the server must locate or create the channel as appropriate, validate entry conditions, update membership, and send the required protocol messages.
+
+Handle repeated joins and channel membership consistently. Also decide how empty channels are removed and how membership is cleaned up when clients disconnect.
+
+### 5.4 Implement channel messaging
+
+Once membership works, extend `PRIVMSG` to channel targets.
+
+```text
+                    #42
+                     |
+        +------------+------------+
+        |            |            |
+     Gonçalo       Pedro        Ricardo
+        |
+        | PRIVMSG #42 :Hello!
+        v
+     IRC server
+        |
+        +-----------> Pedro
+        |
+        +-----------> Ricardo
+```
+
+The server must identify the target channel, validate the request, and forward the message to the appropriate members, normally excluding the sender.
+
+### 5.5 Build the full path, not isolated functions
+
+By the end of this milestone, the same data structures should support:
+
+- Nickname lookup for private messages.
+- Channel lookup for channel messages.
+- Membership checks.
+- Broadcasting to channel members.
+- Removal of disconnected clients from every relevant channel.
+
+Don't duplicate the same membership information in unrelated structures unless we have a clear strategy for keeping it synchronized.
+
+### 5.6 Definition of done
+
+- [ ] Registered users can send private messages to one another.
+- [ ] Unknown nicknames and invalid `PRIVMSG` requests produce appropriate errors.
+- [ ] Clients can join channels using `JOIN`.
+- [ ] Multiple clients can join the same channel.
+- [ ] One client can belong to multiple channels.
+- [ ] Channel messages reach the correct recipients.
+- [ ] Messages aren't accidentally forwarded to unrelated clients.
+- [ ] Repeated joins and invalid membership operations are handled consistently.
+- [ ] Disconnected clients are removed from channel state.
+- [ ] Multiple clients can chat using an existing IRC client.
+
+**Integration checkpoint:** open three IRC clients, register them, join the same channel, and verify that messages arrive correctly. Also test a private message between two of them.
+
+---
+
+## 6. Final Milestone — Modes, Administration, and Testing
+
+**Goal:** Complete the subject's required channel administration, then verify that the server is robust, compatible, and compliant.
+
+This milestone has two parts: **features** and **validation**. We shouldn't leave testing until every feature is finished; each new command should come with its own tests.
+
+### 6.1 Channel operators
+
+Introduce or finalize operator membership within each channel.
+
+Operator status is **channel-specific**:
+
+```text
+Ricardo
+|
+|-- #42       -> operator
+`-- #general  -> regular member
+```
+
+The server must check privileges against the *target channel*, not against a global "operator" flag.
+
+### 6.2 Administrative commands
+
+Implement and test the subject's required administrative commands:
+
+| Command | Purpose | Important validation |
+|---|---|---|
+| `KICK` | Remove a user from a channel | Sender's channel permissions and target membership |
+| `INVITE` | Invite a user to a channel | Channel state, membership, and required privileges |
+| `TOPIC` | Read or change a channel's topic | Target channel and topic restrictions |
+| `MODE` | Change channel settings or privileges | Correct mode syntax, parameters, and permissions |
+
+A command may have both successful and error outcomes. Document those outcomes in `06-commands.md` as we implement each handler.
+
+### 6.3 Required channel modes
+
+| Mode | Meaning | State to maintain |
+|---|---|---|
+| `i` | Invite-only | Whether invitation is required |
+| `t` | Topic restriction | Whether changing the topic requires operator privileges |
+| `k` | Channel key | Current key, if enabled |
+| `o` | Operator privilege | Which channel members are operators |
+| `l` | User limit | Maximum number of members, if enabled |
+
+Test both enabling and disabling modes where applicable, including commands that need additional parameters.
+
+**Example:** if `#42` has a user limit of two and already contains two members, a third user's `JOIN` request should receive the appropriate error.
+
+### 6.4 Testing strategy
+
+Organize testing into four groups.
+
+**A. Normal behavior**
+
+- Several clients connect and register.
+- Users exchange private messages.
+- Users join channels and exchange channel messages.
+- Operators perform permitted administrative actions.
+- Modes affect channel behavior as expected.
+
+**B. Invalid commands and permissions**
+
+- Unknown commands and missing parameters.
+- Duplicate or invalid nicknames.
+- Unknown message targets.
+- Attempts to perform channel actions without membership or permission.
+- Incorrect channel keys and attempts to join restricted or full channels.
+- Invalid or incomplete mode parameters.
+
+**C. Network edge cases**
+
+- One IRC message split across several sends.
+- Several IRC messages combined in one send.
+- Multiple clients sending data at the same time.
+- Slow or idle clients.
+- Partial outgoing writes.
+- Abrupt disconnections and repeated connect/disconnect cycles.
+
+**D. Project and build requirements**
+
+- C++98 compilation and strict warning flags.
+- Required Makefile targets.
+- No prohibited functions or prohibited architecture.
+- Required non-blocking behavior and the subject's event-loop restrictions.
+- No leaks or invalid memory accesses in relevant test scenarios.
+- Compatibility with the selected reference IRC client.
+
+### 6.5 Test the network assumptions explicitly
+
+A test with `nc` or a small test script can send a single command in pieces:
+
+```text
+Send 1: "PRI"
+Send 2: "VMSG #42 :Hello"
+Send 3: "!\r\n"
+```
+
+The server should process **one complete command**, not three partial commands. Repeat this type of test after adding commands, because new handlers should never bypass the shared input-buffering logic.
+
+### 6.6 Definition of done
+
+- [ ] All subject-required commands and modes are implemented.
+- [ ] Permission checks use the correct channel context.
+- [ ] Modes can be enabled, disabled, and queried as required.
+- [ ] Successful commands generate the appropriate replies and notifications.
+- [ ] Invalid commands and invalid states generate appropriate errors.
+- [ ] Fragmented and combined messages work across command types.
+- [ ] Disconnects clean up all affected client and channel state.
+- [ ] The server remains responsive with several simultaneous clients.
+- [ ] Tests pass with an existing IRC client and targeted network tests.
+- [ ] The project meets the official subject's compilation and implementation restrictions.
+
+---
+
+## 9. Final review before evaluation
+
+Before presenting the project, both teammates should be able to explain the following without relying on one person being "the networking person" and the other being "the channels person":
+
+- What happens between launching `ircserv` and accepting the first client.
+- Why we need non-blocking sockets and one event loop.
+- Why one `recv()` call doesn't correspond to one IRC message.
+- How a client transitions from connected to registered.
+- How the server locates the target of a private message.
+- How it finds recipients for a channel message.
+- How channel membership and operator privileges are represented.
+- How the required channel modes change behavior.
+- What happens when a client disconnects unexpectedly.
+- How we verified the project against the subject.
