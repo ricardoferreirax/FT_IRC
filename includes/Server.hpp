@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/28 05:57:46 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/28 06:35:23 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <unistd.h>
 #include <cstdlib>
 
