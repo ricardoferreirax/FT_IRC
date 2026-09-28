@@ -6,20 +6,21 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/28 06:35:23 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/28 13:30:39 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
+#include <unistd.h>
+#include <cstdlib>
 #include <string>
 #include <iostream>
 #include <stdexcept>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <unistd.h>
-#include <cstdlib>
+#include <fcntl.h>
 
 class Server
 {
