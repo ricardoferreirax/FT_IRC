@@ -11,28 +11,28 @@
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
-#define SERVER_HPP
+# define SERVER_HPP
 
-#include <string>
-#include <iostream>
-#include <stdexcept>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <cstdlib>
+# include <cstdlib>
+# include <iostream>
+# include <netinet/in.h>
+# include <stdexcept>
+# include <string>
+# include <sys/socket.h>
+# include <unistd.h>
 
 class Server
 {
-    private:
-        std::string _pass;
-        int _port;
-        int _listenFd;
+	private:
+		std::string _pass;
+		int _port;
+		int _listenFd;
 
-    public:
-        Server(int port, const std::string &pass);
-        ~Server();
+	public:
+		Server(int port, const std::string &pass);
+		~Server();
 
-        void initListener();
+	void initListener();
 };
 
 #endif
