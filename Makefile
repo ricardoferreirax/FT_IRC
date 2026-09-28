@@ -6,7 +6,7 @@
 #    By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/09/27 23:34:05 by rmedeiro          #+#    #+#              #
-#    Updated: 2026/09/27 23:36:40 by rmedeiro         ###   ########.fr        #
+#    Updated: 2026/09/28 05:56:46 by rmedeiro         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -22,7 +22,8 @@ DEBUG_FLAGS = -g
 OBJ_DIR = .objs
 DBG_DIR = .objs-debug
 
-SRCS = srcs/main.cpp
+SRCS = srcs/main.cpp \
+	   srcs/Server.cpp
 
 OBJS = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 DBG_OBJS = $(SRCS:%.cpp=$(DBG_DIR)/%.o)
