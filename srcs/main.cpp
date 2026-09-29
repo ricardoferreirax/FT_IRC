@@ -6,37 +6,37 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:14:15 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/29 14:48:31 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/29 15:21:28 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
-#include <iostream>
-#include <string>
 #include <cstdlib>
 #include <exception>
+#include <iostream>
+#include <string>
 
-bool checkPortRange(const std::string &str)
+bool	checkPortRange(const std::string &str)
 {
-    int port;
+	int	port;
 
-    if (str.empty())
-        return (false);
-    port = 0;
-    for (size_t i = 0; i < str.length(); i++)
-    {
-        if (str[i] < '0' || str[i] > '9')
-            return (false);
-        if (port > 6553)
-            return (false);
-        port = port * 10 + (str[i] - '0');
-        if (port > 65535)
-            return (false);
-    }
-    return (port > 0);
+	if (str.empty())
+		return (false);
+	port = 0;
+	for (size_t i = 0; i < str.length(); i++)
+	{
+		if (str[i] < '0' || str[i] > '9')
+			return (false);
+		if (port > 6553)
+			return (false);
+		port = port * 10 + (str[i] - '0');
+		if (port > 65535)
+			return (false);
+	}
+	return (port > 0);
 }
 
-bool checkServerSetup(int ac, char **av)
+bool	checkServerSetup(int ac, char **av)
 {
     if (ac != 3)
     {
@@ -61,7 +61,7 @@ bool checkServerSetup(int ac, char **av)
     return (true);
 }
 
-int main(int ac, char **av)
+int	main(int ac, char **av)
 {
     int port;
 

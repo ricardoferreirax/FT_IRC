@@ -6,12 +6,12 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/29 14:35:42 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/29 15:21:36 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
-#define SERVER_HPP
+# define SERVER_HPP
 
 #include <iostream>
 #include <string>
@@ -30,9 +30,9 @@ class Server
         int _listenFd;
 		int _epollFd;
 
-    public:
-        Server(int port, const std::string &pass);
-        ~Server();
+	public:
+		Server(int port, const std::string &pass);
+		~Server();
 
         void startSocket();
 		void startEventLoop();
