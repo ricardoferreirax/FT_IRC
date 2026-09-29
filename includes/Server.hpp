@@ -6,21 +6,21 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/29 13:22:31 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/29 14:35:42 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include <unistd.h>
-#include <cstdlib>
-#include <string>
 #include <iostream>
+#include <string>
 #include <stdexcept>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include <unistd.h>
 #include <fcntl.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/epoll.h>
 
 class Server
 {
@@ -28,12 +28,14 @@ class Server
         std::string _pass;
         int _port;
         int _listenFd;
+		int _epollFd;
 
     public:
         Server(int port, const std::string &pass);
         ~Server();
 
         void startSocket();
+		void startEventLoop();
 };
 
 #endif

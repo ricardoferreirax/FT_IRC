@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:14:15 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/29 14:23:48 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/29 14:48:31 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,12 +45,17 @@ bool checkServerSetup(int ac, char **av)
     }
     if (!checkPortRange(av[1]))
     {
-        std::cerr << "IRC: port must be between 1 and 65535." << std::endl;
+        std::cerr << "IRC: port must be between 1 and 65535!" << std::endl;
+        return (false);
+    }
+    if (std::atoi(av[1]) < 1024)
+    {
+        std::cerr << "IRC: privileged port! Use a port above 1023!" << std::endl;
         return (false);
     }
     if (av[2][0] == '\0')
     {
-        std::cerr << "IRC: a server password is required." << std::endl;
+        std::cerr << "IRC: a server password is required!" << std::endl;
         return (false);
     }
     return (true);
@@ -58,26 +63,26 @@ bool checkServerSetup(int ac, char **av)
 
 int main(int ac, char **av)
 {
-	int port;
-	
+    int port;
+
     if (!checkServerSetup(ac, av))
         return (EXIT_FAILURE);
-	
     port = std::atoi(av[1]);
     std::string pass = av[2];
-
+	
     try
     {
         Server server(port, pass);
-		
         std::cout << "\nConfiguration accepted!" << std::endl;
 
         server.startSocket();
+        server.startEventLoop();
     }
     catch (const std::exception &e)
     {
         std::cerr << e.what() << std::endl;
         return (EXIT_FAILURE);
     }
+
     return (EXIT_SUCCESS);
 }

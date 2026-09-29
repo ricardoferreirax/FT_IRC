@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/29 14:25:16 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/29 14:49:47 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,14 +17,20 @@ Server::Server(int port, const std::string &pass)
     this->_pass = pass;
     this->_port = port;
     this->_listenFd = -1;
+	this->_epollFd = -1;
 }
 
 Server::~Server()
 {
+    if (this->_epollFd != -1)
+    {
+        close(this->_epollFd);
+        std::cout << "\nepoll closed!" << std::endl;
+    }
     if (this->_listenFd != -1)
     {
         close(this->_listenFd);
-        std::cout << "\nSocket closed!" << std::endl;
+        std::cout << "Listening socket closed!" << std::endl;
     }
 }
 
@@ -36,26 +42,43 @@ void Server::startSocket()
     std::cout << std::endl;
     if ((this->_listenFd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         throw std::runtime_error("IRC: socket() failed.");
-    std::cout << "[DEBUG] Listening TCP socket created! FD: " << this->_listenFd << std::endl;
+    std::cout << "Listening TCP socket created!" << std::endl;
 
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
     serverAddr.sin_port = htons(this->_port);
-    std::cout << "[DEBUG] IPv4 address configured!" << std::endl;
+    std::cout << "IPv4 address configured!" << std::endl;
 
     socketOpt = 1;
     if (setsockopt(this->_listenFd, SOL_SOCKET, SO_REUSEADDR, &socketOpt, sizeof(socketOpt)) < 0)
         throw std::runtime_error("IRC: setsockopt() failed.");
-    std::cout << "[DEBUG] Socket address reuse enabled!" << std::endl;
+    std::cout << "Socket address reuse enabled!" << std::endl;
 
     if (fcntl(this->_listenFd, F_SETFL, O_NONBLOCK) < 0)
-        throw std::runtime_error("IRC: F_SETFL failed.");
-    std::cout << "[DEBUG] Non-blocking mode enabled!" << std::endl;
+        throw std::runtime_error("IRC: fcntl() failed.");
+    std::cout << "Non-blocking mode enabled!" << std::endl;
 
     if (bind(this->_listenFd, reinterpret_cast<sockaddr *>(&serverAddr), sizeof(serverAddr)) < 0)
         throw std::runtime_error("IRC: bind() failed.");
     if (listen(this->_listenFd, SOMAXCONN) < 0)
         throw std::runtime_error("IRC: listen() failed.");
-    std::cout << "[DEBUG] Server bound and listening on port " << this->_port << " for incoming TCP connections!" << std::endl;
+    std::cout << "Server bound and listening on port " << this->_port << " for incoming TCP connections!" << std::endl;
+}
+
+void Server::startEventLoop()
+{
+    epoll_event serverEvent;
+
+    if ((this->_epollFd = epoll_create1(0)) < 0)
+        throw std::runtime_error("IRC: epoll_create1() failed.");
+    std::cout << "epoll created!" << std::endl;
+
+    serverEvent.events = EPOLLIN;
+    serverEvent.data.fd = this->_listenFd;
+	std::cout << "Listening socket event configured!" << std::endl;
+
+    if (epoll_ctl(this->_epollFd, EPOLL_CTL_ADD, this->_listenFd, &serverEvent) < 0)
+        throw std::runtime_error("IRC: epoll_ctl() failed.");
+    std::cout << "Listening socket registered with epoll!" << std::endl;
 }
 
