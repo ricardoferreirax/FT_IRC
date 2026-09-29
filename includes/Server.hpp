@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/28 13:30:39 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/29 13:22:31 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,7 +33,7 @@ class Server
         Server(int port, const std::string &pass);
         ~Server();
 
-        void initListener();
+        void startSocket();
 };
 
 #endif

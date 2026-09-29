@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:14:15 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/28 05:55:49 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/29 14:23:48 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,10 +70,9 @@ int main(int ac, char **av)
     {
         Server server(port, pass);
 		
-        std::cout << "IRC config accepted." << std::endl;
-        std::cout << "Listening port: " << port << std::endl;
+        std::cout << "\nConfiguration accepted!" << std::endl;
 
-        server.initListener();
+        server.startSocket();
     }
     catch (const std::exception &e)
     {
