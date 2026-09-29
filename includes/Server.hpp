@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/29 14:35:42 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/29 16:41:37 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,6 +36,7 @@ class Server
 
         void startSocket();
 		void startEventLoop();
+		void acceptClient();
 };
 
 #endif
