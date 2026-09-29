@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/29 14:49:47 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/29 15:13:18 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -68,6 +68,9 @@ void Server::startSocket()
 void Server::startEventLoop()
 {
     epoll_event serverEvent;
+	epoll_event events[10];
+    int eventCount;
+    int clientFd;
 
     if ((this->_epollFd = epoll_create1(0)) < 0)
         throw std::runtime_error("IRC: epoll_create1() failed.");
@@ -80,5 +83,21 @@ void Server::startEventLoop()
     if (epoll_ctl(this->_epollFd, EPOLL_CTL_ADD, this->_listenFd, &serverEvent) < 0)
         throw std::runtime_error("IRC: epoll_ctl() failed.");
     std::cout << "Listening socket registered with epoll!" << std::endl;
+	while (true)
+	{
+	    eventCount = epoll_wait(this->_epollFd, events, 10, -1);
+	    if (eventCount < 0)
+	        throw std::runtime_error("IRC: epoll_wait() failed.");
+	    for (int i = 0; i < eventCount; i++)
+	    {
+	        if (events[i].data.fd == this->_listenFd && (events[i].events & EPOLLIN))
+	        {
+	            clientFd = accept(this->_listenFd, NULL, NULL);
+	            if (clientFd < 0)
+	                throw std::runtime_error("IRC: accept() failed.");
+	            std::cout << "New TCP client connected!" << std::endl;
+	            close(clientFd);
+	        }
+	    }
+	}
 }
-
