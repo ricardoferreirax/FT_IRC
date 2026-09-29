@@ -6,9 +6,10 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/29 15:21:36 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/29 18:24:11 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
 
 #ifndef SERVER_HPP
 # define SERVER_HPP
@@ -16,6 +17,7 @@
 #include <iostream>
 #include <string>
 #include <stdexcept>
+#include <vector>
 #include <unistd.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -27,15 +29,19 @@ class Server
     private:
         std::string _pass;
         int _port;
-        int _listenFd;
-		int _epollFd;
+        int _listen_fd;
+        int _epoll_fd;
+
+        std::vector<int> _clientFds;
 
 	public:
 		Server(int port, const std::string &pass);
 		~Server();
 
-        void startSocket();
-		void startEventLoop();
+        void start_socket();
+        void setup_epoll();
+        void start_event_loop();
+        void accept_client();
 };
 
 #endif

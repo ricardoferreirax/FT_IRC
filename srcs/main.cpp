@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:14:15 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/29 15:21:28 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/29 18:24:04 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -69,20 +69,18 @@ int	main(int ac, char **av)
         return (EXIT_FAILURE);
     port = std::atoi(av[1]);
     std::string pass = av[2];
-	
     try
     {
         Server server(port, pass);
-        std::cout << "\nConfiguration accepted!" << std::endl;
 
-        server.startSocket();
-        server.startEventLoop();
+        server.start_socket();
+		server.setup_epoll();
+        server.start_event_loop();
     }
     catch (const std::exception &e)
     {
         std::cerr << e.what() << std::endl;
         return (EXIT_FAILURE);
     }
-
     return (EXIT_SUCCESS);
 }
