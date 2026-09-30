@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/29 18:24:11 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/30 13:28:33 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,6 +34,9 @@ class Server
 
         std::vector<int> _clientFds;
 
+		void accept_client();
+        void receive_data(int client_fd);
+
 	public:
 		Server(int port, const std::string &pass);
 		~Server();
@@ -41,7 +44,6 @@ class Server
         void start_socket();
         void setup_epoll();
         void start_event_loop();
-        void accept_client();
 };
 
 #endif
