@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:14:15 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/30 16:22:34 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/30 17:21:30 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,12 +63,13 @@ bool	checkServerSetup(int ac, char **av)
 
 int	main(int ac, char **av)
 {
+	std::string pass;
     int port;
 
     if (!checkServerSetup(ac, av))
         return (EXIT_FAILURE);
     port = std::atoi(av[1]);
-    std::string pass = av[2];
+    pass = av[2];
     try
     {
         Server server(port, pass);
