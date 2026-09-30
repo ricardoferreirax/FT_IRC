@@ -6,10 +6,11 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/30 14:06:35 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/30 14:33:50 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+#include "../includes/Server.hpp"
 
 #include "../includes/Server.hpp"
 
@@ -25,35 +26,37 @@ Server::~Server()
 {
     std::cout << "Closing server..." << std::endl;
     for (size_t i = 0; i < this->_client_fds.size(); i++)
-	{
-		close(this->_client_fds[i]);
-		std::cout << "[Fd = " << this->_client_fds[i] << "] " << "Client socket fd closed!" << std::endl;
-	}
+    {
+        close(this->_client_fds[i]);
+        std::cout << "[Fd = " << this->_client_fds[i] << "] Client socket fd closed!" << std::endl;
+    }
     if (this->_epoll_fd != -1)
-	{
-		close(this->_epoll_fd);
-		std::cout << "[Fd = " << this->_epoll_fd << "] " << "epoll fd closed!" << std::endl;
-	}
+    {
+        close(this->_epoll_fd);
+        std::cout << "[Fd = " << this->_epoll_fd << "] epoll fd closed!" << std::endl;
+    }
     if (this->_listen_fd != -1)
-	{
-		close(this->_listen_fd);
-		std::cout << "[Fd = " << this->_listen_fd << "] " << "Listening socket fd closed!" << std::endl;
-	}
+    {
+        close(this->_listen_fd);
+        std::cout << "[Fd = " << this->_listen_fd << "] Listening socket fd closed!" << std::endl;
+    }
     std::cout << "Server closed!" << std::endl;
 }
 
-void Server::start_socket()  // create and configure the listening socket
+void Server::start_socket()
 {
     int socket_opt;
     sockaddr_in server_addr;
 
     this->_listen_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (this->_listen_fd < 0)
-        throw std::runtime_error("IRC: socket() failed.");
-    server_addr.sin_family = AF_INET;
+	{
+		throw std::runtime_error("IRC: socket() failed.");
+	}
+	server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     server_addr.sin_port = htons(this->_port);
-	socket_opt = 1;
+    socket_opt = 1;
     if (setsockopt(this->_listen_fd, SOL_SOCKET, SO_REUSEADDR, &socket_opt, sizeof(socket_opt)) < 0)
         throw std::runtime_error("IRC: setsockopt() failed.");
     if (fcntl(this->_listen_fd, F_SETFL, O_NONBLOCK) < 0)
@@ -63,6 +66,19 @@ void Server::start_socket()  // create and configure the listening socket
     if (listen(this->_listen_fd, SOMAXCONN) < 0)
         throw std::runtime_error("IRC: listen() failed.");
     std::cout << "Server listening on port " << this->_port << std::endl;
+}
+
+void Server::setup_epoll()
+{
+    epoll_event event;
+
+    this->_epoll_fd = epoll_create1(0);
+    if (this->_epoll_fd < 0)
+        throw std::runtime_error("IRC: epoll_create1() failed.");
+    event.events = EPOLLIN;
+    event.data.fd = this->_listen_fd;
+    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0)
+        throw std::runtime_error("IRC: epoll_ctl() failed.");
 }
 
 void Server::start_event_loop()
@@ -75,7 +91,7 @@ void Server::start_event_loop()
     while (true)
     {
         if (!this->_client_fds.empty())
-            std::cout << "\nWaiting for events...\n" << std::endl;
+            std::cout << "\nWaiting for events..." << std::endl;
         ready_events = epoll_wait(this->_epoll_fd, events, 10, -1);
         if (ready_events < 0)
             throw std::runtime_error("IRC: epoll_wait() failed.");
@@ -94,19 +110,6 @@ void Server::start_event_loop()
     }
 }
 
-void Server::setup_epoll()
-{
-    epoll_event event;
-
-    this->_epoll_fd = epoll_create1(0);
-    if (this->_epoll_fd < 0)
-        throw std::runtime_error("IRC: epoll_create1() failed.");
-    event.events = EPOLLIN;
-    event.data.fd = this->_listen_fd;
-    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0) // register the listening socket with epoll
-        throw std::runtime_error("IRC: epoll_ctl() failed.");
-}
-
 void Server::accept_client()
 {
     int client_fd;
@@ -122,17 +125,16 @@ void Server::accept_client()
     }
     try
     {
-        this->_client_fds.push_back(client_fd);  // store the client
+        this->_client_fds.push_back(client_fd);
     }
-    catch (const std::exception &e)
+    catch (const std::exception &)
     {
-        std::cerr << "IRC: Occurred an error while storing client: " << e.what() << std::endl;
-        close(client_fd); // close client socket if we can't store it
-        throw std::runtime_error("IRC: Failed to store client!");
+        close(client_fd);
+        throw;
     }
-    event.events = EPOLLIN;  // register the client with epoll
+    event.events = EPOLLIN;
     event.data.fd = client_fd;
-    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, client_fd, &event) < 0)  // register the client socket with epoll
+    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, client_fd, &event) < 0)
     {
         this->_client_fds.pop_back();
         close(client_fd);
@@ -144,27 +146,29 @@ void Server::accept_client()
 void Server::receive_data(int client_fd)
 {
     char buffer[1024];
-    int bytes_recv;
+    ssize_t bytes_recv;
 
     bytes_recv = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
     if (bytes_recv > 0)
     {
         buffer[bytes_recv] = '\0';
-        std::cout << "[Fd = " << client_fd << "] Client received: " << buffer;
+        std::cout << "[Fd = " << client_fd << "] Received: " << buffer;
     }
     else if (bytes_recv == 0)
-    {
         this->disconnect_client(client_fd);
-    }
 }
 
 void Server::disconnect_client(int client_fd)
 {
     std::vector<int>::iterator it;
+    std::vector<int>::iterator begin;
+    std::vector<int>::iterator end;
 
     if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0)
         throw std::runtime_error("IRC: epoll_ctl() failed.");
-    for (it = this->_client_fds.begin(); it != this->_client_fds.end(); ++it)
+    begin = this->_client_fds.begin();
+    end = this->_client_fds.end();
+    for (it = begin; it != end; ++it)
     {
         if (*it == client_fd)
         {
