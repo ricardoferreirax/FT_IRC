@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/30 13:26:04 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/30 14:06:35 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,10 +24,10 @@ Server::Server(int port, const std::string &pass)
 Server::~Server()
 {
     std::cout << "Closing server..." << std::endl;
-    for (size_t i = 0; i < this->_clientFds.size(); i++)
+    for (size_t i = 0; i < this->_client_fds.size(); i++)
 	{
-		close(this->_clientFds[i]);
-		std::cout << "[Fd = " << this->_clientFds[i] << "] " << "Client socket fd closed!" << std::endl;
+		close(this->_client_fds[i]);
+		std::cout << "[Fd = " << this->_client_fds[i] << "] " << "Client socket fd closed!" << std::endl;
 	}
     if (this->_epoll_fd != -1)
 	{
@@ -70,14 +70,12 @@ void Server::start_event_loop()
     epoll_event events[10];
     int ready_events;
     int current_fd;
-    bool connected;
 
-    connected = false;
     std::cout << "\nWaiting for connections..." << std::endl;
     while (true)
     {
-        if (connected)
-            std::cout << "\nWaiting for events..." << std::endl;
+        if (!this->_client_fds.empty())
+            std::cout << "\nWaiting for events...\n" << std::endl;
         ready_events = epoll_wait(this->_epoll_fd, events, 10, -1);
         if (ready_events < 0)
             throw std::runtime_error("IRC: epoll_wait() failed.");
@@ -87,7 +85,6 @@ void Server::start_event_loop()
             if (current_fd == this->_listen_fd && (events[i].events & EPOLLIN))
             {
                 this->accept_client();
-                connected = true;
             }
             else if (current_fd != this->_listen_fd && (events[i].events & EPOLLIN))
             {
@@ -125,7 +122,7 @@ void Server::accept_client()
     }
     try
     {
-        this->_clientFds.push_back(client_fd);  // store the client
+        this->_client_fds.push_back(client_fd);  // store the client
     }
     catch (const std::exception &e)
     {
@@ -137,7 +134,7 @@ void Server::accept_client()
     event.data.fd = client_fd;
     if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, client_fd, &event) < 0)  // register the client socket with epoll
     {
-        this->_clientFds.pop_back();
+        this->_client_fds.pop_back();
         close(client_fd);
         throw std::runtime_error("IRC: epoll_ctl() failed.");
     }
@@ -153,6 +150,28 @@ void Server::receive_data(int client_fd)
     if (bytes_recv > 0)
     {
         buffer[bytes_recv] = '\0';
-        std::cout << "[Fd = " << client_fd << "] Received: " << buffer;
+        std::cout << "[Fd = " << client_fd << "] Client received: " << buffer;
     }
+    else if (bytes_recv == 0)
+    {
+        this->disconnect_client(client_fd);
+    }
+}
+
+void Server::disconnect_client(int client_fd)
+{
+    std::vector<int>::iterator it;
+
+    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0)
+        throw std::runtime_error("IRC: epoll_ctl() failed.");
+    for (it = this->_client_fds.begin(); it != this->_client_fds.end(); ++it)
+    {
+        if (*it == client_fd)
+        {
+            this->_client_fds.erase(it);
+            break;
+        }
+    }
+    close(client_fd);
+    std::cout << "[Fd = " << client_fd << "] Client disconnected!" << std::endl;
 }
