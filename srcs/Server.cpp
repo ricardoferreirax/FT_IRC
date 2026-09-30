@@ -6,11 +6,9 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/30 14:33:50 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/30 16:32:43 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
-#include "../includes/Server.hpp"
 
 #include "../includes/Server.hpp"
 
@@ -50,9 +48,7 @@ void Server::start_socket()
 
     this->_listen_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (this->_listen_fd < 0)
-	{
 		throw std::runtime_error("IRC: socket() failed.");
-	}
 	server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     server_addr.sin_port = htons(this->_port);
@@ -68,30 +64,29 @@ void Server::start_socket()
     std::cout << "Server listening on port " << this->_port << std::endl;
 }
 
-void Server::setup_epoll()
+void Server::add_to_epoll(int fd)
 {
     epoll_event event;
 
-    this->_epoll_fd = epoll_create1(0);
-    if (this->_epoll_fd < 0)
-        throw std::runtime_error("IRC: epoll_create1() failed.");
     event.events = EPOLLIN;
-    event.data.fd = this->_listen_fd;
-    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0)
+    event.data.fd = fd;
+    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, fd, &event) < 0)
         throw std::runtime_error("IRC: epoll_ctl() failed.");
 }
 
-void Server::start_event_loop()
+void Server::start_epoll()
 {
     epoll_event events[10];
     int ready_events;
     int current_fd;
 
+    this->_epoll_fd = epoll_create1(0);
+    if (this->_epoll_fd < 0)
+		throw std::runtime_error("IRC: epoll_create1() failed.");
+    this->add_to_epoll(this->_listen_fd);
     std::cout << "\nWaiting for connections..." << std::endl;
     while (true)
     {
-        if (!this->_client_fds.empty())
-            std::cout << "\nWaiting for events..." << std::endl;
         ready_events = epoll_wait(this->_epoll_fd, events, 10, -1);
         if (ready_events < 0)
             throw std::runtime_error("IRC: epoll_wait() failed.");
@@ -113,7 +108,6 @@ void Server::start_event_loop()
 void Server::accept_client()
 {
     int client_fd;
-    epoll_event event;
 
     client_fd = accept(this->_listen_fd, NULL, NULL);
     if (client_fd < 0)
@@ -132,13 +126,15 @@ void Server::accept_client()
         close(client_fd);
         throw;
     }
-    event.events = EPOLLIN;
-    event.data.fd = client_fd;
-    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, client_fd, &event) < 0)
+    try
+    {
+        this->add_to_epoll(client_fd);
+    }
+    catch (const std::exception &)
     {
         this->_client_fds.pop_back();
         close(client_fd);
-        throw std::runtime_error("IRC: epoll_ctl() failed.");
+        throw;
     }
     std::cout << "[Fd = " << client_fd << "] Client connected!" << std::endl;
 }

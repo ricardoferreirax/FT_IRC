@@ -6,10 +6,9 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/30 14:02:04 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/09/30 16:22:12 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
 
 #ifndef SERVER_HPP
 # define SERVER_HPP
@@ -34,17 +33,17 @@ class Server
 
         std::vector<int> _client_fds;
 
-		void accept_client();
+        void add_to_epoll(int fd);
+        void accept_client();
         void receive_data(int client_fd);
-		void disconnect_client(int client_fd);
+        void disconnect_client(int client_fd);
 
-	public:
-		Server(int port, const std::string &pass);
-		~Server();
+    public:
+        Server(int port, const std::string &pass);
+        ~Server();
 
         void start_socket();
-        void setup_epoll();
-        void start_event_loop();
+        void start_epoll();
 };
 
 #endif
