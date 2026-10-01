@@ -6,15 +6,15 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/09/30 18:46:43 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/01 11:00:15 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
 
 // creates server object and stores config received.
-// port: where the server will listen for incoming TCP connections.
-// pass: password that clients will later need during irc registration.
+// port: where server will listen for incoming tcp connections.
+// pass: password clients will need during irc registration.
 Server::Server(int port, const std::string &pass)
 {
     this->_pass = pass;
@@ -55,7 +55,7 @@ void Server::start_socket()
         throw std::runtime_error("IRC: socket() failed.");
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);  // configure socket to accept connections on any local network interface
-    server_addr.sin_port = htons(this->_port);        // configure socket to listen on specified port (convert to network byte order)
+    server_addr.sin_port = htons(this->_port);       // configure socket to listen on specified port (convert to network byte order)
     socket_opt = 1;
     if (setsockopt(this->_listen_fd, SOL_SOCKET, SO_REUSEADDR, &socket_opt, sizeof(socket_opt)) < 0) // enable SO_REUSEADDR so listening address can be reused after restarting the server
         throw std::runtime_error("IRC: setsockopt() failed.");
@@ -63,15 +63,15 @@ void Server::start_socket()
         throw std::runtime_error("IRC: fcntl() failed.");
     if (bind(this->_listen_fd, reinterpret_cast<sockaddr *>(&server_addr), sizeof(server_addr)) < 0) // associate socket with configured address and port so it can receive incoming connections
         throw std::runtime_error("IRC: bind() failed.");
-    if (listen(this->_listen_fd, SOMAXCONN) < 0)         // changes into a listening socket so it can receive incoming tcp connection
+    if (listen(this->_listen_fd, SOMAXCONN) < 0)         // changes socket into a listening socket so it can receive incoming tcp connection
         throw std::runtime_error("IRC: listen() failed.");
     std::cout << "Server listening on port " << this->_port << std::endl;
 }
 
-// creates epoll and starts the event loop of the server.
+// creates epoll and starts the event loop of the server
 // epoll allows a single server process to monitor multiple sockets without blocking while waiting for one specific client.
-// each returned event contains the fd that generated it. If it is _listen_fd, there is a new connection to accept.
-// otherwise, the event belongs to an already connected client.
+// each returned event contains fd that generated it, if it is listen_fd, there is a new connection to accept.
+// otherwise, event belongs to an already connected client.
 void Server::start_epoll()
 {
     epoll_event events[10];
@@ -151,7 +151,6 @@ void Server::accept_client()
     std::cout << "[Fd = " << client_fd << "] Client connected!" << std::endl;
 }
 
-
 // reads available tcp data from one connected client.
 // recv() tells how many bytes are currently available, it doesn't guarantee that those bytes contain exactly one complete irc message.
 // Otherwise, multiple irc messages may arrive in one recv() call.
@@ -173,12 +172,8 @@ void Server::receive_data(int client_fd)
     }
 }
 
-/*
- extracts complete irc messages from a client's receive buffer. irc messages are terminated by \r\n.
-
- any incomplete data left after the loop stays inside the client buffer and will be combined with bytes received by a future recv().
-*/
-
+// extracts complete irc messages from a client's receive buffer. irc messages are terminated by \r\n.
+// any incomplete data left after the loop stays inside the client buffer and will be combined with bytes received by a future recv().
 void Server::process_buffer(int client_fd)
 {
     std::string &buffer = this->_client_buffers[client_fd];
@@ -195,25 +190,27 @@ void Server::process_buffer(int client_fd)
     }
 }
 
+// removes a disconnected client from every part of the server that was tracking it
+// EPOLL_CTL_DEL removes the socket from the epoll interest list
 void Server::disconnect_client(int client_fd)
 {
     std::vector<int>::iterator it;
     std::vector<int>::iterator begin;
     std::vector<int>::iterator end;
 
-    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0)
+    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0) // stop monitoring client socket with epoll (removes from epoll list) so server will no longer receive events for this client.
         throw std::runtime_error("IRC: epoll_ctl() failed.");
     begin = this->_client_fds.begin();
     end = this->_client_fds.end();
-    for (it = begin; it != end; ++it)
+    for (it = begin; it != end; ++it)  // iterate through the vector of active client fds
     {
-        if (*it == client_fd)
+        if (*it == client_fd) // to find the one that matches the disconnected client
         {
-            this->_client_fds.erase(it);
+            this->_client_fds.erase(it); // remove the client fd from the vector
             break;
         }
     }
-    this->_client_buffers.erase(client_fd);
-    close(client_fd);
+    this->_client_buffers.erase(client_fd); // remove any complete or incomplete data stored for this client buffer
+    close(client_fd); // close socket so that OS can reuse the fd for future connections
     std::cout << "[Fd = " << client_fd << "] Client disconnected!" << std::endl;
 }
