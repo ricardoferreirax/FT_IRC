@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/02 16:22:17 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/02 16:46:31 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -136,8 +136,8 @@ void Server::accept_client()
     std::cout << "[Fd = " << client_fd << "] Client connected!" << std::endl;
 }
 
-// recv() tells how many bytes are available, it doesn't guarantee that those bytes contain exactly one complete irc message.
-// multiple messages may also arrive in one recv() call so received bytes are appended to persistent buffer associated with this client.
+// recv() reads and tells how many bytes are available to read from the client socket, if there are bytes available, they are read 
+// and appended to the client's persistent buffer. buffer may contain incomplete data from previous recv() calls.
 void Server::receive_data(int client_fd)
 {
     char buffer[1024];
@@ -146,17 +146,17 @@ void Server::receive_data(int client_fd)
     bytes_recv = recv(client_fd, buffer, sizeof(buffer), 0);  // reads tcp data from connected client socket and stores it in the buffer
     if (bytes_recv > 0) // means that the client sent data and it was successfully read into the buffer
     {
-        this->_client_buffers[client_fd].append(buffer, bytes_recv); // append the exactly received bytes to the buffer associated with this client. This buffer may contain incomplete data from previous recv() calls.
-        this->process_buffer(client_fd); // extracts complete irc messages from the client's receive buffer and processes them
+        this->_client_buffers[client_fd].append(buffer, bytes_recv); // append the exactly received bytes to buffer associated with this client
+        this->process_buffer(client_fd); // extracts complete irc messages from client's receive buffer and processes them
     }
-    else if (bytes_recv == 0) // means that peer has closed its side of the tcp connection
+    else if (bytes_recv == 0) // means peer has closed its side of tcp connection
     {
         this->disconnect_client(client_fd);
     }
 }
 
 // extracts complete irc messages from a client's receive buffer. irc messages are terminated by \r\n.
-// any incomplete data left after the loop stays inside the client buffer and will be combined with bytes received by a future recv().
+// any incomplete data left after the loop stays inside the client buffer and will be combined with bytes received by a future recv()
 void Server::process_buffer(int client_fd)
 {
     std::string &buffer = this->_client_buffers[client_fd];
@@ -164,7 +164,7 @@ void Server::process_buffer(int client_fd)
     size_t pos;
 
     pos = buffer.find("\r\n"); // searches for the end of the first complete irc message in the buffer
-    while (pos != std::string::npos)
+    while (pos != std::string::npos) // while there is a complete irc message in buffer...
     {
         message = buffer.substr(0, pos); // extracts the message without the terminating \r\n
         std::cout << "[Fd = " << client_fd << "] Message: " << message << std::endl;
@@ -181,13 +181,13 @@ void Server::disconnect_client(int client_fd)
     std::vector<int>::iterator begin;
     std::vector<int>::iterator end;
 
-    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0) // stop monitoring client socket with epoll (removes from epoll list) so server will no longer receive events for this client.
+    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0) // stop monitoring client socket (removes from epoll list) so server will no longer receive events for this client.
         throw std::runtime_error("IRC: epoll_ctl() failed.");
     begin = this->_client_fds.begin();
     end = this->_client_fds.end();
     for (it = begin; it != end; ++it)  // iterate through the vector of active client fds
     {
-        if (*it == client_fd) // to find the one that matches the disconnected client
+        if (*it == client_fd) // if matches the disconnected client
         {
             this->_client_fds.erase(it); // remove the client fd from the vector
             break;
