@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/01 11:00:15 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/02 16:22:17 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -68,100 +68,83 @@ void Server::start_socket()
     std::cout << "Server listening on port " << this->_port << std::endl;
 }
 
-// creates epoll and starts the event loop of the server
-// epoll allows a single server process to monitor multiple sockets without blocking while waiting for one specific client.
-// each returned event contains fd that generated it, if it is listen_fd, there is a new connection to accept.
-// otherwise, event belongs to an already connected client.
-void Server::start_epoll()
+// creates epoll which allows server monitor multiple sockets w/out blocking while waiting for events.
+// listening socket is added to epoll list so epoll can notify server whenever a new tcp connection is waiting to be accepted.
+void Server::prepare_epoll()
 {
-    epoll_event events[10];
-    int ready_events;       // how many events were returned by epoll_wait()
-    int current_fd;
+    epoll_event event;
 
-    this->_epoll_fd = epoll_create1(0);  // create epoll instance that will be used to monitor multiple fds for events
+    this->_epoll_fd = epoll_create1(0);
     if (this->_epoll_fd < 0)
         throw std::runtime_error("IRC: epoll_create1() failed.");
-    this->add_to_epoll(this->_listen_fd); // register listening socket with epoll so server can be notified when a new connection is waiting to be accepted
+    event.events = EPOLLIN;  // fd server socket wanna know when data can be read and is ready for reading -> a new connection is waiting
+    event.data.fd = this->_listen_fd; // stores the fd inside the event, allows to know which fd generated the event
+    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0) // add socket to epoll list
+        throw std::runtime_error("IRC: epoll_ctl() failed.");
+}
+	
+void Server::handle_events()
+{
+    epoll_event events[10];
+    int ready_events;  // how many events were returned by epoll_wait()
+    int current_fd;
+
     std::cout << "\nWaiting for connections..." << std::endl;
-    while (true)
+    while (true) // runs until server is closed
     {
-        ready_events = epoll_wait(this->_epoll_fd, events, 10, -1);  // wait until one or more registered fds become ready for reading. epoll_wait() blocks until at least one fd is ready.
+        ready_events = epoll_wait(this->_epoll_fd, events, 10, -1); // wait until at least one registered fd socket become ready or an event happens
         if (ready_events < 0)
             throw std::runtime_error("IRC: epoll_wait() failed.");
-        for (int i = 0; i < ready_events; i++) // iterate through all the events returned by epoll_wait() and process them one by one
+        for (int i = 0; i < ready_events; i++) // iterate through events returned by epoll_wait() and process them one by one
         {
-            current_fd = events[i].data.fd;
-            if (current_fd == this->_listen_fd && (events[i].events & EPOLLIN))  // An EPOLLIN event on listening socket means that a new client is waiting to be accepted
+            current_fd = events[i].data.fd; // get fd socket that generated the event
+            if (current_fd == this->_listen_fd && (events[i].events & EPOLLIN)) // if returned event is from listening socket and it's ready for reading...
             {
-                this->accept_client();
+                this->accept_client(); // a new client is waiting to be accepted
             }
-            else if (current_fd != this->_listen_fd && (events[i].events & EPOLLIN)) // An EPOLLIN event on a client socket means that client has sent data that can be read with recv()
+            else if (current_fd != this->_listen_fd && (events[i].events & EPOLLIN)) // if returned event is from another socket and it's ready for reading...
             {
-                this->receive_data(current_fd);
+                this->receive_data(current_fd); // an already connected client has sent data
             }
         }
     }
 }
 
-// registers a fd inside the server's epoll instance. epoll needs to know which fds server wants to monitor.
-void Server::add_to_epoll(int fd)
-{
-    epoll_event event;
-
-    event.events = EPOLLIN;  // tells epoll that we are interested in events where the fd becomes ready for reading
-    event.data.fd = fd;      // stores the fd inside the event, this allows to know which fd generated the event
-    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, fd, &event) < 0) // tells epoll_ctl() that this fd should be added to epoll interest list
-        throw std::runtime_error("IRC: epoll_ctl() failed.");
-}
-
-// accepts one new tcp client connection and prepares its socket so it can be managed by the server.
-// buffer is necessary because tcp is a byte stream and one recv() call doesn't necessarily correspond to one complete irc message
+// accepts a new tcp client and prepares its socket so it can be monitored by the server.
 void Server::accept_client()
 {
     int client_fd;
+    epoll_event event;
 
-    client_fd = accept(this->_listen_fd, NULL, NULL);  // accepts the pending connection from listening sockcet. client_fd represents the new connected client
+    client_fd = accept(this->_listen_fd, NULL, NULL); // accepts pending connection from listening sockcet, client_fd is socket to communicate with new connected client
     if (client_fd < 0)
         throw std::runtime_error("IRC: accept() failed.");
-    if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0) // every connected client socket must also be non-blocking so that recv() does not block the server while waiting for data from one specific client
+    if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0) // make client socket non-blocking so recv() doesn't block server while waiting data from one specific client
     {
         close(client_fd);
         throw std::runtime_error("IRC: fcntl() failed.");
     }
-    try
+    event.events = EPOLLIN; // configure event that epoll should monitor for this client
+    event.data.fd = client_fd;
+    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, client_fd, &event) < 0)
     {
-        this->_client_fds.push_back(client_fd);  // store client fd so server knows which clients are currently connected
-    }
-    catch (const std::exception &)
-    {
-        close(client_fd); // if vector allocation fails, close the socket
-        throw;
-    }
-    try
-    {
-        this->add_to_epoll(client_fd); // register the client socket with epoll so server can be notified when this client sends data
-    }
-    catch (const std::exception &)
-    {
-        this->_client_fds.pop_back(); // remove the client fd from the vector before closing the socket
         close(client_fd);
-        throw;
+        throw std::runtime_error("IRC: epoll_ctl() failed.");
     }
-    this->_client_buffers[client_fd] = "";  // create empty receive buffer for this client. Each client needs its own buffer because data from different clients must never be mixed
+    this->_client_fds.push_back(client_fd); // store client fd so server knows which clients are connected
+    this->_client_buffers[client_fd] = ""; // create empty receive buffer for this client, each client needs its own buffer
     std::cout << "[Fd = " << client_fd << "] Client connected!" << std::endl;
 }
 
-// reads available tcp data from one connected client.
-// recv() tells how many bytes are currently available, it doesn't guarantee that those bytes contain exactly one complete irc message.
-// Otherwise, multiple irc messages may arrive in one recv() call.
-// Because of this, received bytes are appended to the persistent buffer associated with this client.
+// recv() tells how many bytes are available, it doesn't guarantee that those bytes contain exactly one complete irc message.
+// multiple messages may also arrive in one recv() call so received bytes are appended to persistent buffer associated with this client.
 void Server::receive_data(int client_fd)
 {
     char buffer[1024];
     ssize_t bytes_recv;
 
-    bytes_recv = recv(client_fd, buffer, sizeof(buffer), 0);  // reads data from client socket and stores it in the buffer. It returns the number of bytes read.
-    if (bytes_recv > 0)
+    bytes_recv = recv(client_fd, buffer, sizeof(buffer), 0);  // reads tcp data from connected client socket and stores it in the buffer
+    if (bytes_recv > 0) // means that the client sent data and it was successfully read into the buffer
     {
         this->_client_buffers[client_fd].append(buffer, bytes_recv); // append the exactly received bytes to the buffer associated with this client. This buffer may contain incomplete data from previous recv() calls.
         this->process_buffer(client_fd); // extracts complete irc messages from the client's receive buffer and processes them
