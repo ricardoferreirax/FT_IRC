@@ -6,11 +6,19 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/02 16:46:31 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/02 16:56:13 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
+
+volatile sig_atomic_t running = 1;
+
+void handle_signal(int signal)
+{
+    (void)signal;
+    running = 0;
+}
 
 // creates server object and stores config received.
 // port: where server will listen for incoming tcp connections.
@@ -82,20 +90,30 @@ void Server::prepare_epoll()
     if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0) // add socket to epoll list
         throw std::runtime_error("IRC: epoll_ctl() failed.");
 }
-	
+
 void Server::handle_events()
 {
     epoll_event events[10];
-    int ready_events;  // how many events were returned by epoll_wait()
+    int ready_events; // how many events were returned by epoll_wait()
     int current_fd;
+    struct sigaction sa;
 
+    sa.sa_handler = handle_signal;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    if (sigaction(SIGINT, &sa, NULL) < 0)
+        throw std::runtime_error("IRC: sigaction() failed.");
     std::cout << "\nWaiting for connections..." << std::endl;
-    while (true) // runs until server is closed
+    while (running) // runs until ctrl-c changes running to 0
     {
-        ready_events = epoll_wait(this->_epoll_fd, events, 10, -1); // wait until at least one registered fd socket become ready or an event happens
+        ready_events = epoll_wait(this->_epoll_fd, events, 10, -1); // wait until at least one registered socket becomes ready
         if (ready_events < 0)
+        {
+            if (!running) // ctrl-cinterrupted epoll_wait(), so stop event loop
+                break;
             throw std::runtime_error("IRC: epoll_wait() failed.");
-        for (int i = 0; i < ready_events; i++) // iterate through events returned by epoll_wait() and process them one by one
+        }
+        for (int i = 0; i < ready_events; i++) // // process all events returned by epoll_wait()
         {
             current_fd = events[i].data.fd; // get fd socket that generated the event
             if (current_fd == this->_listen_fd && (events[i].events & EPOLLIN)) // if returned event is from listening socket and it's ready for reading...
