@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/05 19:58:58 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/05 20:32:04 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -136,6 +136,7 @@ void Server::accept_client()
     }
     this->_client_fds.push_back(client_fd); // store client fd so server knows which clients are connected
     this->_client_buffers[client_fd] = ""; // create empty receive buffer for this client, each client needs its own buffer
+	this->_authenticated[client_fd] = false;
     std::cout << "[Fd = " << client_fd << "] Client connected!\n" << std::endl;
 }
 
@@ -172,6 +173,7 @@ void Server::process_messages(int client_fd)
     while (pos != std::string::npos) // while there is at least one complete msg ready to be processed
     {
         msg = buffer.substr(0, pos); // copy till "\r\n" into msg
+		std::cout << "--------------------------------------------------------" << std::endl;
         std::cout << "[Message]: " << msg << std::endl;
         space = msg.find(' '); // search for first space in msg, which separates cmd from its params
         if (space == std::string::npos) // if no space was found msg has only a cmd
@@ -193,26 +195,16 @@ void Server::process_messages(int client_fd)
 
 void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string &params)
 {
-    (void)client_fd;
-
     std::cout << "[Command]: " << cmd << std::endl;
     std::cout << "[Params] : " << params << std::endl;
     if (cmd == "PASS")
-    {
-        std::cout << "PASS command received" << std::endl;
-    }
+        this->handle_pass(client_fd, params);
     else if (cmd == "NICK")
-    {
-        std::cout << "NICK command received" << std::endl;
-    }
+        this->handle_nick(client_fd, params);
     else if (cmd == "USER")
-    {
-        std::cout << "USER command received" << std::endl;
-    }
+        this->handle_user(client_fd, params);
     else
-    {
         std::cout << "Unknown command" << std::endl;
-    }
     std::cout << std::endl;
 }
 
@@ -236,6 +228,7 @@ void Server::disconnect_client(int client_fd)
         }
     }
     this->_client_buffers.erase(client_fd); // remove any complete/incomplete data stored for this client buffer
+	this->_authenticated.erase(client_fd); // remove authentication status of this client
     close(client_fd);
     std::cout << "[Fd = " << client_fd << "] Client disconnected!" << std::endl;
 }
