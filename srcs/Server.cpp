@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/05 19:34:46 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/05 19:58:58 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -139,8 +139,8 @@ void Server::accept_client()
     std::cout << "[Fd = " << client_fd << "] Client connected!\n" << std::endl;
 }
 
-// recv() reads and tells how many bytes are available to read from the client socket, if there are bytes available, they are read 
-// and appended to the client's persistent buffer. buffer may contain incomplete data from previous recv() calls.
+// recv() reads and tells how many bytes are available to read from client socket, if there are bytes available, they are read 
+// and appended to client's buffer. buffer may contain incomplete data from previous recv() calls.
 void Server::receive_data(int client_fd)
 {
     char buffer[1024];
@@ -150,7 +150,7 @@ void Server::receive_data(int client_fd)
     if (bytes_recv > 0) // if client sent data and it was successfully read into buffer
     {
         this->_client_buffers[client_fd].append(buffer, bytes_recv); // append exactly received bytes to buffer associated with this client
-        this->process_messages(client_fd); // extracts complete irc messages from client's receive buffer and processes them
+        this->process_messages(client_fd); // extracts complete irc msgs from client's buffer and processes them
     }
     else if (bytes_recv == 0) // if peer has closed its side of tcp connection
     {
@@ -163,6 +163,8 @@ void Server::process_messages(int client_fd)
 {
     std::string &buffer = this->_client_buffers[client_fd]; // buffer associated with this client fd.
     std::string msg;
+    std::string cmd;
+    std::string params;
     size_t pos;
     size_t space;
 
@@ -170,22 +172,48 @@ void Server::process_messages(int client_fd)
     while (pos != std::string::npos) // while there is at least one complete msg ready to be processed
     {
         msg = buffer.substr(0, pos); // copy till "\r\n" into msg
-        space = msg.find(' '); // search for first space in msg, which separates cmd from its params
         std::cout << "[Message]: " << msg << std::endl;
+        space = msg.find(' '); // search for first space in msg, which separates cmd from its params
         if (space == std::string::npos) // if no space was found msg has only a cmd
         {
-            std::cout << "[Command]: " << msg << std::endl;
-            std::cout << "[Params] : " << std::endl;
+			cmd = msg;
+			params = "";
         }
         else // otherwise msg has a cmd followed by at least one param
         {
-            std::cout << "[Command]: " << msg.substr(0, space) << std::endl; // extract everything before first space
-            std::cout << "[Params] : " << msg.substr(space + 1) << std::endl; // extract everything after first space
+			cmd = msg.substr(0, space); // extract everything before first space
+			params = msg.substr(space + 1); // extract everything after first space
         }
         std::cout << std::endl;
+		this->handle_cmd(client_fd, cmd, params);
         buffer.erase(0, pos + 2); // remove processed message and "\r\n" from client's buffer
         pos = buffer.find("\r\n");  // search again cause buffer may has another complete msg after one that was removed
     }
+}
+
+void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string &params)
+{
+    (void)client_fd;
+
+    std::cout << "[Command]: " << cmd << std::endl;
+    std::cout << "[Params] : " << params << std::endl;
+    if (cmd == "PASS")
+    {
+        std::cout << "PASS command received" << std::endl;
+    }
+    else if (cmd == "NICK")
+    {
+        std::cout << "NICK command received" << std::endl;
+    }
+    else if (cmd == "USER")
+    {
+        std::cout << "USER command received" << std::endl;
+    }
+    else
+    {
+        std::cout << "Unknown command" << std::endl;
+    }
+    std::cout << std::endl;
 }
 
 // removes a disconnected client from every part of server. EPOLL_CTL_DEL removes socket from epoll interest list
