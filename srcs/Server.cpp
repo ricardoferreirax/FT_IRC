@@ -6,13 +6,11 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/05 18:12:37 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/05 18:26:44 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
-
-volatile sig_atomic_t running = 1;
 
 void handle_signal(int signal)
 {
@@ -20,9 +18,19 @@ void handle_signal(int signal)
     running = 0;
 }
 
-// creates server object and stores config received.
-// port: where server will listen for incoming tcp connections.
-// pass: password clients will need during irc registration.
+void setup_signals()
+{
+    struct sigaction action;
+
+    action.sa_handler = handle_signal; // set signal handler function for sigint
+    sigemptyset(&action.sa_mask); // initialize mask to empty so no signals are blocked during execution of the handler
+    action.sa_flags = 0;
+    if (sigaction(SIGINT, &action, NULL) < 0) // set the action for sigint (ctrl-c) to the specified handler
+        throw std::runtime_error("IRC: sigaction() failed.");
+}
+
+// port: where server will listen for incoming tcp connections
+// pass: password clients will need during irc registration
 Server::Server(int port, const std::string &pass)
 {
     this->_pass = pass;
@@ -94,26 +102,20 @@ void Server::prepare_epoll()
 void Server::handle_events()
 {
     epoll_event events[10];
-    int ready_events; // how many events were returned by epoll_wait()
+    int ready_events;  // how many events were returned by epoll_wait()
     int current_fd;
-    struct sigaction sa;
 
-    sa.sa_handler = handle_signal;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    if (sigaction(SIGINT, &sa, NULL) < 0)
-        throw std::runtime_error("IRC: sigaction() failed.");
     std::cout << "\nWaiting for connections..." << std::endl;
-    while (running) // runs until ctrl-c changes running to 0
+    while (running)  // runs until ctrl-c changes running to 0
     {
-        ready_events = epoll_wait(this->_epoll_fd, events, 10, -1); // wait until at least one registered socket becomes ready
+        ready_events = epoll_wait(this->_epoll_fd, events, 10, -1); // wait till at least one registered socket becomes ready
         if (ready_events < 0)
         {
             if (!running) // ctrl-cinterrupted epoll_wait(), so stop event loop
                 break;
             throw std::runtime_error("IRC: epoll_wait() failed.");
         }
-        for (int i = 0; i < ready_events; i++) // // process all events returned by epoll_wait()
+        for (int i = 0; i < ready_events; i++) // process all events returned by epoll_wait()
         {
             current_fd = events[i].data.fd; // get fd socket that generated the event
             if (current_fd == this->_listen_fd && (events[i].events & EPOLLIN)) // if returned event is from listening socket and it's ready for reading...

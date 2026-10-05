@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/02 16:56:33 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/05 18:31:44 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,12 +19,15 @@
 #include <vector>
 #include <map>
 #include <cstring>
+#include <cstdlib>
 #include <unistd.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <csignal>
+
+extern volatile sig_atomic_t running;
 
 class Server
 {
@@ -34,8 +37,8 @@ class Server
         int _listen_fd;
         int _epoll_fd;
 
-        std::vector<int> _client_fds;  // stores fds of all currently connected clients so server knows clients are active and manage them
-        std::map<int, std::string> _client_buffers;
+        std::vector<int> _client_fds; // stores fds of all currently connected clients
+        std::map<int, std::string> _client_buffers; // stores the receive buffer associated with each client fd
 
         void accept_client();
         void receive_data(int client_fd);
@@ -50,5 +53,8 @@ class Server
         void prepare_epoll();
         void handle_events();
 };
+
+void handle_signal(int signal);
+void setup_signals();
 
 #endif

@@ -6,15 +6,13 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:14:15 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/02 16:23:32 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/05 18:31:51 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
-#include <cstdlib>
-#include <exception>
-#include <iostream>
-#include <string>
+
+volatile sig_atomic_t running = 1;
 
 bool	checkPortRange(const std::string &str)
 {
@@ -71,17 +69,19 @@ int	main(int ac, char **av)
     port = std::atoi(av[1]);
     pass = av[2];
     try
-    {
-        Server server(port, pass);
-
-        server.start_socket();
-		server.prepare_epoll();
-		server.handle_events();
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << std::endl;
-        return (EXIT_FAILURE);
-    }
+	{
+	    setup_signals();
+	
+	    Server server(port, pass);
+	
+	    server.start_socket();
+	    server.prepare_epoll();
+	    server.handle_events();
+	}
+	catch (const std::exception &e)
+	{
+	    std::cerr << e.what() << std::endl;
+	    return (EXIT_FAILURE);
+	}
     return (EXIT_SUCCESS);
 }
