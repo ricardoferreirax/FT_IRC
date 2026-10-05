@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/05 18:31:44 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/05 19:35:08 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,7 +42,7 @@ class Server
 
         void accept_client();
         void receive_data(int client_fd);
-        void process_buffer(int client_fd);
+        void process_messages(int client_fd);
         void disconnect_client(int client_fd);
 
     public:

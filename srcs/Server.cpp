@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/05 18:37:11 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/05 19:34:46 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -88,7 +88,7 @@ void Server::handle_events()
     int ready_events;  // how many events were returned by epoll_wait()
     int current_fd;
 
-    std::cout << "\nWaiting for connections..." << std::endl;
+    std::cout << "\nWaiting for connections...\n" << std::endl;
     while (running)  // runs until ctrl-c changes running to 0
     {
         ready_events = epoll_wait(this->_epoll_fd, events, 10, -1); // wait till at least one registered socket becomes ready
@@ -136,7 +136,7 @@ void Server::accept_client()
     }
     this->_client_fds.push_back(client_fd); // store client fd so server knows which clients are connected
     this->_client_buffers[client_fd] = ""; // create empty receive buffer for this client, each client needs its own buffer
-    std::cout << "[Fd = " << client_fd << "] Client connected!" << std::endl;
+    std::cout << "[Fd = " << client_fd << "] Client connected!\n" << std::endl;
 }
 
 // recv() reads and tells how many bytes are available to read from the client socket, if there are bytes available, they are read 
@@ -150,7 +150,7 @@ void Server::receive_data(int client_fd)
     if (bytes_recv > 0) // if client sent data and it was successfully read into buffer
     {
         this->_client_buffers[client_fd].append(buffer, bytes_recv); // append exactly received bytes to buffer associated with this client
-        this->process_buffer(client_fd); // extracts complete irc messages from client's receive buffer and processes them
+        this->process_messages(client_fd); // extracts complete irc messages from client's receive buffer and processes them
     }
     else if (bytes_recv == 0) // if peer has closed its side of tcp connection
     {
@@ -158,21 +158,33 @@ void Server::receive_data(int client_fd)
     }
 }
 
-// extracts complete irc messages from a client's receive buffer. irc messages are terminated by \r\n.
-// any incomplete data left after the loop stays inside the client buffer and will be combined with bytes received by a future recv()
-void Server::process_buffer(int client_fd)
+// extracts complete irc msgs from client's receive buffer, incomplete data stays in buffer till more data is received by recv().
+void Server::process_messages(int client_fd)
 {
-    std::string &buffer = this->_client_buffers[client_fd];
-    std::string message;
+    std::string &buffer = this->_client_buffers[client_fd]; // buffer associated with this client fd.
+    std::string msg;
     size_t pos;
+    size_t space;
 
-    pos = buffer.find("\r\n"); // searches for end of first complete irc message in buffer
-    while (pos != std::string::npos) // while there is a complete irc message in buffer...
+    pos = buffer.find("\r\n"); // search for first "\r\n" in buffer
+    while (pos != std::string::npos) // while there is at least one complete msg ready to be processed
     {
-        message = buffer.substr(0, pos); // extracts the message without '\r\n'
-        std::cout << "[Fd = " << client_fd << "] Message: " << message << std::endl;
-        buffer.erase(0, pos + 2); // remove the processed message and its "\r\n" from buffer
-        pos = buffer.find("\r\n"); // searches for end of the next complete irc message in buffer
+        msg = buffer.substr(0, pos); // copy till "\r\n" into msg
+        space = msg.find(' '); // search for first space in msg, which separates cmd from its params
+        std::cout << "[Message]: " << msg << std::endl;
+        if (space == std::string::npos) // if no space was found msg has only a cmd
+        {
+            std::cout << "[Command]: " << msg << std::endl;
+            std::cout << "[Params] : " << std::endl;
+        }
+        else // otherwise msg has a cmd followed by at least one param
+        {
+            std::cout << "[Command]: " << msg.substr(0, space) << std::endl; // extract everything before first space
+            std::cout << "[Params] : " << msg.substr(space + 1) << std::endl; // extract everything after first space
+        }
+        std::cout << std::endl;
+        buffer.erase(0, pos + 2); // remove processed message and "\r\n" from client's buffer
+        pos = buffer.find("\r\n");  // search again cause buffer may has another complete msg after one that was removed
     }
 }
 
