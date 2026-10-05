@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/05 21:04:22 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/05 21:50:36 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,7 @@
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <csignal>
+#include <sstream>
 
 extern volatile sig_atomic_t running;
 
@@ -41,6 +42,7 @@ class Server
         std::map<int, std::string> _client_buffers; // stores the receive buffer associated with each client fd
 		std::map<int, bool> _authenticated; // stores authentication status of each client fd
 		std::map<int, std::string> _nicknames; // stores nickname associated with each client fd
+		std::map<int, std::string> _usernames; // stores username associated with each client fd
 
         void accept_client();
         void receive_data(int client_fd);

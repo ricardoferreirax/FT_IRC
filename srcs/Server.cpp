@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/05 21:30:07 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/05 21:46:50 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -229,6 +229,8 @@ void Server::disconnect_client(int client_fd)
     }
     this->_client_buffers.erase(client_fd); // remove any complete/incomplete data stored for this client buffer
 	this->_authenticated.erase(client_fd); // remove authentication status of this client
+	this->_nicknames.erase(client_fd); // remove nickname associated with this client
+	this->_usernames.erase(client_fd); // remove username associated with this client
     close(client_fd);
     std::cout << "[CLIENT " << client_fd << "] DISCONNECTED!" << std::endl;
 }
