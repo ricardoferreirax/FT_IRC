@@ -6,28 +6,11 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/05 18:26:44 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/05 18:37:11 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
-
-void handle_signal(int signal)
-{
-    (void)signal;
-    running = 0;
-}
-
-void setup_signals()
-{
-    struct sigaction action;
-
-    action.sa_handler = handle_signal; // set signal handler function for sigint
-    sigemptyset(&action.sa_mask); // initialize mask to empty so no signals are blocked during execution of the handler
-    action.sa_flags = 0;
-    if (sigaction(SIGINT, &action, NULL) < 0) // set the action for sigint (ctrl-c) to the specified handler
-        throw std::runtime_error("IRC: sigaction() failed.");
-}
 
 // port: where server will listen for incoming tcp connections
 // pass: password clients will need during irc registration
