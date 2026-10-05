@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/05 20:32:04 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/05 21:30:07 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,19 +28,19 @@ Server::~Server()
     for (size_t i = 0; i < this->_client_fds.size(); i++)
     {
         close(this->_client_fds[i]);
-        std::cout << "[Fd = " << this->_client_fds[i] << "] Client socket fd closed!" << std::endl;
+        std::cout << "[CLIENT " << this->_client_fds[i] << "] Closed!" << std::endl;
     }
     if (this->_epoll_fd != -1)
     {
         close(this->_epoll_fd);
-        std::cout << "[Fd = " << this->_epoll_fd << "] epoll fd closed!" << std::endl;
+        std::cout << "[EPOLL FD " << this->_epoll_fd << "] Closed!" << std::endl;
     }
     if (this->_listen_fd != -1)
     {
         close(this->_listen_fd);
-        std::cout << "[Fd = " << this->_listen_fd << "] Listening socket fd closed!" << std::endl;
+        std::cout << "[SOCKET FD " << this->_listen_fd << "] Closed!" << std::endl;
     }
-    std::cout << "Server closed!" << std::endl;
+    std::cout << "[SERVER] Closed!" << std::endl;
 }
 
 // creates and prepares tcp listening socket used by irc server
@@ -64,7 +64,7 @@ void Server::start_socket()
         throw std::runtime_error("IRC: bind() failed.");
     if (listen(this->_listen_fd, SOMAXCONN) < 0)         // changes socket into a listening socket so it can receive incoming tcp connection
         throw std::runtime_error("IRC: listen() failed.");
-    std::cout << "Server listening on port " << this->_port << std::endl;
+    std::cout << "[SERVER] Listening On Port " << this->_port << std::endl;
 }
 
 // creates epoll which allows server monitor multiple sockets w/out blocking while waiting for events.
@@ -88,7 +88,7 @@ void Server::handle_events()
     int ready_events;  // how many events were returned by epoll_wait()
     int current_fd;
 
-    std::cout << "\nWaiting for connections...\n" << std::endl;
+    std::cout << "\n[SERVER] Waiting for connections..." << std::endl;
     while (running)  // runs until ctrl-c changes running to 0
     {
         ready_events = epoll_wait(this->_epoll_fd, events, 10, -1); // wait till at least one registered socket becomes ready
@@ -137,7 +137,7 @@ void Server::accept_client()
     this->_client_fds.push_back(client_fd); // store client fd so server knows which clients are connected
     this->_client_buffers[client_fd] = ""; // create empty receive buffer for this client, each client needs its own buffer
 	this->_authenticated[client_fd] = false;
-    std::cout << "[Fd = " << client_fd << "] Client connected!\n" << std::endl;
+	std::cout << "\n>>>>>>>>>> [CLIENT " << client_fd << "] CONNECTED! <<<<<<<<<<\n" << std::endl;
 }
 
 // recv() reads and tells how many bytes are available to read from client socket, if there are bytes available, they are read 
@@ -173,8 +173,8 @@ void Server::process_messages(int client_fd)
     while (pos != std::string::npos) // while there is at least one complete msg ready to be processed
     {
         msg = buffer.substr(0, pos); // copy till "\r\n" into msg
-		std::cout << "--------------------------------------------------------" << std::endl;
-        std::cout << "[Message]: " << msg << std::endl;
+		std::cout << "------------------------------------------------------------" << std::endl;
+		std::cout << "[CLIENT " << client_fd << "] MSG: " << msg << std::endl;
         space = msg.find(' '); // search for first space in msg, which separates cmd from its params
         if (space == std::string::npos) // if no space was found msg has only a cmd
         {
@@ -195,8 +195,8 @@ void Server::process_messages(int client_fd)
 
 void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string &params)
 {
-    std::cout << "[Command]: " << cmd << std::endl;
-    std::cout << "[Params] : " << params << std::endl;
+    std::cout << "[CMD]: " << cmd << std::endl;
+    std::cout << "[PARAMS]: " << params << std::endl;
     if (cmd == "PASS")
         this->handle_pass(client_fd, params);
     else if (cmd == "NICK")
@@ -204,7 +204,7 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
     else if (cmd == "USER")
         this->handle_user(client_fd, params);
     else
-        std::cout << "Unknown command" << std::endl;
+        std::cout << "\nUNKNOWN COMMAND" << std::endl;
     std::cout << std::endl;
 }
 
@@ -230,5 +230,5 @@ void Server::disconnect_client(int client_fd)
     this->_client_buffers.erase(client_fd); // remove any complete/incomplete data stored for this client buffer
 	this->_authenticated.erase(client_fd); // remove authentication status of this client
     close(client_fd);
-    std::cout << "[Fd = " << client_fd << "] Client disconnected!" << std::endl;
+    std::cout << "[CLIENT " << client_fd << "] DISCONNECTED!" << std::endl;
 }
