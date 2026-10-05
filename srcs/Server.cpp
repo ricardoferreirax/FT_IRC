@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/02 16:56:13 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/05 18:07:35 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -161,13 +161,13 @@ void Server::receive_data(int client_fd)
     char buffer[1024];
     ssize_t bytes_recv;
 
-    bytes_recv = recv(client_fd, buffer, sizeof(buffer), 0);  // reads tcp data from connected client socket and stores it in the buffer
-    if (bytes_recv > 0) // means that the client sent data and it was successfully read into the buffer
+    bytes_recv = recv(client_fd, buffer, sizeof(buffer), 0);  // reads tcp data from connected client socket and stores it in buffer
+    if (bytes_recv > 0) // if client sent data and it was successfully read into buffer
     {
-        this->_client_buffers[client_fd].append(buffer, bytes_recv); // append the exactly received bytes to buffer associated with this client
+        this->_client_buffers[client_fd].append(buffer, bytes_recv); // append exactly received bytes to buffer associated with this client
         this->process_buffer(client_fd); // extracts complete irc messages from client's receive buffer and processes them
     }
-    else if (bytes_recv == 0) // means peer has closed its side of tcp connection
+    else if (bytes_recv == 0) // if peer has closed its side of tcp connection
     {
         this->disconnect_client(client_fd);
     }
@@ -181,25 +181,24 @@ void Server::process_buffer(int client_fd)
     std::string message;
     size_t pos;
 
-    pos = buffer.find("\r\n"); // searches for the end of the first complete irc message in the buffer
+    pos = buffer.find("\r\n"); // searches for end of first complete irc message in buffer
     while (pos != std::string::npos) // while there is a complete irc message in buffer...
     {
-        message = buffer.substr(0, pos); // extracts the message without the terminating \r\n
+        message = buffer.substr(0, pos); // extracts the message without '\r\n'
         std::cout << "[Fd = " << client_fd << "] Message: " << message << std::endl;
-        buffer.erase(0, pos + 2); // remove the processed message and its "\r\n" terminator from the buffer
-        pos = buffer.find("\r\n"); // searches for the end of the next complete irc message in the buffer
+        buffer.erase(0, pos + 2); // remove the processed message and its "\r\n" from buffer
+        pos = buffer.find("\r\n"); // searches for end of the next complete irc message in buffer
     }
 }
 
-// removes a disconnected client from every part of the server that was tracking it
-// EPOLL_CTL_DEL removes the socket from the epoll interest list
+// removes a disconnected client from every part of server. EPOLL_CTL_DEL removes socket from epoll interest list
 void Server::disconnect_client(int client_fd)
 {
     std::vector<int>::iterator it;
     std::vector<int>::iterator begin;
     std::vector<int>::iterator end;
 
-    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0) // stop monitoring client socket (removes from epoll list) so server will no longer receive events for this client.
+    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0) // stop monitoring client socket so server doesn't receive events for this client.
         throw std::runtime_error("IRC: epoll_ctl() failed.");
     begin = this->_client_fds.begin();
     end = this->_client_fds.end();
@@ -211,7 +210,7 @@ void Server::disconnect_client(int client_fd)
             break;
         }
     }
-    this->_client_buffers.erase(client_fd); // remove any complete or incomplete data stored for this client buffer
-    close(client_fd); // close socket so that OS can reuse the fd for future connections
+    this->_client_buffers.erase(client_fd); // remove any complete/incomplete data stored for this client buffer
+    close(client_fd);
     std::cout << "[Fd = " << client_fd << "] Client disconnected!" << std::endl;
 }
