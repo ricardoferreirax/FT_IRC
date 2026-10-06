@@ -38,16 +38,11 @@ class Server
 	int _listen_fd;
 	int _epoll_fd;
 
-	std::vector<int> _client_fds;              
-		// stores fds of all currently connected clients
-	std::map<int, std::string> _client_buffers;
-		// stores the receive buffer associated with each client fd
-	std::map<int, bool> _authenticated;        
-		// stores authentication status of each client fd
-	std::map<int, std::string> _nicknames;     
-		// stores nickname associated with each client fd
-	std::map<int, std::string> _usernames;     
-		// stores username associated with each client fd
+	std::vector<int> _client_fds;              // stores fds of all currently connected clients
+	std::map<int, std::string> _client_buffers; // stores the receive buffer associated with each client fd
+	std::map<int, bool> _authenticated;        // stores authentication status of each client fd
+	std::map<int, std::string> _nicknames;     // stores nickname associated with each client fd
+	std::map<int, std::string> _usernames;     // stores username associated with each client fd
 
 	void accept_client();
 	void receive_data(int client_fd);
