@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/06 15:12:55 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/06 15:27:39 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -130,7 +130,10 @@ void Server::accept_client()
     this->_client_fds.push_back(client_fd); // store client fd in list of connected clients
     this->_client_buffers[client_fd] = ""; // create empty receive buffer used to store incoming data from client
     this->_authenticated[client_fd] = false;
-    std::cout << "\n[CLIENT " << client_fd << "] CONNECTED!\n" << std::endl;
+	this->_registered[client_fd] = false;
+	std::cout << "\n==========================================" << std::endl;	
+    std::cout << "			[CLIENT " << client_fd << "] CONNECTED!" << std::endl;
+	std::cout << "==========================================\n" << std::endl;	
 }
 
 // receives available data from client socket and appends it to client's buffer.
@@ -172,7 +175,7 @@ void Server::process_client_data(int client_fd)
 
 void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string &params)
 {
-    std::cout << "[CMD]: " << cmd << std::endl;
+    std::cout << "\n[CMD]: " << cmd << std::endl;
     std::cout << "[PARAMS]: " << params << std::endl;
     if (cmd == "PASS")
         this->handle_pass(client_fd, params);
@@ -183,6 +186,20 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
     else
         std::cout << "\nUNKNOWN COMMAND" << std::endl;
     std::cout << std::endl;
+}
+
+void Server::check_registration(int client_fd)
+{
+    if (this->_registered[client_fd])
+        return;
+    if (this->_authenticated[client_fd] && !this->_nicknames[client_fd].empty() && !this->_usernames[client_fd].empty())
+    {
+        this->_registered[client_fd] = true;
+		std::cout << "\n==========================================" << std::endl;
+        std::cout << "[CLIENT " << client_fd << "] REGISTERED!" << std::endl;
+		std::cout << "==========================================" << std::endl;
+
+    }
 }
 
 // removes a disconnected client from every part of server. EPOLL_CTL_DEL removes socket from epoll interest list
@@ -206,6 +223,7 @@ void Server::disconnect_client(int client_fd)
     }
     this->_client_buffers.erase(client_fd); // remove any complete/incomplete data stored for this client buffer
 	this->_authenticated.erase(client_fd); // remove authentication status of this client
+	this->_registered.erase(client_fd);
 	this->_nicknames.erase(client_fd); // remove nickname associated with this client
 	this->_usernames.erase(client_fd); // remove username associated with this client
     close(client_fd);

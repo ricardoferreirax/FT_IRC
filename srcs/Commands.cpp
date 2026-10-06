@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/05 22:15:54 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/06 15:17:44 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,19 +16,17 @@ void Server::handle_pass(int client_fd, const std::string &params)
 {
     if (params.empty())
     {
-		std::cout << "\nPASSWORD IS MISSING!";
-		std::cout << " | [AUTH]: " << this->_authenticated[client_fd] << std::endl;
+		std::cout << "\nPASSWORD IS MISSING!" << std::endl;
         return;
     }
     if (params != this->_pass)
     {
-		std::cout << "\nPASSWORD IS INCORRECT!";
-        std::cout << " | [AUTH]: " << this->_authenticated[client_fd] << std::endl;
+		std::cout << "\nPASSWORD IS INCORRECT!" << std::endl;
         return;
     }
 	this->_authenticated[client_fd] = true;
-    std::cout << "\nCORRECT PASSWORD!";
-	std::cout << " | [AUTH]: " << this->_authenticated[client_fd] << std::endl;
+    std::cout << "\nCORRECT PASSWORD!" << std::endl;
+	this->check_registration(client_fd);
 }
 
 void Server::handle_nick(int client_fd, const std::string &params)
@@ -54,6 +52,7 @@ void Server::handle_nick(int client_fd, const std::string &params)
     }
     this->_nicknames[client_fd] = params; // associate nickname with this client fd
     std::cout << "\nNICKNAME SET TO " << params << std::endl;
+	this->check_registration(client_fd);
 }
 
 void Server::handle_user(int client_fd, const std::string &params)
@@ -101,4 +100,5 @@ void Server::handle_user(int client_fd, const std::string &params)
     std::cout << "MODE: " << mode << std::endl;
     std::cout << "UNUSED: " << unused << std::endl;
     std::cout << "REALNAME: " << realname << std::endl;
+	this->check_registration(client_fd);
 }

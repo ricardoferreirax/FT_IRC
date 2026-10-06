@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/06 14:37:00 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/06 15:21:03 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,6 +43,7 @@ class Server
 		std::map<int, bool> _authenticated; // stores authentication status of each client fd
 		std::map<int, std::string> _nicknames; // stores nickname associated with each client fd
 		std::map<int, std::string> _usernames; // stores username associated with each client fd
+		std::map<int, bool> _registered; // stores registration status of each client fd
 
         void accept_client();
         void process_client_data(int client_fd);
@@ -50,6 +51,7 @@ class Server
 		void handle_pass(int client_fd, const std::string &params);
     	void handle_nick(int client_fd, const std::string &params);
     	void handle_user(int client_fd, const std::string &params);
+		void check_registration(int client_fd);
 		
         void disconnect_client(int client_fd);
 
