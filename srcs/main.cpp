@@ -25,11 +25,9 @@ void	setup_signals(void)
 	struct sigaction	action;
 
 	action.sa_handler = handle_signal; // set signal handler function for sigint
-	sigemptyset(&action.sa_mask);     
-		// initialize mask to empty so no signals are blocked during execution of the handler
+	sigemptyset(&action.sa_mask); // initialize mask to empty so no signals are blocked during execution of the handler
 	action.sa_flags = 0;
-	if (sigaction(SIGINT, &action, NULL) < 0)
-		// set the action for sigint (ctrl-c) to the specified handler
+	if (sigaction(SIGINT, &action, NULL) < 0) // set the action for sigint (ctrl-c) to the specified handler
 		throw std::runtime_error("IRC: sigaction() failed.");
 }
 
