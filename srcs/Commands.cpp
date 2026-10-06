@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/06 15:17:44 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/06 16:39:08 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,7 @@
 
 void Server::handle_pass(int client_fd, const std::string &params)
 {
-    if (params.empty())
+    if (params.empty() || params.find(' ') != std::string::npos)
     {
 		std::cout << "\nPASSWORD IS MISSING!" << std::endl;
         return;
@@ -26,7 +26,7 @@ void Server::handle_pass(int client_fd, const std::string &params)
     }
 	this->_authenticated[client_fd] = true;
     std::cout << "\nCORRECT PASSWORD!" << std::endl;
-	this->check_registration(client_fd);
+	this->register_client(client_fd);
 }
 
 void Server::handle_nick(int client_fd, const std::string &params)
@@ -37,9 +37,9 @@ void Server::handle_nick(int client_fd, const std::string &params)
 
     begin = this->_nicknames.begin(); // points to first client nickname
     end = this->_nicknames.end(); // points to position after last nickname
-    if (params.empty())
+    if (params.empty() || params.find(' ') != std::string::npos)
     {
-        std::cout << "\nNICKNAME IS MISSING!" << std::endl;
+        std::cout << "\nINVALID NICKNAME!" << std::endl;
         return;
     }
     for (it = begin; it != end; ++it) // iterate through all stored client nicknames
@@ -52,7 +52,7 @@ void Server::handle_nick(int client_fd, const std::string &params)
     }
     this->_nicknames[client_fd] = params; // associate nickname with this client fd
     std::cout << "\nNICKNAME SET TO " << params << std::endl;
-	this->check_registration(client_fd);
+	this->register_client(client_fd);
 }
 
 void Server::handle_user(int client_fd, const std::string &params)
@@ -100,5 +100,5 @@ void Server::handle_user(int client_fd, const std::string &params)
     std::cout << "MODE: " << mode << std::endl;
     std::cout << "UNUSED: " << unused << std::endl;
     std::cout << "REALNAME: " << realname << std::endl;
-	this->check_registration(client_fd);
+	this->register_client(client_fd);
 }

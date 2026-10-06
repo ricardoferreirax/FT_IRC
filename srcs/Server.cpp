@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/06 15:27:39 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/06 16:48:13 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -132,7 +132,7 @@ void Server::accept_client()
     this->_authenticated[client_fd] = false;
 	this->_registered[client_fd] = false;
 	std::cout << "\n==========================================" << std::endl;	
-    std::cout << "			[CLIENT " << client_fd << "] CONNECTED!" << std::endl;
+    std::cout << "	   [CLIENT " << client_fd << "] CONNECTED!" << std::endl;
 	std::cout << "==========================================\n" << std::endl;	
 }
 
@@ -188,17 +188,25 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
     std::cout << std::endl;
 }
 
-void Server::check_registration(int client_fd)
+void Server::register_client(int client_fd)
 {
+    std::string nickname;
+    std::string response;
+	ssize_t bytes_sent;
+
     if (this->_registered[client_fd])
         return;
     if (this->_authenticated[client_fd] && !this->_nicknames[client_fd].empty() && !this->_usernames[client_fd].empty())
     {
         this->_registered[client_fd] = true;
-		std::cout << "\n==========================================" << std::endl;
-        std::cout << "[CLIENT " << client_fd << "] REGISTERED!" << std::endl;
+        nickname = this->_nicknames[client_fd];
+        std::cout << "\n==========================================" << std::endl;	
+    	std::cout << "	   [CLIENT " << client_fd << "] REGISTERED!" << std::endl;
 		std::cout << "==========================================" << std::endl;
-
+        response = ":ircserv 001 " + nickname + " :Welcome to the IRC server\r\n";
+		bytes_sent = send(client_fd, response.c_str(), response.size(), 0);
+		if (bytes_sent < 0)
+    		std::cerr << "IRC: send() failed." << std::endl;
     }
 }
 
@@ -227,5 +235,7 @@ void Server::disconnect_client(int client_fd)
 	this->_nicknames.erase(client_fd); // remove nickname associated with this client
 	this->_usernames.erase(client_fd); // remove username associated with this client
     close(client_fd);
-    std::cout << "[CLIENT " << client_fd << "] DISCONNECTED!" << std::endl;
+    std::cout << "==========================================" << std::endl;	
+    std::cout << "	   [CLIENT " << client_fd << "] DISCONNECTED!" << std::endl;
+	std::cout << "==========================================\n" << std::endl;
 }
