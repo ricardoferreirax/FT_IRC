@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/06 16:39:08 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/06 16:59:18 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,7 +26,6 @@ void Server::handle_pass(int client_fd, const std::string &params)
     }
 	this->_authenticated[client_fd] = true;
     std::cout << "\nCORRECT PASSWORD!" << std::endl;
-	this->register_client(client_fd);
 }
 
 void Server::handle_nick(int client_fd, const std::string &params)
@@ -52,7 +51,6 @@ void Server::handle_nick(int client_fd, const std::string &params)
     }
     this->_nicknames[client_fd] = params; // associate nickname with this client fd
     std::cout << "\nNICKNAME SET TO " << params << std::endl;
-	this->register_client(client_fd);
 }
 
 void Server::handle_user(int client_fd, const std::string &params)
@@ -96,9 +94,4 @@ void Server::handle_user(int client_fd, const std::string &params)
     }
     realname = remaining.substr(1); // extract realname from params, removing colon
     this->_usernames[client_fd] = username;
-    std::cout << "\nUSERNAME: " << username << std::endl;
-    std::cout << "MODE: " << mode << std::endl;
-    std::cout << "UNUSED: " << unused << std::endl;
-    std::cout << "REALNAME: " << realname << std::endl;
-	this->register_client(client_fd);
 }

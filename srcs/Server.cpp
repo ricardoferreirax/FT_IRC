@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/06 16:48:13 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/06 18:13:53 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -68,7 +68,7 @@ void Server::start_socket()
 }
 
 // creates epoll to monitor listening socket and connected client sockets.
-// listening socket is monitored for new connections, while client sockets are monitored for incoming data. 
+// listening socket is monitored for new connections, while client sockets are monitored for incoming and outgoing data.
 // epoll_wait() blocks until one or more registered sockets become ready.
 void Server::monitor_epoll_events()
 {
@@ -80,14 +80,14 @@ void Server::monitor_epoll_events()
     this->_epoll_fd = epoll_create1(0); // create epoll to monitor socket events
     if (this->_epoll_fd < 0)
         throw std::runtime_error("IRC: epoll_create1() failed.");
-    event.events = EPOLLIN; // monitor for EPOLLIN events for a listening socket, EPOLLIN means a new connection is ready to be accepted
+    event.events = EPOLLIN; // monitor listening socket for new incoming connections
     event.data.fd = this->_listen_fd; // store listening socket fd inside event so it can be identified later
-    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0) // add the listening socket to the epoll interest list
+    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0) // add listening socket to epoll interest list
         throw std::runtime_error("IRC: epoll_ctl() failed.");
     std::cout << "\n[SERVER] Waiting for connections..." << std::endl;
     while (running) // keep monitoring socket events till server is stopped
     {
-        ready_events = epoll_wait(this->_epoll_fd, events, 10, -1); // waits indefinitely (-1) till at least one registered socket has an event
+        ready_events = epoll_wait(this->_epoll_fd, events, 10, -1); // wait till at least one registered socket has an event
         if (ready_events < 0)
         {
             if (!running) // stop server when ctrl-c
@@ -96,31 +96,36 @@ void Server::monitor_epoll_events()
         }
         for (int i = 0; i < ready_events; i++) // process every event returned by epoll_wait()
         {
-            current_fd = events[i].data.fd; // get fd that generated the current event
-            if (current_fd == this->_listen_fd && (events[i].events & EPOLLIN)) // if returned event is from listening socket and is an EPOLLIN
-                this->accept_client(); // EPOLLIN on the listening socket means a new client is waiting to connect
-            else if (current_fd != this->_listen_fd && (events[i].events & EPOLLIN)) // if returned event is from a client socket and is an EPOLLIN
-                this->process_client_data(current_fd); // EPOLLIN on a client socket means client has sent data
+            current_fd = events[i].data.fd; // get fd that generated current event
+            if (current_fd == this->_listen_fd && (events[i].events & EPOLLIN)) // if returned event is from listening socket and is EPOLLIN
+                this->accept_client(); // EPOLLIN on listening socket means a new client is waiting to connect
+            else // if returned event is from a client socket
+            {
+                if (events[i].events & EPOLLIN) // EPOLLIN on client socket means client has sent data
+                    this->receive_client_data(current_fd);
+                if (events[i].events & EPOLLOUT) // EPOLLOUT means client socket is ready to receive data from server
+                    this->send_client_data(current_fd);
+            }
         }
     }
 }
 
 // client socket is made non-blocking, added to epoll and its initial data is stored so server can manage client independently
-// each client has its own buffer to store incoming data, authentication status, nickname and username
+// each client has its own input/output buffers, authentication status, registration status, nickname and username
 void Server::accept_client()
 {
     int client_fd;
     epoll_event event;
 
-    client_fd = accept(this->_listen_fd, NULL, NULL); // accept pending tcp connection and create new socket to communicate with client socket
+    client_fd = accept(this->_listen_fd, NULL, NULL); // accept pending tcp connection and create new socket to communicate with client
     if (client_fd < 0)
         throw std::runtime_error("IRC: accept() failed.");
-    if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0) // make client socket non-blocking so recv() doesn't block server while waiting for data from specific client
+    if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0) // make client socket non-blocking so socket operations don't block server
     {
         close(client_fd);
         throw std::runtime_error("IRC: fcntl() failed.");
     }
-    event.events = EPOLLIN; // monitor the client socket for incoming data
+    event.events = EPOLLIN; // initially monitor client socket only for incoming data
     event.data.fd = client_fd; // store client fd in event so server can identify which client generated it
     if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, client_fd, &event) < 0) // add client socket to epoll interest list
     {
@@ -128,48 +133,106 @@ void Server::accept_client()
         throw std::runtime_error("IRC: epoll_ctl() failed.");
     }
     this->_client_fds.push_back(client_fd); // store client fd in list of connected clients
-    this->_client_buffers[client_fd] = ""; // create empty receive buffer used to store incoming data from client
+    this->_client_buffers[client_fd] = ""; // create empty input buffer to store incoming data from client
+    this->_client_output[client_fd] = ""; // create empty output buffer to store data waiting to be sent to client
     this->_authenticated[client_fd] = false;
-	this->_registered[client_fd] = false;
-	std::cout << "\n==========================================" << std::endl;	
-    std::cout << "	   [CLIENT " << client_fd << "] CONNECTED!" << std::endl;
-	std::cout << "==========================================\n" << std::endl;	
+    this->_registered[client_fd] = false;
+    std::cout << "\n==========================================" << std::endl;
+    std::cout << "     [CLIENT " << client_fd << "] CONNECTED!" << std::endl;
+    std::cout << "==========================================\n" << std::endl;
 }
 
-// receives available data from client socket and appends it to client's buffer.
-// buffer keeps received data till a complete irc msg ending with "\r\n" is found.
-// complete messages are processed while incomplete data remains in buffer for next recv().
-void Server::process_client_data(int client_fd)
+// after epoll reports EPOLLIN for a client socket data is ready to be read/received, recv() reads available tcp data and 
+// appends it to input buffer associated with this client, one recv() may contain a partial irc msg or multiple, only 
+// complete msgs ending with "\r\n" are processed, incomplete data stays in client's buffer and will be completed by a future recv().
+void Server::receive_client_data(int client_fd)
 {
-	std::string &client_buffer = this->_client_buffers[client_fd]; // buffer associated with this client fd
-	std::string msg;
+    std::string &client_buffer = this->_client_buffers[client_fd]; // input buffer that stores received data for this specific client
+    std::string msg;
     char buffer[1024];
     ssize_t bytes_recv;
     size_t pos;
     size_t space;
 
-    bytes_recv = recv(client_fd, buffer, sizeof(buffer), 0); // reads tcp data from connected client socket and stores it in buffer
-	if (bytes_recv < 0)
+    bytes_recv = recv(client_fd, buffer, sizeof(buffer), 0); // receive/reads available tcp data from client socket and store it in buffer
+    if (bytes_recv < 0)
+    {
+        std::cerr << "[CLIENT " << client_fd << "] recv() failed." << std::endl;
         return;
-    if (bytes_recv == 0) // if peer has closed its side of tcp connection
+    }
+    if (bytes_recv == 0) // means client has closed its tcp connection
     {
         this->disconnect_client(client_fd);
         return;
     }
-    client_buffer.append(buffer, bytes_recv); // append exactly received bytes to buffer associated with this client
-    pos = client_buffer.find("\r\n"); // search for first "\r\n" in buffer
-    while (pos != std::string::npos) // while there is at least one complete msg ready to be processed
+    client_buffer.append(buffer, bytes_recv); // append exactly received bytes to this client's input buffer
+    pos = client_buffer.find("\r\n"); // irc msgs are complete when terminated by "\r\n"
+    while (pos != std::string::npos) // process every complete msg stored in buffer
     {
-        msg = client_buffer.substr(0, pos); // copy till "\r\n" into msg
+        msg = client_buffer.substr(0, pos); // extract one complete message without "\r\n"
         std::cout << "------------------------------------------------------------" << std::endl;
         std::cout << "[CLIENT " << client_fd << "] Message: " << msg << std::endl;
-        space = msg.find(' '); // search for first space in msg, which separates cmd from its params
-        if (space == std::string::npos) // if no space was found
-            this->handle_cmd(client_fd, msg, ""); // msg has only a cmd, params is empty string
-        else
-            this->handle_cmd(client_fd, msg.substr(0, space), msg.substr(space + 1)); // msg has a cmd followed by at least one param
-        client_buffer.erase(0, pos + 2); // remove processed message and "\r\n" from client's buffer
-        pos = client_buffer.find("\r\n"); // search again cause buffer may has another complete msg after one that was removed
+        space = msg.find(' '); // first space separates cmd from its params
+        if (space == std::string::npos) // no space means msg contains only a cmd
+            this->handle_cmd(client_fd, msg, "");
+        else // with space separates cmd from its params
+            this->handle_cmd(client_fd, msg.substr(0, space), msg.substr(space + 1));
+        client_buffer.erase(0, pos + 2); // remove processed message + "\r\n" from input buffer
+        pos = client_buffer.find("\r\n"); // search again cause another complete message may already be stored in buffer
+    }
+}
+
+// after epoll reports EPOLLOUT for a client socket is ready for writing/send, send() send only part of pending data
+// so only successfully sent bytes are removed, pending server replies are stored in output buffer till they can be sent to this client.
+// when output buffer becomes empty, EPOLLOUT is removed because there is nothing left to send.
+void Server::send_client_data(int client_fd)
+{
+    std::string &output = this->_client_output[client_fd]; // output buffer containing data waiting to be sent to this specific client
+    ssize_t bytes_sent;
+    epoll_event event;
+
+    if (output.empty()) // nothing is waiting to be sent to this client
+        return;
+    bytes_sent = send(client_fd, output.c_str(), output.size(), 0); // send pending tcp data from output buffer to client socket
+    if (bytes_sent < 0)
+    {
+        std::cerr << "[CLIENT " << client_fd << "] send() failed." << std::endl;
+        return;
+    }
+    output.erase(0, bytes_sent); // remove only successfully sent bytes because may not send all pending data at once
+    std::cout << "[CLIENT " << client_fd << "] Sent " << bytes_sent << " bytes." << std::endl;
+    if (output.empty()) // if all pending data was sent, socket no longer needs to be monitored for writing
+    {
+        event.events = EPOLLIN; // keep monitoring client socket for new incoming data
+        event.data.fd = client_fd; // store client fd in event so server can identify which client generated it
+        if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0) // update epoll and stop monitoring EPOLLOUT for this client
+            throw std::runtime_error("IRC: epoll_ctl() failed.");
+    }
+}
+
+// completes client registration after PASS, NICK and USER have been successfully received
+// welcome reply is stored in client's output buffer and EPOLLOUT is enabled so epoll can notify when socket is ready for writing
+// EPOLL_CTL_MOD modify events monitored for this client socket, adding EPOLLOUT to existing EPOLLIN
+void Server::register_client(int client_fd)
+{
+    std::string nickname;
+    epoll_event event;
+
+    if (this->_registered[client_fd]) // client has already completed registration
+        return;
+    if (this->_authenticated[client_fd] && !this->_nicknames[client_fd].empty() && !this->_usernames[client_fd].empty())
+    {
+        this->_registered[client_fd] = true;
+        nickname = this->_nicknames[client_fd];
+        std::cout << "\n==========================================" << std::endl;
+        std::cout << "     [CLIENT " << client_fd << "] REGISTERED!" << std::endl;
+        std::cout << "==========================================" << std::endl;
+        this->_client_output[client_fd] += ":ircserv 001 " + nickname + " :Welcome to the IRC server\r\n"; // += allows multiple replies to not replace each other 
+        event.events = EPOLLIN | EPOLLOUT; // monitor client for both incoming data and readiness for writing
+        event.data.fd = client_fd;
+        if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0) // update client events to include EPOLLOUT
+            throw std::runtime_error("IRC: epoll_ctl() failed.");
+        std::cout << std::endl;
     }
 }
 
@@ -184,58 +247,37 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
     else if (cmd == "USER")
         this->handle_user(client_fd, params);
     else
-        std::cout << "\nUNKNOWN COMMAND" << std::endl;
-    std::cout << std::endl;
-}
-
-void Server::register_client(int client_fd)
-{
-    std::string nickname;
-    std::string response;
-	ssize_t bytes_sent;
-
-    if (this->_registered[client_fd])
-        return;
-    if (this->_authenticated[client_fd] && !this->_nicknames[client_fd].empty() && !this->_usernames[client_fd].empty())
     {
-        this->_registered[client_fd] = true;
-        nickname = this->_nicknames[client_fd];
-        std::cout << "\n==========================================" << std::endl;	
-    	std::cout << "	   [CLIENT " << client_fd << "] REGISTERED!" << std::endl;
-		std::cout << "==========================================" << std::endl;
-        response = ":ircserv 001 " + nickname + " :Welcome to the IRC server\r\n";
-		bytes_sent = send(client_fd, response.c_str(), response.size(), 0);
-		if (bytes_sent < 0)
-    		std::cerr << "IRC: send() failed." << std::endl;
+        std::cout << "\nUNKNOWN COMMAND" << std::endl;
+        return;
     }
+    this->register_client(client_fd);
+    std::cout << std::endl;
 }
 
 // removes a disconnected client from every part of server. EPOLL_CTL_DEL removes socket from epoll interest list
 void Server::disconnect_client(int client_fd)
 {
     std::vector<int>::iterator it;
-    std::vector<int>::iterator begin;
-    std::vector<int>::iterator end;
 
-    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0) // stop monitoring client socket so server doesn't receive events for this client.
+    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0) // stop monitoring this client socket for events
         throw std::runtime_error("IRC: epoll_ctl() failed.");
-    begin = this->_client_fds.begin();
-    end = this->_client_fds.end();
-    for (it = begin; it != end; ++it)  // iterate through the vector of active client fds
+    for (it = this->_client_fds.begin(); it != this->_client_fds.end(); ++it) // find client fd in list/vector of connected clients
     {
         if (*it == client_fd) // if matches the disconnected client
         {
-            this->_client_fds.erase(it); // remove the client fd from the vector
+            this->_client_fds.erase(it); // remove from the list/vector
             break;
         }
     }
     this->_client_buffers.erase(client_fd); // remove any complete/incomplete data stored for this client buffer
-	this->_authenticated.erase(client_fd); // remove authentication status of this client
-	this->_registered.erase(client_fd);
-	this->_nicknames.erase(client_fd); // remove nickname associated with this client
-	this->_usernames.erase(client_fd); // remove username associated with this client
+	this->_client_output.erase(client_fd); // remove any pending data waiting to be sent to this client
+    this->_authenticated.erase(client_fd);
+    this->_registered.erase(client_fd);
+    this->_nicknames.erase(client_fd);
+    this->_usernames.erase(client_fd);
     close(client_fd);
-    std::cout << "==========================================" << std::endl;	
-    std::cout << "	   [CLIENT " << client_fd << "] DISCONNECTED!" << std::endl;
-	std::cout << "==========================================\n" << std::endl;
+    std::cout << "==========================================" << std::endl;
+    std::cout << "     [CLIENT " << client_fd << "] DISCONNECTED!" << std::endl;
+    std::cout << "==========================================\n" << std::endl;
 }
