@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:14:15 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/05 18:46:14 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/06 14:36:22 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,8 +89,7 @@ int main(int ac, char **av)
         Server server(port, av[2]);
 
         server.start_socket();
-        server.prepare_epoll();
-        server.handle_events();
+        server.monitor_epoll_events();
     }
     catch (const std::exception &e)
     {

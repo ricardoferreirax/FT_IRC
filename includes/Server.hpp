@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/05 21:50:36 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/06 14:37:00 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,8 +45,7 @@ class Server
 		std::map<int, std::string> _usernames; // stores username associated with each client fd
 
         void accept_client();
-        void receive_data(int client_fd);
-        void process_messages(int client_fd);
+        void process_client_data(int client_fd);
 		void handle_cmd(int client_fd, const std::string &cmd, const std::string &params);
 		void handle_pass(int client_fd, const std::string &params);
     	void handle_nick(int client_fd, const std::string &params);
@@ -59,8 +58,7 @@ class Server
         ~Server();
 
         void start_socket();
-        void prepare_epoll();
-        void handle_events();
+        void monitor_epoll_events();
 };
 
 void handle_signal(int signal);

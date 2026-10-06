@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/05 21:46:50 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/06 14:42:55 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -64,14 +64,17 @@ void Server::start_socket()
         throw std::runtime_error("IRC: bind() failed.");
     if (listen(this->_listen_fd, SOMAXCONN) < 0)         // changes socket into a listening socket so it can receive incoming tcp connection
         throw std::runtime_error("IRC: listen() failed.");
-    std::cout << "[SERVER] Listening On Port " << this->_port << std::endl;
+    std::cout << "[SERVER] Listening on 0.0.0.0:" << this->_port << std::endl;
 }
 
 // creates epoll which allows server monitor multiple sockets w/out blocking while waiting for events.
 // listening socket is added to epoll list so epoll can notify server whenever a new tcp connection is waiting to be accepted.
-void Server::prepare_epoll()
+void Server::monitor_epoll_events()
 {
     epoll_event event;
+    epoll_event events[10];
+    int ready_events;  // how many events were returned by epoll_wait()
+    int current_fd;
 
     this->_epoll_fd = epoll_create1(0);
     if (this->_epoll_fd < 0)
@@ -80,14 +83,6 @@ void Server::prepare_epoll()
     event.data.fd = this->_listen_fd; // stores the fd inside the event, allows to know which fd generated the event
     if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0) // add socket to epoll list
         throw std::runtime_error("IRC: epoll_ctl() failed.");
-}
-
-void Server::handle_events()
-{
-    epoll_event events[10];
-    int ready_events;  // how many events were returned by epoll_wait()
-    int current_fd;
-
     std::cout << "\n[SERVER] Waiting for connections..." << std::endl;
     while (running)  // runs until ctrl-c changes running to 0
     {
@@ -102,13 +97,9 @@ void Server::handle_events()
         {
             current_fd = events[i].data.fd; // get fd socket that generated the event
             if (current_fd == this->_listen_fd && (events[i].events & EPOLLIN)) // if returned event is from listening socket and it's ready for reading...
-            {
                 this->accept_client(); // a new client is waiting to be accepted
-            }
             else if (current_fd != this->_listen_fd && (events[i].events & EPOLLIN)) // if returned event is from another socket and it's ready for reading...
-            {
-                this->receive_data(current_fd); // an already connected client has sent data
-            }
+                this->process_client_data(current_fd); // an already connected client has sent data
         }
     }
 }
@@ -137,59 +128,43 @@ void Server::accept_client()
     this->_client_fds.push_back(client_fd); // store client fd so server knows which clients are connected
     this->_client_buffers[client_fd] = ""; // create empty receive buffer for this client, each client needs its own buffer
 	this->_authenticated[client_fd] = false;
-	std::cout << "\n>>>>>>>>>> [CLIENT " << client_fd << "] CONNECTED! <<<<<<<<<<\n" << std::endl;
+	std::cout << "\n[CLIENT " << client_fd << "] CONNECTED!\n" << std::endl;
 }
 
-// recv() reads and tells how many bytes are available to read from client socket, if there are bytes available, they are read 
-// and appended to client's buffer. buffer may contain incomplete data from previous recv() calls.
-void Server::receive_data(int client_fd)
+// receives available data from client socket and appends it to client's buffer.
+// buffer keeps received data till a complete irc msg ending with "\r\n" is found.
+// complete messages are processed while incomplete data remains in buffer for next recv().
+void Server::process_client_data(int client_fd)
 {
+	std::string &client_buffer = this->_client_buffers[client_fd]; // buffer associated with this client fd
+	std::string msg;
     char buffer[1024];
     ssize_t bytes_recv;
-
-    bytes_recv = recv(client_fd, buffer, sizeof(buffer), 0);  // reads tcp data from connected client socket and stores it in buffer
-    if (bytes_recv > 0) // if client sent data and it was successfully read into buffer
-    {
-        this->_client_buffers[client_fd].append(buffer, bytes_recv); // append exactly received bytes to buffer associated with this client
-        this->process_messages(client_fd); // extracts complete irc msgs from client's buffer and processes them
-    }
-    else if (bytes_recv == 0) // if peer has closed its side of tcp connection
-    {
-        this->disconnect_client(client_fd);
-    }
-}
-
-// extracts complete irc msgs from client's receive buffer, incomplete data stays in buffer till more data is received by recv().
-void Server::process_messages(int client_fd)
-{
-    std::string &buffer = this->_client_buffers[client_fd]; // buffer associated with this client fd.
-    std::string msg;
-    std::string cmd;
-    std::string params;
     size_t pos;
     size_t space;
 
-    pos = buffer.find("\r\n"); // search for first "\r\n" in buffer
+    bytes_recv = recv(client_fd, buffer, sizeof(buffer), 0); // reads tcp data from connected client socket and stores it in buffer
+	if (bytes_recv < 0)
+        return;
+    if (bytes_recv == 0) // if peer has closed its side of tcp connection
+    {
+        this->disconnect_client(client_fd);
+        return;
+    }
+    client_buffer.append(buffer, bytes_recv); // append exactly received bytes to buffer associated with this client
+    pos = client_buffer.find("\r\n"); // search for first "\r\n" in buffer
     while (pos != std::string::npos) // while there is at least one complete msg ready to be processed
     {
-        msg = buffer.substr(0, pos); // copy till "\r\n" into msg
-		std::cout << "------------------------------------------------------------" << std::endl;
-		std::cout << "[CLIENT " << client_fd << "] MSG: " << msg << std::endl;
+        msg = client_buffer.substr(0, pos); // copy till "\r\n" into msg
+        std::cout << "------------------------------------------------------------" << std::endl;
+        std::cout << "[CLIENT " << client_fd << "] Message: " << msg << std::endl;
         space = msg.find(' '); // search for first space in msg, which separates cmd from its params
-        if (space == std::string::npos) // if no space was found msg has only a cmd
-        {
-			cmd = msg;
-			params = "";
-        }
-        else // otherwise msg has a cmd followed by at least one param
-        {
-			cmd = msg.substr(0, space); // extract everything before first space
-			params = msg.substr(space + 1); // extract everything after first space
-        }
-        std::cout << std::endl;
-		this->handle_cmd(client_fd, cmd, params);
-        buffer.erase(0, pos + 2); // remove processed message and "\r\n" from client's buffer
-        pos = buffer.find("\r\n");  // search again cause buffer may has another complete msg after one that was removed
+        if (space == std::string::npos) // if no space was found
+            this->handle_cmd(client_fd, msg, ""); // msg has only a cmd, params is empty string
+        else
+            this->handle_cmd(client_fd, msg.substr(0, space), msg.substr(space + 1)); // msg has a cmd followed by at least one param
+        client_buffer.erase(0, pos + 2); // remove processed message and "\r\n" from client's buffer
+        pos = client_buffer.find("\r\n"); // search again cause buffer may has another complete msg after one that was removed
     }
 }
 
