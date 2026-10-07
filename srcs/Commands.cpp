@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 14:06:31 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/07 16:54:31 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,32 +24,28 @@ void Server::handle_pass(int client_fd, const std::string &params)
 		std::cout << "\nPASS IS INCORRECT!" << std::endl;
         return;
     }
-	this->_authenticated[client_fd] = true;
+	this->_clients[client_fd].set_auth(true);
     std::cout << "\nCORRECT PASS!" << std::endl;
 }
 
 void Server::handle_nick(int client_fd, const std::string &params)
 {
-    std::map<int, std::string>::iterator it;
-    std::map<int, std::string>::iterator begin;
-    std::map<int, std::string>::iterator end;
+    std::map<int, Client>::iterator it;
 
-    begin = this->_nicknames.begin(); // points to first client nickname
-    end = this->_nicknames.end(); // points to position after last nickname
-    if (params.empty() || params.find(' ') != std::string::npos)
+    if (params.empty() || params.find(' ') != std::string::npos) // if nickname is empty or has spaces
     {
         std::cout << "\nINVALID NICK!" << std::endl;
         return;
     }
-    for (it = begin; it != end; ++it) // iterate through all stored client nicknames
+    for (it = this->_clients.begin(); it != this->_clients.end(); ++it) // iterate through all connected clients
     {
-        if (it->second == params) // check if requested nickname is already being used
+        if (it->second.get_nick() == params) // check if requested nick is being used by another client
         {
             std::cout << "\nNICK ALREADY IN USE!" << std::endl;
             return;
         }
     }
-    this->_nicknames[client_fd] = params; // associate nickname with this client fd
+    this->_clients[client_fd].set_nick(params); // associate nick with this client fd
     std::cout << "\nNICK: " << params << std::endl;
 }
 
@@ -93,6 +89,6 @@ void Server::handle_user(int client_fd, const std::string &params)
         return;
     }
     realname = remaining.substr(1); // extract realname from params, removing colon
-    this->_usernames[client_fd] = username;
+    this->_clients[client_fd].set_user(username); // associate username with this client fd
 	std::cout << "\nUSER: " << username << " " << mode << " " << unused << " " << realname << std::endl;
 }

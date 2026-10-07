@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:31:53 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 15:49:04 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/07 16:55:39 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,18 @@
 
 Client::Client()
 {
+    this->_fd = -1;
+    this->_recv_buffer = "";
+    this->_send_buffer = "";
+    this->_nick = "";
+    this->_user = "";
+    this->_auth = false;
+    this->_registered = false;
+}
+
+Client::Client(int fd)
+{
+    this->_fd = fd;
     this->_recv_buffer = "";
     this->_send_buffer = "";
     this->_nick = "";
@@ -25,6 +37,51 @@ Client::Client()
 Client::~Client()
 {
 	
+}
+
+int Client::get_fd() const
+{
+    return (this->_fd);
+}
+
+const std::string &Client::get_nick() const
+{
+    return (this->_nick);
+}
+
+const std::string &Client::get_user() const
+{
+    return (this->_user);
+}
+
+bool Client::get_auth() const
+{
+    return (this->_auth);
+}
+
+bool Client::get_registered() const
+{
+    return (this->_registered);
+}
+
+void Client::set_nick(const std::string &nick)
+{
+    this->_nick = nick;
+}
+
+void Client::set_user(const std::string &user)
+{
+    this->_user = user;
+}
+
+void Client::set_auth(bool auth)
+{
+    this->_auth = auth;
+}
+
+void Client::set_registered(bool registered)
+{
+    this->_registered = registered;
 }
 
 std::string &Client::get_recv_buffer()
