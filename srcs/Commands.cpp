@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 13:54:38 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/07 14:06:31 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,6 +55,11 @@ void Server::handle_nick(int client_fd, const std::string &params)
 
 void Server::handle_user(int client_fd, const std::string &params)
 {
+	std::string username;
+	std::string mode;
+	std::string unused;
+	std::string realname;
+	std::string remaining;
 	size_t	space;
 
     remaining = params;
