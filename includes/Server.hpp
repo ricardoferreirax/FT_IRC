@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 16:46:27 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/07 18:05:02 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 
 # include <csignal>
 # include <cstdlib>
+# include <cctype>
 # include <cstring>
 # include <fcntl.h>
 # include <iostream>
@@ -45,6 +46,7 @@ class Server
         void accept_client();
         void receive_client_data(int client_fd);
         void send_client_data(int client_fd);
+		void send_reply(int client_fd, const std::string &reply);
         void disconnect_client(int client_fd);
 
         void handle_cmd(int client_fd, const std::string &cmd, const std::string &params);
@@ -52,6 +54,7 @@ class Server
         void handle_nick(int client_fd, const std::string &params);
         void handle_user(int client_fd, const std::string &params);
         void register_client(int client_fd);
+		bool is_valid_nick(const std::string &nick);
 
     public:
         Server(int port, const std::string &pass);

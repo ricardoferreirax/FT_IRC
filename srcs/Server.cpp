@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 17:01:44 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/07 17:46:11 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -207,10 +207,20 @@ void Server::send_client_data(int client_fd)
     }
 }
 
+void Server::send_reply(int client_fd, const std::string &reply)
+{
+    epoll_event event;
+
+    this->_clients[client_fd].get_send_buffer() += reply; // += allows multiple replies to not replace each other 
+    event.events = EPOLLIN | EPOLLOUT; // monitor client for both incoming data and writting
+    event.data.fd = client_fd; // store client fd in event
+    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0) // update client events to add EPOLLOUT
+        throw std::runtime_error("IRC: epoll_ctl() failed.");
+}
+
 void Server::register_client(int client_fd)
 {
     std::string nick; // store nick of client that completed registration
-    epoll_event event;
 
     if (this->_clients[client_fd].get_registered()) // if client is already registered
         return;
@@ -221,12 +231,8 @@ void Server::register_client(int client_fd)
 		nick = this->_clients[client_fd].get_nick(); // store nick that has completed regist
 		std::cout << "\n==========================================" << std::endl;
 		std::cout << "     [CLIENT " << client_fd << "] REGISTERED!" << std::endl;
-		std::cout << "==========================================" << std::endl;
-		this->_clients[client_fd].get_send_buffer() += ":ircserv 001 " + nick + " :Welcome to the IRC server\r\n"; // += allows multiple replies to not replace each other 
-		event.events = EPOLLIN | EPOLLOUT; // monitor client for both incoming data and writting
-		event.data.fd = client_fd; // store client fd in event
-		if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0) // update client events to add EPOLLOUT to EPOLLIN
-			throw std::runtime_error("IRC: epoll_ctl() failed.");
+		std::cout << "==========================================\n" << std::endl;
+		this->send_reply(client_fd, ":ircserv 001 " + nick + " :Welcome to the IRC server\r\n");
 		std::cout << std::endl;
 	}
 }
