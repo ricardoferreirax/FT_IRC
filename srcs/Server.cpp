@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 14:05:57 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/07 15:53:33 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,16 +24,15 @@ Server::Server(int port, const std::string &pass)
 
 Server::~Server()
 {
-    std::map<int, Client *>::iterator it;
+    std::map<int, Client>::iterator it;
 
     std::cout << "Closing server..." << std::endl;
     for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
     {
-        close(it->first); // close client socket fd. first is key of map = client fd
-        delete it->second; // delete client object associated with this fd. second is value of map = client *
+        close(it->first);
         std::cout << "[CLIENT " << it->first << "] Closed!" << std::endl;
     }
-    if (this->_epoll_fd != -1) // if epoll fd was created, close it
+    if (this->_epoll_fd != -1)
     {
         close(this->_epoll_fd);
         std::cout << "[EPOLL FD " << this->_epoll_fd << "] Closed!" << std::endl;
@@ -135,7 +134,7 @@ void Server::accept_client()
         close(client_fd);
         throw std::runtime_error("IRC: epoll_ctl() failed.");
     }
-    this->_clients[client_fd] = new Client(client_fd); // create and store client object associated with its socket fd
+	this->_clients[client_fd] = Client(); // create and store client object associated with its socket fd
     this->_authenticated[client_fd] = false;
     this->_registered[client_fd] = false;
     std::cout << "\n==========================================" << std::endl;
@@ -148,7 +147,7 @@ void Server::accept_client()
 // incomplete data stays in client's buffer and will be completed by a future recv()
 void Server::receive_client_data(int client_fd)
 {
-    std::string &client_buffer = this->_clients[client_fd]->get_recv_buffer(); // buffer stores received data for this specific client
+    std::string &client_buffer = this->_clients[client_fd].get_recv_buffer(); // buffer stores received data for this specific client
     std::string msg;
     char buffer[1024];
     ssize_t bytes_recv; // nb of bytes received from client socket
@@ -187,7 +186,7 @@ void Server::receive_client_data(int client_fd)
 // output buffer till they can be sent to this client, when output buffer becomes empty, EPOLLOUT is removed because there is nothing left to send.
 void Server::send_client_data(int client_fd)
 {
-    std::string &output = this->_clients[client_fd]->get_send_buffer(); // buffer has data waiting to be sent to this specific client
+    std::string &output = this->_clients[client_fd].get_send_buffer(); // buffer has data waiting to be sent to this specific client
     ssize_t bytes_sent; // nb of bytes sent to client socket
     epoll_event event;
 
@@ -225,7 +224,7 @@ void Server::register_client(int client_fd)
         std::cout << "\n==========================================" << std::endl;
         std::cout << "     [CLIENT " << client_fd << "] REGISTERED!" << std::endl;
         std::cout << "==========================================" << std::endl;
-        this->_clients[client_fd]->get_send_buffer() += ":ircserv 001 " + nick + " :Welcome to the IRC server\r\n"; // += allows multiple replies to not replace each other 
+        this->_clients[client_fd].get_send_buffer() += ":ircserv 001 " + nick + " :Welcome to the IRC server\r\n"; // += allows multiple replies to not replace each other 
         event.events = EPOLLIN | EPOLLOUT; // monitor client for both incoming data and readiness for writing
         event.data.fd = client_fd;
         if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0) // update client events to add EPOLLOUT to EPOLLIN
@@ -260,7 +259,6 @@ void Server::disconnect_client(int client_fd)
 {
     if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0) // stop monitoring client socket
         throw std::runtime_error("IRC: epoll_ctl() failed.");
-    delete this->_clients[client_fd]; // delete client object associated with this fd
     this->_clients.erase(client_fd); // remove client from server container
     this->_authenticated.erase(client_fd);
     this->_registered.erase(client_fd);

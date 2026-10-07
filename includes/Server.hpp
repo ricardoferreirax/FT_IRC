@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 14:04:57 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/07 15:48:27 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,7 +40,7 @@ class Server
         int _listen_fd;
         int _epoll_fd;
 
-        std::map<int, Client *> _clients; // store all connected clients with their socket fd corresponding to their client
+        std::map<int, Client> _clients; // store all connected clients with their socket fd corresponding to their client
 
         std::vector<int> _client_fds;
         std::map<int, bool> _authenticated;
