@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:31:53 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 12:32:55 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/07 12:56:22 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,4 +27,14 @@ Client::Client(int fd)
 Client::~Client()
 {
 	
+}
+
+std::string &Client::get_recv_buffer()
+{
+	return (this->_recv_buffer);
+}
+
+std::string &Client::get_send_buffer()
+{
+	return (this->_send_buffer);
 }

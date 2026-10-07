@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:28:03 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 12:31:44 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/07 13:47:28 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,6 +29,9 @@ class Client
     public:
         Client(int fd);
         ~Client();
+
+		std::string &get_recv_buffer(); // returns reference to client's receive buffer so server can append new data to it
+		std::string &get_send_buffer(); // returns reference to client's send buffer so server can append new data to it
 };
 
 #endif

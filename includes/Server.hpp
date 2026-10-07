@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 12:34:15 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/07 13:48:37 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,8 +43,6 @@ class Server
 		std::map<int, Client *> _clients; // stores client objects associated with each client fd
 
         std::vector<int> _client_fds; // stores fds of all currently connected clients
-        std::map<int, std::string> _client_buffers; // stores the receive buffer associated with each client fd
-		std::map<int, std::string> _client_output; // stores the output buffer associated with each client fd
 		std::map<int, bool> _authenticated; // stores authentication status of each client fd
 		std::map<int, std::string> _nicknames; // stores nickname associated with each client fd
 		std::map<int, std::string> _usernames; // stores username associated with each client fd
