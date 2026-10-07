@@ -1,2 +1,5 @@
 compile_commands.json
 .cache/
+.objs/
+ircserv
+
