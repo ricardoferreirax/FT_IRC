@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 13:54:18 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/07 14:05:57 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,6 +50,7 @@ Server::~Server()
 void Server::start_socket()
 {
 	int	socket_opt;
+	sockaddr_in server_addr;
 
     this->_listen_fd = socket(AF_INET, SOCK_STREAM, 0); // create ipv4 tcp listening socket
     if (this->_listen_fd < 0)
