@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 13:49:12 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/07 13:54:18 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,10 +16,10 @@
 // pass: password clients will need during irc registration
 Server::Server(int port, const std::string &pass)
 {
-    this->_pass = pass;
-    this->_port = port;
-    this->_listen_fd = -1;
-    this->_epoll_fd = -1;
+	this->_pass = pass;
+	this->_port = port;
+	this->_listen_fd = -1;
+	this->_epoll_fd = -1;
 }
 
 Server::~Server()
@@ -49,8 +49,7 @@ Server::~Server()
 // creates and prepares tcp listening socket used by irc server
 void Server::start_socket()
 {
-    int socket_opt;
-    sockaddr_in server_addr;  // describes ipv4 address where server will listen
+	int	socket_opt;
 
     this->_listen_fd = socket(AF_INET, SOCK_STREAM, 0); // create ipv4 tcp listening socket
     if (this->_listen_fd < 0)
@@ -117,8 +116,8 @@ void Server::monitor_epoll_events()
 // to store all data and state associated with this connection
 void Server::accept_client()
 {
-    int client_fd;
-    epoll_event event;
+	int			client_fd;
+	epoll_event	event;
 
     client_fd = accept(this->_listen_fd, NULL, NULL); // accept pending tcp connection and create new socket to communicate with client
     if (client_fd < 0)
@@ -234,7 +233,8 @@ void Server::register_client(int client_fd)
     }
 }
 
-void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string &params)
+void Server::handle_cmd(int client_fd, const std::string &cmd,
+	const std::string &params)
 {
     std::cout << "\n[CMD]: " << cmd << std::endl;
     std::cout << "[PARAMS]: " << params << std::endl;

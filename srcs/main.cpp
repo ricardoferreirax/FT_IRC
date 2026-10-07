@@ -6,74 +6,74 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:14:15 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/06 14:36:22 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/07 13:54:27 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
 
-volatile sig_atomic_t running = 1;
+volatile sig_atomic_t	running = 1;
 
-void handle_signal(int signal)
+void	handle_signal(int signal)
 {
-    (void)signal;
-    running = 0;
+	(void)signal;
+	running = 0;
 }
 
-void setup_signals()
+void	setup_signals(void)
 {
-    struct sigaction action;
+	struct sigaction	action;
 
-    action.sa_handler = handle_signal; // set signal handler function for sigint
-    sigemptyset(&action.sa_mask); // initialize mask to empty so no signals are blocked during execution of the handler
-    action.sa_flags = 0;
-    if (sigaction(SIGINT, &action, NULL) < 0) // set the action for sigint (ctrl-c) to the specified handler
-        throw std::runtime_error("IRC: sigaction() failed.");
+	action.sa_handler = handle_signal; // set signal handler function for sigint
+	sigemptyset(&action.sa_mask); // initialize mask to empty so no signals are blocked during execution of the handler
+	action.sa_flags = 0;
+	if (sigaction(SIGINT, &action, NULL) < 0) // set the action for sigint (ctrl-c) to the specified handler
+		throw std::runtime_error("IRC: sigaction() failed.");
 }
 
-bool validate_args(char **av, int &port)
+bool	validate_args(char **av, int &port)
 {
-    if (av[1][0] == '\0')
-    {
-        std::cerr << "IRC: invalid port!" << std::endl;
-        return (false);
-    }
-    port = 0;
-    for (size_t i = 0; av[1][i] != '\0'; i++)
-    {
-        if (av[1][i] < '0' || av[1][i] > '9')
-        {
-            std::cerr << "IRC: port must contain only numbers!" << std::endl;
-            return (false);
-        }
-        if (port > 6553)
-        {
-            std::cerr << "IRC: port must be between 1 and 65535!" << std::endl;
-            return (false);
-        }
-        port = port * 10 + (av[1][i] - '0');
-        if (port > 65535)
-        {
-            std::cerr << "IRC: port must be between 1 and 65535!" << std::endl;
-            return (false);
-        }
-    }
-    if (port < 1024)
-    {
-        std::cerr << "IRC: privileged port! Use a port above 1023!" << std::endl;
-        return (false);
-    }
-    if (av[2][0] == '\0')
-    {
-        std::cerr << "IRC: a server password is required!" << std::endl;
-        return (false);
-    }
+	if (av[1][0] == '\0')
+	{
+		std::cerr << "IRC: invalid port!" << std::endl;
+		return (false);
+	}
+	port = 0;
+	for (size_t i = 0; av[1][i] != '\0'; i++)
+	{
+		if (av[1][i] < '0' || av[1][i] > '9')
+		{
+			std::cerr << "IRC: port must contain only numbers!" << std::endl;
+			return (false);
+		}
+		if (port > 6553)
+		{
+			std::cerr << "IRC: port must be between 1 and 65535!" << std::endl;
+			return (false);
+		}
+		port = port * 10 + (av[1][i] - '0');
+		if (port > 65535)
+		{
+			std::cerr << "IRC: port must be between 1 and 65535!" << std::endl;
+			return (false);
+		}
+	}
+	if (port < 1024)
+	{
+		std::cerr << "IRC: privileged port! Use a port above 1023!" << std::endl;
+		return (false);
+	}
+	if (av[2][0] == '\0')
+	{
+		std::cerr << "IRC: a server password is required!" << std::endl;
+		return (false);
+	}
 	return (true);
 }
 
-int main(int ac, char **av)
+int	main(int ac, char **av)
 {
-    int port;
+	int	port;
 
     if (ac != 3)
     {

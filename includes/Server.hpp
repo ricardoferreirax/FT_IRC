@@ -6,27 +6,27 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 13:48:37 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/07 13:54:49 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
-#include <iostream>
-#include <string>
-#include <stdexcept>
-#include <vector>
-#include <map>
-#include <cstring>
-#include <cstdlib>
-#include <unistd.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/epoll.h>
-#include <csignal>
-#include <sstream>
+# include <csignal>
+# include <cstdlib>
+# include <cstring>
+# include <fcntl.h>
+# include <iostream>
+# include <map>
+# include <netinet/in.h>
+# include <sstream>
+# include <stdexcept>
+# include <string>
+# include <sys/epoll.h>
+# include <sys/socket.h>
+# include <unistd.h>
+# include <vector>
 
 #include "Client.hpp"
 
@@ -34,11 +34,11 @@ extern volatile sig_atomic_t running;
 
 class Server
 {
-    private:
-        std::string _pass;
-        int _port;
-        int _listen_fd;
-        int _epoll_fd;
+  private:
+	std::string _pass;
+	int _port;
+	int _listen_fd;
+	int _epoll_fd;
 
 		std::map<int, Client *> _clients; // stores client objects associated with each client fd
 
@@ -59,15 +59,13 @@ class Server
 		
         void disconnect_client(int client_fd);
 
-    public:
-        Server(int port, const std::string &pass);
-        ~Server();
+	void disconnect_client(int client_fd);
 
         void start_socket();
         void monitor_epoll_events();
 };
 
-void handle_signal(int signal);
-void setup_signals();
+void							handle_signal(int signal);
+void							setup_signals(void);
 
 #endif
