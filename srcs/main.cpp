@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:14:15 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/05 18:46:14 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/07 13:54:27 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -75,25 +75,26 @@ int	main(int ac, char **av)
 {
 	int	port;
 
-	if (ac != 3)
-	{
-		std::cerr << "./ircserv <port> <password>" << std::endl;
-		return (EXIT_FAILURE);
-	}
-	if (!validate_args(av, port))
-		return (EXIT_FAILURE);
-	try
-	{
-		setup_signals();
-		Server server(port, av[2]);
-		server.start_socket();
-		server.prepare_epoll();
-		server.handle_events();
-	}
-	catch (const std::exception &e)
-	{
-		std::cerr << e.what() << std::endl;
-		return (EXIT_FAILURE);
-	}
-	return (EXIT_SUCCESS);
+    if (ac != 3)
+    {
+        std::cerr << "./ircserv <port> <password>" << std::endl;
+        return (EXIT_FAILURE);
+    }
+    if (!validate_args(av, port))
+        return (EXIT_FAILURE);
+    try
+    {
+        setup_signals();
+
+        Server server(port, av[2]);
+
+        server.start_socket();
+        server.monitor_epoll_events();
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << e.what() << std::endl;
+        return (EXIT_FAILURE);
+    }
+    return (EXIT_SUCCESS);
 }
