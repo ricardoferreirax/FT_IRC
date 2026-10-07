@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/06 18:13:53 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/07 12:42:49 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,13 +24,16 @@ Server::Server(int port, const std::string &pass)
 
 Server::~Server()
 {
+    std::map<int, Client *>::iterator it;
+
     std::cout << "Closing server..." << std::endl;
-    for (size_t i = 0; i < this->_client_fds.size(); i++)
+    for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
     {
-        close(this->_client_fds[i]);
-        std::cout << "[CLIENT " << this->_client_fds[i] << "] Closed!" << std::endl;
+        close(it->first); // close client socket fd. first is key of map = client fd
+        delete it->second; // delete client object associated with this fd. second is value of map = client *
+        std::cout << "[CLIENT " << it->first << "] Closed!" << std::endl;
     }
-    if (this->_epoll_fd != -1)
+    if (this->_epoll_fd != -1) // if epoll fd was created, close it
     {
         close(this->_epoll_fd);
         std::cout << "[EPOLL FD " << this->_epoll_fd << "] Closed!" << std::endl;
@@ -110,8 +113,8 @@ void Server::monitor_epoll_events()
     }
 }
 
-// client socket is made non-blocking, added to epoll and its initial data is stored so server can manage client independently
-// each client has its own input/output buffers, authentication status, registration status, nickname and username
+// client socket is made non-blocking, added to epoll and a Client object is created
+// to store all data and state associated with this connection
 void Server::accept_client()
 {
     int client_fd;
@@ -126,15 +129,16 @@ void Server::accept_client()
         throw std::runtime_error("IRC: fcntl() failed.");
     }
     event.events = EPOLLIN; // initially monitor client socket only for incoming data
-    event.data.fd = client_fd; // store client fd in event so server can identify which client generated it
+    event.data.fd = client_fd; // store client fd so server can identify which client generated the event
     if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, client_fd, &event) < 0) // add client socket to epoll interest list
     {
         close(client_fd);
         throw std::runtime_error("IRC: epoll_ctl() failed.");
     }
-    this->_client_fds.push_back(client_fd); // store client fd in list of connected clients
-    this->_client_buffers[client_fd] = ""; // create empty input buffer to store incoming data from client
-    this->_client_output[client_fd] = ""; // create empty output buffer to store data waiting to be sent to client
+    this->_clients[client_fd] = new Client(client_fd); // create and store Client object associated with its socket fd
+    // this->_client_fds.push_back(client_fd); // store client fd in list of connected clients
+    this->_client_buffers[client_fd] = "";
+    this->_client_output[client_fd] = "";
     this->_authenticated[client_fd] = false;
     this->_registered[client_fd] = false;
     std::cout << "\n==========================================" << std::endl;
@@ -255,28 +259,21 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
     std::cout << std::endl;
 }
 
-// removes a disconnected client from every part of server. EPOLL_CTL_DEL removes socket from epoll interest list
+// removes disconnected client from epoll, deletes its client object and closes socket associated with the connection
+// EPOLL_CTL_DEL removes socket from epoll interest list
 void Server::disconnect_client(int client_fd)
 {
-    std::vector<int>::iterator it;
-
-    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0) // stop monitoring this client socket for events
+    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0) // stop monitoring client socket
         throw std::runtime_error("IRC: epoll_ctl() failed.");
-    for (it = this->_client_fds.begin(); it != this->_client_fds.end(); ++it) // find client fd in list/vector of connected clients
-    {
-        if (*it == client_fd) // if matches the disconnected client
-        {
-            this->_client_fds.erase(it); // remove from the list/vector
-            break;
-        }
-    }
-    this->_client_buffers.erase(client_fd); // remove any complete/incomplete data stored for this client buffer
-	this->_client_output.erase(client_fd); // remove any pending data waiting to be sent to this client
+    delete this->_clients[client_fd]; // delete client object associated with this fd
+    this->_clients.erase(client_fd); // remove client from server container
+    this->_client_buffers.erase(client_fd);
+    this->_client_output.erase(client_fd);
     this->_authenticated.erase(client_fd);
     this->_registered.erase(client_fd);
     this->_nicknames.erase(client_fd);
     this->_usernames.erase(client_fd);
-    close(client_fd);
+    close(client_fd); // close client socket
     std::cout << "==========================================" << std::endl;
     std::cout << "     [CLIENT " << client_fd << "] DISCONNECTED!" << std::endl;
     std::cout << "==========================================\n" << std::endl;
