@@ -6,30 +6,30 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 18:05:02 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/08 14:22:18 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
-# include <csignal>
-# include <cstdlib>
-# include <cctype>
-# include <cstring>
-# include <fcntl.h>
-# include <iostream>
-# include <map>
-# include <netinet/in.h>
-# include <sstream>
-# include <stdexcept>
-# include <string>
-# include <sys/epoll.h>
-# include <sys/socket.h>
-# include <unistd.h>
-# include <vector>
+#include <csignal>
+#include <cstdlib>
+#include <cctype>
+#include <cstring>
+#include <fcntl.h>
+#include <iostream>
+#include <map>
+#include <netinet/in.h>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <sys/epoll.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <vector>
 
-# include "Client.hpp"
+#include "Client.hpp"
 
 extern volatile sig_atomic_t running;
 
@@ -42,7 +42,7 @@ class Server
         int _epoll_fd;
 
         std::map<int, Client> _clients; // store all connected clients with their socket fd corresponding to their client
-
+		
         void accept_client();
         void receive_client_data(int client_fd);
         void send_client_data(int client_fd);

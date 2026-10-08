@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 18:06:18 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/07 18:35:47 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,43 +15,49 @@
 void Server::handle_pass(int client_fd, const std::string &params)
 {
     if (params.empty())
-	{
-	    this->send_reply(client_fd, ":ircserv 461 * PASS :Not enough parameters\r\n"); // ERR_NEEDMOREPARAMS
-	    return;
-	}
-    if (params != this->_pass)
-	{
-	    this->send_reply(client_fd, ":ircserv 464 * :Password incorrect\r\n"); // ERR_PASSWDMISMATCH
-	    return;
-	}
-	this->_clients[client_fd].set_auth(true);
+    {
+        this->send_reply(client_fd, ":ircserv 461 * PASS :Not enough parameters\r\n");
+        return;
+    }
+    if (params.find(' ') != std::string::npos || params != this->_pass)
+    {
+        this->send_reply(client_fd, ":ircserv 464 * :Password incorrect\r\n");
+        return;
+    }
+    this->_clients[client_fd].set_auth(true);
     std::cout << "\nCORRECT PASS!" << std::endl;
 }
 
 void Server::handle_nick(int client_fd, const std::string &params)
 {
     std::map<int, Client>::iterator it;
+    std::string nick;
+    size_t space;
 
-    if (params.empty() || params.find(' ') != std::string::npos) // if nickname is empty or has spaces
+    if (params.empty()) // if no nickname was provided
     {
-        this->send_reply(client_fd, ":ircserv 431 * :No nickname given\r\n"); // ERR_NONICKNAMEGIVEN
+        this->send_reply(client_fd, ":ircserv 431 * :No nickname given\r\n");
         return;
     }
-	if (!this->is_valid_nick(params))
-	{
-	    this->send_reply(client_fd, ":ircserv 432 * " + params + " :Erroneous nickname\r\n"); // ERR_ERRONEUSNICKNAME
-	    return;
-	}
+    space = params.find(' ');
+    if (space == std::string::npos) // if no space was found
+        nick = params; // entire params is the nick
+    else
+        nick = params.substr(0, space); // extract nick from params ignoring extra params after space
+    if (!this->is_valid_nick(nick))
+    {
+        this->send_reply(client_fd, ":ircserv 432 * " + nick + " :Erroneous nickname\r\n");
+        return;
+    }
     for (it = this->_clients.begin(); it != this->_clients.end(); ++it) // iterate through all connected clients
     {
-        if (it->second.get_nick() == params) // check if requested nick is being used by another client
+        if (it->second.get_nick() == nick) // check if nick is used by another client
         {
-            this->send_reply(client_fd, ":ircserv 433 * :Nickname is already in use\r\n"); // ERR_NICKNAMEINUSE
+            this->send_reply(client_fd, ":ircserv 433 * " + nick + " :Nickname is already in use\r\n");
             return;
         }
     }
-    this->_clients[client_fd].set_nick(params); // associate nick with this client fd
-    std::cout << "\nNICK set to: " << params << std::endl;
+    this->_clients[client_fd].set_nick(nick);
 }
 
 void Server::handle_user(int client_fd, const std::string &params)
