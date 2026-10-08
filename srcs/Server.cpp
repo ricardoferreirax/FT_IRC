@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/08 16:06:28 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/08 16:32:48 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -198,16 +198,16 @@ void Server::process_message(int client_fd, std::string &client_buffer)
     size_t space;
 
     pos = client_buffer.find("\r\n");
-    while (pos != std::string::npos)
+    while (pos != std::string::npos) // while there is at least one complete irc msg in buffer
     {
-        msg = client_buffer.substr(0, pos);
-		if (msg.empty())
+        msg = client_buffer.substr(0, pos); // extract msg from buffer ignoring "\r\n"
+		if (msg.empty()) // if msg is emptyremove it from buffer and continue to next msg
 		{
 		    client_buffer.erase(0, pos + 2);
-		    pos = client_buffer.find("\r\n");
+		    pos = client_buffer.find("\r\n"); // find next complete msg in buffer
 		    continue;
 		}
-        space = msg.find(' ');
+        space = msg.find(' '); // find space that separate cmd from params
         if (space == std::string::npos)
         {
             cmd = msg;
@@ -215,11 +215,11 @@ void Server::process_message(int client_fd, std::string &client_buffer)
         }
         else
         {
-            cmd = msg.substr(0, space);
-            params = msg.substr(space + 1);
+            cmd = msg.substr(0, space); // extract cmd w/out params after space
+            params = msg.substr(space + 1); // extract params after space
         }
         this->send_reply(client_fd, "Msg: " + msg + " | Cmd: " + cmd + " | Params: " + params + "\r\n");
-        this->handle_cmd(client_fd, cmd, params);
+        this->handle_cmd(client_fd, cmd, params); // process irc msg by executing its cmd with its params
 		this->send_reply(client_fd, "\r\n");
         client_buffer.erase(0, pos + 2);
         pos = client_buffer.find("\r\n");
@@ -242,15 +242,17 @@ void Server::register_client(int client_fd)
     std::string nick; // store nick of client that completed registration
 
     if (this->_clients[client_fd].get_registered()) // if client is already registered
+	{
         return;
-    if (this->_clients[client_fd].get_auth() && !this->_clients[client_fd].get_nick().empty() 
-		&& !this->_clients[client_fd].get_user().empty()) // if client has sent correct pass and set both nick and user
+	}
+	if (this->_clients[client_fd].can_register())
 	{
 		this->_clients[client_fd].set_registered(true); // mark client as registered
 		nick = this->_clients[client_fd].get_nick(); // store nick that has completed regist
 		std::cout << "\n==========================================" << std::endl;
 		std::cout << "     [CLIENT " << client_fd << "] REGISTERED!" << std::endl;
 		std::cout << "==========================================\n" << std::endl;
+		this->send_reply(client_fd, "\r\n");
 		this->send_reply(client_fd, ":ircserv 001 " + nick + " :Welcome to the IRC server\r\n");
 	}
 }
@@ -259,7 +261,7 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
 {
     if ((cmd == "PASS" || cmd == "USER") && this->_clients[client_fd].get_registered())
     {
-        this->send_reply(client_fd, ":ircserv 462 * :You may not reregister\r\n");
+        this->send_reply(client_fd, ":ircserv 462 * :You may not reregister\r\n"); // ERR_ALREADYREGISTRED
         return;
     }
     if (cmd == "PASS")

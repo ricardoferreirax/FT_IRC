@@ -1,18 +1,18 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   utils.cpp                                          :+:      :+:    :+:   */
+/*   Utils.cpp                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/08 15:52:24 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/08 16:15:35 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../includes/Server.hpp"
+#include "../includes/Utils.hpp"
 
-bool Server::is_valid_nick(const std::string &nick)
+bool is_valid_nick(const std::string &nick)
 {
     if (nick.empty())
         return (false);
@@ -26,7 +26,7 @@ bool Server::is_valid_nick(const std::string &nick)
     return (true);
 }
 
-bool Server::get_param(std::string &remaining, std::string &param)
+bool get_param(std::string &remaining, std::string &param)
 {
     size_t space;
 

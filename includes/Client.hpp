@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:28:03 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/08 14:22:05 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/08 16:30:21 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 #include <iostream>
 #include <string>
 
+// 
 class Client
 {
     private:
@@ -46,6 +47,8 @@ class Client
         void set_user(const std::string &user);
         void set_auth(bool auth);
         void set_registered(bool registered);
+
+		bool can_register() const;
 };
 
 #endif

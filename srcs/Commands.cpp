@@ -6,11 +6,12 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/08 15:58:00 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/08 16:16:30 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
+#include "../includes/Utils.hpp"
 
 void Server::handle_pass(int client_fd, const std::string &params)
 {
@@ -44,7 +45,7 @@ void Server::handle_nick(int client_fd, const std::string &params)
         nick = params; // entire params is the nick
     else
         nick = params.substr(0, space); // extract nick from params ignoring extra params after space
-    if (!this->is_valid_nick(nick))
+    if (!is_valid_nick(nick))
     {
         this->send_reply(client_fd, ":ircserv 432 * " + nick + " :Erroneous nickname\r\n");
         return;
@@ -70,8 +71,8 @@ void Server::handle_user(int client_fd, const std::string &params)
     std::string remaining;
 
     remaining = params;
-    if (!this->get_param(remaining, username) || !this->get_param(remaining, mode)
-    	|| !this->get_param(remaining, unused) || remaining.size() < 2 || remaining[0] != ':')
+    if (!get_param(remaining, username) || !get_param(remaining, mode)
+    	|| !get_param(remaining, unused) || remaining.size() < 2 || remaining[0] != ':')
     {
         this->send_reply(client_fd, ":ircserv 461 * USER :Not enough parameters\r\n");
         return;

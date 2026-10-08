@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:31:53 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/08 15:56:32 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/08 16:28:50 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -92,4 +92,9 @@ std::string &Client::get_recv_buffer()
 std::string &Client::get_send_buffer()
 {
     return (this->_send_buffer);
+}
+
+bool Client::can_register() const
+{
+    return (this->_auth && !this->_nick.empty() && !this->_user.empty());
 }
