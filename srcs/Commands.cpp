@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/08 16:16:30 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/08 17:08:33 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,7 +35,7 @@ void Server::handle_nick(int client_fd, const std::string &params)
     std::string nick;
     size_t space;
 
-    if (params.empty()) // if no nickname was provided
+    if (params.empty())
     {
         this->send_reply(client_fd, ":ircserv 431 * :No nickname given\r\n");
         return;
@@ -50,14 +50,14 @@ void Server::handle_nick(int client_fd, const std::string &params)
         this->send_reply(client_fd, ":ircserv 432 * " + nick + " :Erroneous nickname\r\n");
         return;
     }
-    for (it = this->_clients.begin(); it != this->_clients.end(); ++it) // iterate through all connected clients
-    {
-        if (it->second.get_nick() == nick) // check if nick is used by another client
-        {
-            this->send_reply(client_fd, ":ircserv 433 * " + nick + " :Nickname is already in use\r\n");
-            return;
-        }
-    }
+    for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
+	{
+	    if (it->first != client_fd && it->second.get_nick() == nick)
+	    {
+	        this->send_reply(client_fd, ":ircserv 433 * " + nick + " :Nickname is already in use\r\n");
+	        return;
+	    }
+	}
     this->_clients[client_fd].set_nick(nick);
 	this->send_reply(client_fd, "NICK set to: " + nick + "\r\n");
 }
@@ -80,4 +80,10 @@ void Server::handle_user(int client_fd, const std::string &params)
     realname = remaining.substr(1); // extract realname from remaining removing colon
     this->_clients[client_fd].set_user(username); // associate username with this client fd
     this->send_reply(client_fd, "USER set to: " + username + " | Mode: " + mode + " | Unused: " + unused + " | Realname: " + realname + "\r\n");
+}
+
+void Server::handle_quit(int client_fd, const std::string &params)
+{
+    (void)params;
+    this->disconnect_client(client_fd);
 }

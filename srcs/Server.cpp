@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/08 16:32:48 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/08 17:18:30 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,22 +26,14 @@ Server::~Server()
 {
     std::map<int, Client>::iterator it;
 
-    std::cout << "Closing server..." << std::endl;
     for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
     {
         close(it->first);
-        std::cout << "[CLIENT " << it->first << "] Closed!" << std::endl;
     }
     if (this->_epoll_fd != -1)
-    {
         close(this->_epoll_fd);
-        std::cout << "[EPOLL FD " << this->_epoll_fd << "] Closed!" << std::endl;
-    }
     if (this->_listen_fd != -1)
-    {
         close(this->_listen_fd);
-        std::cout << "[SOCKET FD " << this->_listen_fd << "] Closed!" << std::endl;
-    }
     std::cout << "[SERVER] Closed!" << std::endl;
 }
 
@@ -101,13 +93,15 @@ void Server::monitor_epoll_events()
             current_fd = events[i].data.fd; // get fd that generated current event
             if (current_fd == this->_listen_fd && (events[i].events & EPOLLIN)) // if returned event is from listening socket and is EPOLLIN
                 this->accept_client(); // EPOLLIN on listening socket means a new client is waiting to connect
-            else if (current_fd != this->_listen_fd) // if returned event is from a client socket
-            {
-                if (events[i].events & EPOLLIN) // EPOLLIN on client socket means client has sent data to server and it is ready to be read/receive
-                    this->handle_client_data(current_fd, RECV);
-                if (events[i].events & EPOLLOUT) // EPOLLOUT on client socket means server has data to send to client and it is ready to be written/send
-                    this->handle_client_data(current_fd, SEND);
-            }
+            else if (current_fd != this->_listen_fd)
+			{
+			    if (events[i].events & EPOLLIN) // if returned event is from a client socket and is EPOLLIN
+			        this->handle_client_data(current_fd, RECV); // means new data is waiting to be read from this client
+			    if (this->_clients.find(current_fd) == this->_clients.end()) // if client was disconnected don't try to send data to it
+			        continue; // skip to next event
+			    if (events[i].events & EPOLLOUT) // if returned event is from a client socket and is EPOLLOUT
+			        this->handle_client_data(current_fd, SEND); // means client socket is ready to send data
+			}
         }
     }
 }
@@ -220,6 +214,8 @@ void Server::process_message(int client_fd, std::string &client_buffer)
         }
         this->send_reply(client_fd, "Msg: " + msg + " | Cmd: " + cmd + " | Params: " + params + "\r\n");
         this->handle_cmd(client_fd, cmd, params); // process irc msg by executing its cmd with its params
+		if (this->_clients.find(client_fd) == this->_clients.end()) // if client was disconnected don't try to send data to it
+			return;
 		this->send_reply(client_fd, "\r\n");
         client_buffer.erase(0, pos + 2);
         pos = client_buffer.find("\r\n");
@@ -270,6 +266,11 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
         this->handle_nick(client_fd, params);
     else if (cmd == "USER")
         this->handle_user(client_fd, params);
+	else if (cmd == "QUIT")
+	{
+		this->handle_quit(client_fd, params);
+		return;
+	}
     else
     {
         this->send_reply(client_fd, ":ircserv 421 * " + cmd + " :Unknown command\r\n"); // ERR_UNKNOWNCOMMAND
