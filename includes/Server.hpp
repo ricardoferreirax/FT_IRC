@@ -6,38 +6,20 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/08 17:06:20 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/08 21:22:40 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
-#include <csignal>
-#include <cstdlib>
-#include <cctype>
-#include <cstring>
-#include <fcntl.h>
-#include <iostream>
-#include <map>
-#include <netinet/in.h>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <sys/epoll.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <vector>
+# include <csignal>
+# include <map>
+# include <string>
 
 #include "Client.hpp"
 
 extern volatile sig_atomic_t running;
-
-enum client_event
-{
-	RECV,
-    SEND
-};
 
 class Server
 {
@@ -50,7 +32,8 @@ class Server
         std::map<int, Client> _clients; // store all connected clients
 		
         void accept_client();
-		void handle_client_data(int client_fd, client_event event);
+		void receive_client_data(int client_fd);
+		void send_client_data(int client_fd);
         void process_message(int client_fd, std::string &client_buffer);
 		void send_reply(int client_fd, const std::string &reply);
         void register_client(int client_fd);
@@ -60,6 +43,7 @@ class Server
         void handle_pass(int client_fd, const std::string &params);
         void handle_nick(int client_fd, const std::string &params);
         void handle_user(int client_fd, const std::string &params);
+		void handle_ping(int client_fd, const std::string &params);
 		void handle_quit(int client_fd, const std::string &params);
 
     public:

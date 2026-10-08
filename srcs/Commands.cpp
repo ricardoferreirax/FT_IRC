@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/08 17:08:33 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/08 20:35:43 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -80,6 +80,16 @@ void Server::handle_user(int client_fd, const std::string &params)
     realname = remaining.substr(1); // extract realname from remaining removing colon
     this->_clients[client_fd].set_user(username); // associate username with this client fd
     this->send_reply(client_fd, "USER set to: " + username + " | Mode: " + mode + " | Unused: " + unused + " | Realname: " + realname + "\r\n");
+}
+
+void Server::handle_ping(int client_fd, const std::string &params)
+{
+    if (params.empty())
+	{
+		return;
+	}
+	this->send_reply(client_fd, "\r\n");
+    this->send_reply(client_fd, "PONG " + params + "\r\n");
 }
 
 void Server::handle_quit(int client_fd, const std::string &params)

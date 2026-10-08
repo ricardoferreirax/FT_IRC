@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:31:53 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/08 16:28:50 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/08 23:02:42 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,10 +15,6 @@
 Client::Client()
 {
     this->_fd = -1;
-    this->_recv_buffer = "";
-    this->_send_buffer = "";
-    this->_nick = "";
-    this->_user = "";
     this->_auth = false;
     this->_registered = false;
 }
@@ -26,17 +22,18 @@ Client::Client()
 Client::Client(int fd)
 {
     this->_fd = fd;
-    this->_recv_buffer = "";
-    this->_send_buffer = "";
-    this->_nick = "";
-    this->_user = "";
     this->_auth = false;
     this->_registered = false;
 }
 
-Client::~Client()
+std::string &Client::get_recv_buffer()
 {
-	
+    return (this->_recv_buffer);
+}
+
+std::string &Client::get_send_buffer()
+{
+    return (this->_send_buffer);
 }
 
 int Client::get_fd() const
@@ -47,16 +44,6 @@ int Client::get_fd() const
 const std::string &Client::get_nick() const
 {
     return (this->_nick);
-}
-
-const std::string &Client::get_user() const
-{
-    return (this->_user);
-}
-
-bool Client::get_auth() const
-{
-    return (this->_auth);
 }
 
 bool Client::get_registered() const
@@ -82,16 +69,6 @@ void Client::set_auth(bool auth)
 void Client::set_registered(bool registered)
 {
     this->_registered = registered;
-}
-
-std::string &Client::get_recv_buffer()
-{
-    return (this->_recv_buffer);
-}
-
-std::string &Client::get_send_buffer()
-{
-    return (this->_send_buffer);
 }
 
 bool Client::can_register() const
