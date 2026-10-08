@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/08 14:22:18 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/08 15:04:46 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,12 @@
 
 extern volatile sig_atomic_t running;
 
+enum client_event
+{
+	RECV,
+    SEND
+};
+
 class Server
 {
     private:
@@ -44,8 +50,8 @@ class Server
         std::map<int, Client> _clients; // store all connected clients with their socket fd corresponding to their client
 		
         void accept_client();
-        void receive_client_data(int client_fd);
-        void send_client_data(int client_fd);
+		void handle_client_data(int client_fd, client_event event);
+        void process_message(int client_fd, std::string &client_buffer);
 		void send_reply(int client_fd, const std::string &reply);
         void disconnect_client(int client_fd);
 
