@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/08 15:05:50 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/08 16:06:28 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -192,6 +192,8 @@ void Server::handle_client_data(int client_fd, client_event type)
 void Server::process_message(int client_fd, std::string &client_buffer)
 {
     std::string msg;
+    std::string cmd;
+    std::string params;
     size_t pos;
     size_t space;
 
@@ -199,14 +201,26 @@ void Server::process_message(int client_fd, std::string &client_buffer)
     while (pos != std::string::npos)
     {
         msg = client_buffer.substr(0, pos);
-        std::cout << "------------------------------------------------------------" << std::endl;
-        std::cout << "[CLIENT " << client_fd << "]" << std::endl;
-        std::cout << "\nMsg: " << msg << std::endl;
+		if (msg.empty())
+		{
+		    client_buffer.erase(0, pos + 2);
+		    pos = client_buffer.find("\r\n");
+		    continue;
+		}
         space = msg.find(' ');
         if (space == std::string::npos)
-            this->handle_cmd(client_fd, msg, "");
+        {
+            cmd = msg;
+            params = "";
+        }
         else
-            this->handle_cmd(client_fd, msg.substr(0, space), msg.substr(space + 1));
+        {
+            cmd = msg.substr(0, space);
+            params = msg.substr(space + 1);
+        }
+        this->send_reply(client_fd, "Msg: " + msg + " | Cmd: " + cmd + " | Params: " + params + "\r\n");
+        this->handle_cmd(client_fd, cmd, params);
+		this->send_reply(client_fd, "\r\n");
         client_buffer.erase(0, pos + 2);
         pos = client_buffer.find("\r\n");
     }
@@ -238,15 +252,16 @@ void Server::register_client(int client_fd)
 		std::cout << "     [CLIENT " << client_fd << "] REGISTERED!" << std::endl;
 		std::cout << "==========================================\n" << std::endl;
 		this->send_reply(client_fd, ":ircserv 001 " + nick + " :Welcome to the IRC server\r\n");
-		std::cout << std::endl;
 	}
 }
 
-void Server::handle_cmd(int client_fd, const std::string &cmd,
-	const std::string &params)
+void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string &params)
 {
-    std::cout << "\nCmd: " << cmd << std::endl;
-    std::cout << "Params: " << params << std::endl;
+    if ((cmd == "PASS" || cmd == "USER") && this->_clients[client_fd].get_registered())
+    {
+        this->send_reply(client_fd, ":ircserv 462 * :You may not reregister\r\n");
+        return;
+    }
     if (cmd == "PASS")
         this->handle_pass(client_fd, params);
     else if (cmd == "NICK")
@@ -255,11 +270,10 @@ void Server::handle_cmd(int client_fd, const std::string &cmd,
         this->handle_user(client_fd, params);
     else
     {
-        std::cout << "\nUNKNOWN COMMAND" << std::endl;
+        this->send_reply(client_fd, ":ircserv 421 * " + cmd + " :Unknown command\r\n"); // ERR_UNKNOWNCOMMAND
         return;
     }
     this->register_client(client_fd);
-    std::cout << std::endl;
 }
 
 // removes disconnected client from epoll, deletes its client object and closes socket associated with the connection

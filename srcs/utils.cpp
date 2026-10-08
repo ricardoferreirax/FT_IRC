@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 18:26:48 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/08 15:52:24 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,5 +23,17 @@ bool Server::is_valid_nick(const std::string &nick)
         if (!std::isalnum(nick[i]) && nick[i] != '_' && nick[i] != '-')
             return (false);
     }
+    return (true);
+}
+
+bool Server::get_param(std::string &remaining, std::string &param)
+{
+    size_t space;
+
+    space = remaining.find(' ');
+    if (space == std::string::npos || space == 0)
+        return (false);
+    param = remaining.substr(0, space);
+    remaining.erase(0, space + 1);
     return (true);
 }

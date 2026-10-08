@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/08 15:04:46 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/08 15:55:30 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,7 +60,9 @@ class Server
         void handle_nick(int client_fd, const std::string &params);
         void handle_user(int client_fd, const std::string &params);
         void register_client(int client_fd);
+		
 		bool is_valid_nick(const std::string &nick);
+		bool get_param(std::string &remaining, std::string &param);
 
     public:
         Server(int port, const std::string &pass);
