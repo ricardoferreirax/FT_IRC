@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/09 22:54:01 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/09 23:27:24 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,13 +49,14 @@ class Server
 		void handle_ping(int client_fd, const std::string &params);
 		void handle_quit(int client_fd, const std::string &params);
 
+		std::string get_client_prefix(int client_fd);
+
     public:
         Server(int port, const std::string &pass);
         ~Server();
 
         void start_socket();
         void monitor_epoll_events();
-		std::map<int, Client> &getClients();
 };
 
 void handle_signal(int signal);

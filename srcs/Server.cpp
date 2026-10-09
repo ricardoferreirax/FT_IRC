@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/09 23:11:41 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/09 23:44:59 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -57,8 +57,8 @@ void Server::start_socket()
     if (this->_listen_fd < 0)
         throw std::runtime_error("IRC: socket() failed.");
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);  // configure socket to accept connections on any local network interface
-    server_addr.sin_port = htons(this->_port);       // configure socket to listen on specified port (convert to network byte order)
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); // socket accept connections on any local ipv4 network
+    server_addr.sin_port = htons(this->_port); // listen on specified port
     socket_opt = 1;
     if (setsockopt(this->_listen_fd, SOL_SOCKET, SO_REUSEADDR, &socket_opt, sizeof(socket_opt)) < 0) // enable SO_REUSEADDR so listening address can be reused after restarting the server
         throw std::runtime_error("IRC: setsockopt() failed.");
@@ -68,7 +68,7 @@ void Server::start_socket()
         throw std::runtime_error("IRC: bind() failed.");
     if (listen(this->_listen_fd, SOMAXCONN) < 0)         // changes socket into a listening socket so it can receive incoming tcp connection
         throw std::runtime_error("IRC: listen() failed.");
-    std::cout << "\n[SERVER] Listening on 0.0.0.0:" << this->_port << std::endl;
+    std::cout << "\n[SERVER] Listening on all interfaces (0.0.0.0:" << this->_port << ")" << std::endl;
 }
 
 // monitors sockets (listening and client) for events, when the event occurs, corresponding socket is processed.
@@ -119,15 +119,22 @@ void Server::monitor_epoll_events()
 void Server::accept_client()
 {
 	epoll_event	event;
-	sockaddr_in	client_addr; // addr information (ip and port) of accepted connection
-	socklen_t	client_len; // 
+	sockaddr_in	client_addr;
+	sockaddr_in	server_addr;
+	socklen_t	addr_len;
 	int			client_fd;
 
-	client_len = sizeof(client_addr);
-	client_fd = accept(this->_listen_fd, reinterpret_cast<sockaddr *>(&client_addr), &client_len); // accept connection from new client and return its socket fd, store its addr info in client_addr
+	addr_len = sizeof(client_addr);
+	client_fd = accept(this->_listen_fd, reinterpret_cast<sockaddr *>(&client_addr), &addr_len); // accept connection from new client and return its socket fd, store its addr in client_addr
 	if (client_fd < 0)
 		throw std::runtime_error("IRC: accept() failed.");
-	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0) // set client non-blocking
+	addr_len = sizeof(server_addr);
+	if (getsockname(client_fd, reinterpret_cast<sockaddr *>(&server_addr), &addr_len) < 0) // get server address and port that client connected to
+	{
+		close(client_fd);
+		throw std::runtime_error("IRC: getsockname() failed.");
+	}
+	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0) // set client socket to non-blocking
 	{
 		close(client_fd);
 		throw std::runtime_error("IRC: fcntl() failed.");
@@ -140,10 +147,11 @@ void Server::accept_client()
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 	}
 	this->_clients[client_fd] = Client(client_fd); // create and store client with its socket fd
-	this->_clients[client_fd].set_hostname(inet_ntoa(client_addr.sin_addr)); // store client ip address in client
-	std::cout << "==========================================" << std::endl;
-	std::cout << "CLIENT " << client_fd << " CONNECTED! " << std::endl;
-	std::cout << "HOST: " << this->_clients[client_fd].get_hostname() << std::endl;
+	this->_clients[client_fd].set_host_ip(inet_ntoa(client_addr.sin_addr)); // store client ip address in client
+	std::cout << "\n==========================================" << std::endl;
+	std::cout << "         CLIENT " << client_fd << " CONNECTED!\n" << std::endl;
+	std::cout << "CLIENT IP: " << inet_ntoa(client_addr.sin_addr) << " (HOST)"<<std::endl;
+	std::cout << "SERVER IP: " << inet_ntoa(server_addr.sin_addr) << std::endl;
 	std::cout << "==========================================\n" << std::endl;
 }
 
@@ -162,7 +170,6 @@ void Server::receive_client_data(int client_fd)
 	}
 	if (bytes == 0) // recv() returns 0 when client disconnects
 	{
-		// std::cout << "recv(): " << recv(client_fd, buffer, sizeof(buffer), 0) << std::endl;
 		this->disconnect_client(client_fd);
 		return;
 	}
@@ -300,7 +307,8 @@ void Server::disconnect_client(int client_fd)
     std::cout << "==========================================\n" << std::endl;
 }
 
-std::map<int, Client> &Server::getClients(void)
+std::string Server::get_client_prefix(int client_fd)
 {
-	return this->_clients;
+	Client &client = this->_clients[client_fd];
+	return (":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip());
 }
