@@ -13,10 +13,12 @@
 #include "../includes/Server.hpp"
 #include "../includes/Channels.hpp"
 
-Channel::Channel(std::string name, int mode, Client chanop, Server serv) :
-	_name(name), _mode(mode), _clients(serv.getClients()) 
+Channel::Channel(std::string name, int mode, Client chanop) :
+	_name(name), _mode(mode) 
 {
 	std::cout << "New Channel " << this->_name << " has been created.";
 	this->_chanops.insert(chanop.get_fd());
+	this->_clients.insert(std::make_pair(chanop.get_fd(), chanop));
 }
+
 

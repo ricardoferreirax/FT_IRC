@@ -19,12 +19,11 @@ Client::Client()
     this->_registered = false;
 }
 
-Client::Client(int fd, t_ip net)
+Client::Client(int fd)
 {
     this->_fd = fd;
     this->_auth = false;
     this->_registered = false;
-	this->_net = net;
 }
 
 std::string &Client::get_recv_buffer()

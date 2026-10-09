@@ -18,11 +18,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-typedef struct s_ip
-{
-	sockaddr_in data;
-	socklen_t	len;
-} t_ip;
 
 class Client
 {
@@ -34,12 +29,11 @@ class Client
 		std::string _send_buffer;
 		std::string _nick;
 		std::string _user;
-		t_ip		_net;
 
 
     public:
         Client();
-        Client(int fd, t_ip net);
+        Client(int fd);
 
         std::string &get_recv_buffer();
         std::string &get_send_buffer();
