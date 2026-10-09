@@ -16,7 +16,7 @@
 # include <map>
 #include <set>
 
-typedef enum
+typedef enum e_mode
 {
 	NONE,
 	INVITE_ONLY,
@@ -32,10 +32,12 @@ class Channel
 		std::string _name;
 		int _mode;
 		std::set<int> _chanops;
-		std::map<int, Client> &_clients;
+		std::map<int, Client> _clients;
+		std::set<t_ip> _invite_ips;
+		std::set<t_ip> _naughtyList;
 		Channel(void);
 	public:
-		Channel(std::string name, int mode, Client chanop, Server serv);
+		Channel(std::string name, int mode, Client chanop);
 		~Channel(void);
 		bool joinChannel(Client guest);
 };
