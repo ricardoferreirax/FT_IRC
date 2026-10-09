@@ -11,5 +11,13 @@
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
+#include "../includes/Channels.hpp"
+
+Channel::Channel(std::string name, int mode, Client chanop) :
+	_name(name), _mode(mode) 
+{
+	this->_chanops.insert(chanop);
+	std::cout << "New Channel " << this->_name << " has been created.";
+}
 
 

@@ -34,13 +34,15 @@ extern volatile sig_atomic_t running;
 
 class Server
 {
+	protected:
+        std::map<int, Client> _clients; // store all connected clients with their socket fd corresponding to their client
+
     private:
         std::string _pass;
         int _port;
         int _listen_fd;
         int _epoll_fd;
 
-        std::map<int, Client *> _clients; // store all connected clients with their socket fd corresponding to their client
 
         std::vector<int> _client_fds;
         std::map<int, bool> _authenticated;

@@ -12,15 +12,18 @@
 
 #include <iostream>
 #include "Client.hpp"
+#include "Server.hpp"
+# include <map>
+#include <set>
 
-class Channel
+class Channel : public Server
 {
 	private:
 		std::string _name;
 		int _mode;
-		Client *_clients;
-		Client _chanop;
+		std::set<int> _chanops;
 		Channel(void);
 	public:
-		Channel(std::string name, int mode);
+		Channel(std::string name, int mode, int fd);
+		~Channel(void);
 };
