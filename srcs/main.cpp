@@ -6,11 +6,12 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:14:15 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 13:54:27 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/08 21:11:47 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
+#include <cstdlib>
 
 volatile sig_atomic_t	running = 1;
 

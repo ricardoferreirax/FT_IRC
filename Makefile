@@ -6,7 +6,7 @@
 #    By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/09/27 23:34:05 by rmedeiro          #+#    #+#              #
-#    Updated: 2026/10/07 12:43:29 by rmedeiro         ###   ########.fr        #
+#    Updated: 2026/10/08 16:14:21 by rmedeiro         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -26,7 +26,7 @@ SRCS = srcs/main.cpp \
 	   srcs/Server.cpp \
 	   srcs/Client.cpp \
 	   srcs/Commands.cpp \
-	   srcs/utils.cpp
+	   srcs/Utils.cpp
 
 OBJS = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 DBG_OBJS = $(SRCS:%.cpp=$(DBG_DIR)/%.o)

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/07 14:04:57 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/08 21:22:40 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,28 +14,17 @@
 # define SERVER_HPP
 
 # include <csignal>
-# include <cstdlib>
-# include <cstring>
-# include <fcntl.h>
-# include <iostream>
 # include <map>
-# include <netinet/in.h>
-# include <sstream>
-# include <stdexcept>
 # include <string>
-# include <sys/epoll.h>
-# include <sys/socket.h>
-# include <unistd.h>
-# include <vector>
 
-# include "Client.hpp"
+#include "Client.hpp"
 
 extern volatile sig_atomic_t running;
 
 class Server
 {
-	protected:
-        std::map<int, Client> _clients; // store all connected clients with their socket fd corresponding to their client
+	// protected:
+	//        std::map<int, Client> _clients; // store all connected clients with their socket fd corresponding to their client
 
     private:
         std::string _pass;
@@ -43,23 +32,21 @@ class Server
         int _listen_fd;
         int _epoll_fd;
 
-
-        std::vector<int> _client_fds;
-        std::map<int, bool> _authenticated;
-        std::map<int, std::string> _nicknames;
-        std::map<int, std::string> _usernames;
-        std::map<int, bool> _registered;
-
+        std::map<int, Client> _clients; // store all connected clients
         void accept_client();
-        void receive_client_data(int client_fd);
-        void send_client_data(int client_fd);
+		void receive_client_data(int client_fd);
+		void send_client_data(int client_fd);
+        void process_message(int client_fd, std::string &client_buffer);
+		void send_reply(int client_fd, const std::string &reply);
+        void register_client(int client_fd);
         void disconnect_client(int client_fd);
 
         void handle_cmd(int client_fd, const std::string &cmd, const std::string &params);
         void handle_pass(int client_fd, const std::string &params);
         void handle_nick(int client_fd, const std::string &params);
         void handle_user(int client_fd, const std::string &params);
-        void register_client(int client_fd);
+		void handle_ping(int client_fd, const std::string &params);
+		void handle_quit(int client_fd, const std::string &params);
 
     public:
         Server(int port, const std::string &pass);
