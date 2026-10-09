@@ -118,8 +118,12 @@ void Server::accept_client()
 {
 	epoll_event	event;
 	int				client_fd;
+	// sockaddr_in temp_for_client;
+	// socklen_t temp_for_client_len = sizeof(temp_for_client);
+	t_ip temp_for_client;
+	temp_for_client.len = sizeof(temp_for_client.data);
 
-	client_fd = accept(this->_listen_fd, NULL, NULL); // accept connection from new client and return its socket fd
+	client_fd = accept(this->_listen_fd, (struct sockaddr *)&temp_for_client.data, &temp_for_client.len); // accept connection from new client and return its socket fd
 	if (client_fd < 0)
 		throw std::runtime_error("IRC: accept() failed.");
 	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0) // set client non-blocking
@@ -134,7 +138,7 @@ void Server::accept_client()
 		close(client_fd);
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 	}
-	this->_clients[client_fd] = Client(client_fd); // create and store client with its socket fd
+	this->_clients[client_fd] = Client(client_fd, temp_for_client); // create and store client with its socket fd
 	std::cout << "\n==========================================" << std::endl;
     std::cout << "        [CLIENT " << client_fd << "] CONNECTED!" << std::endl;
     std::cout << "==========================================\n" << std::endl;
@@ -291,4 +295,9 @@ void Server::disconnect_client(int client_fd)
     std::cout << "==========================================" << std::endl;
     std::cout << "     [CLIENT " << client_fd << "] DISCONNECTED!" << std::endl;
     std::cout << "==========================================\n" << std::endl;
+}
+
+std::map<int, Client> &Server::getClients(void)
+{
+	return this->_clients;
 }

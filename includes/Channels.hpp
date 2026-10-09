@@ -16,14 +16,26 @@
 # include <map>
 #include <set>
 
-class Channel : public Server
+typedef enum
+{
+	NONE,
+	INVITE_ONLY,
+	TOPIC_RESTRICTED,
+	CHANNEL_KEY,
+	OPERATOR_PRIV,
+	USER_LIMIT
+};
+
+class Channel
 {
 	private:
 		std::string _name;
 		int _mode;
 		std::set<int> _chanops;
+		std::map<int, Client> &_clients;
 		Channel(void);
 	public:
-		Channel(std::string name, int mode, int fd);
+		Channel(std::string name, int mode, Client chanop, Server serv);
 		~Channel(void);
+		bool joinChannel(Client guest);
 };

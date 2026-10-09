@@ -21,6 +21,8 @@
 
 extern volatile sig_atomic_t running;
 
+typedef struct s_ip t_ip;
+
 class Server
 {
 	// protected:
@@ -54,6 +56,7 @@ class Server
 
         void start_socket();
         void monitor_epoll_events();
+		std::map<int, Client> &getClients();
 };
 
 void handle_signal(int signal);
