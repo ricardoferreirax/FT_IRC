@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/09 12:57:19 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/10 00:18:34 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,34 +31,30 @@ void Server::handle_pass(int client_fd, const std::string &params)
 
 void Server::handle_nick(int client_fd, const std::string &params)
 {
-    std::map<int, Client>::iterator it;
-    std::string nick;
-    size_t space;
+	std::map<int, Client>::iterator	it;
+	std::string						remaining;
+	std::string						nick;
 
-    if (params.empty())
-    {
-        this->send_reply(client_fd, ":" + this->_name + " 431 * :No nickname given\r\n");
-        return;
-    }
-    space = params.find(' ');
-    if (space == std::string::npos) // if no space was found
-        nick = params; // entire params is the nick
-    else
-        nick = params.substr(0, space); // extract nick from params ignoring extra params after space
-    if (!is_valid_nick(nick))
-    {
-        this->send_reply(client_fd, ":" + this->_name + " 432 * " + nick + " :Erroneous nickname\r\n");
-        return;
-    }
-    for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
+	remaining = params;
+	if (!get_param(remaining, nick))
 	{
-	    if (it->first != client_fd && it->second.get_nick() == nick)
-	    {
-	        this->send_reply(client_fd, ":" + this->_name + " 433 * " + nick + " :Nickname is already in use\r\n");
-	        return;
-	    }
+		this->send_reply(client_fd, ":" + this->_name + " 431 * :No nickname given\r\n");
+		return;
 	}
-    this->_clients[client_fd].set_nick(nick);
+	if (!is_valid_nick(nick))
+	{
+		this->send_reply(client_fd, ":" + this->_name + " 432 * " + nick + " :Erroneous nickname\r\n");
+		return;
+	}
+	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
+	{
+		if (it->first != client_fd && same_nick(it->second.get_nick(), nick))
+		{
+			this->send_reply(client_fd, ":" + this->_name + " 433 * " + nick + " :Nickname is already in use\r\n");
+			return;
+		}
+	}
+	this->_clients[client_fd].set_nick(nick);
 	this->send_reply(client_fd, "NICK set to: " + nick + "\r\n");
 }
 
