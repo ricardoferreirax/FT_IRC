@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/08 20:35:43 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/09 12:57:19 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,12 +17,12 @@ void Server::handle_pass(int client_fd, const std::string &params)
 {
     if (params.empty())
     {
-        this->send_reply(client_fd, ":ircserv 461 * PASS :Not enough parameters\r\n");
+        this->send_reply(client_fd, ":" + this->_name + " 461 * PASS :Not enough parameters\r\n");
         return;
     }
     if (params.find(' ') != std::string::npos || params != this->_pass)
     {
-        this->send_reply(client_fd, ":ircserv 464 * :Password incorrect\r\n");
+        this->send_reply(client_fd, ":" + this->_name + " 464 * :Password incorrect\r\n");
         return;
     }
     this->_clients[client_fd].set_auth(true);
@@ -37,7 +37,7 @@ void Server::handle_nick(int client_fd, const std::string &params)
 
     if (params.empty())
     {
-        this->send_reply(client_fd, ":ircserv 431 * :No nickname given\r\n");
+        this->send_reply(client_fd, ":" + this->_name + " 431 * :No nickname given\r\n");
         return;
     }
     space = params.find(' ');
@@ -47,14 +47,14 @@ void Server::handle_nick(int client_fd, const std::string &params)
         nick = params.substr(0, space); // extract nick from params ignoring extra params after space
     if (!is_valid_nick(nick))
     {
-        this->send_reply(client_fd, ":ircserv 432 * " + nick + " :Erroneous nickname\r\n");
+        this->send_reply(client_fd, ":" + this->_name + " 432 * " + nick + " :Erroneous nickname\r\n");
         return;
     }
     for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
 	    if (it->first != client_fd && it->second.get_nick() == nick)
 	    {
-	        this->send_reply(client_fd, ":ircserv 433 * " + nick + " :Nickname is already in use\r\n");
+	        this->send_reply(client_fd, ":" + this->_name + " 433 * " + nick + " :Nickname is already in use\r\n");
 	        return;
 	    }
 	}
@@ -74,7 +74,7 @@ void Server::handle_user(int client_fd, const std::string &params)
     if (!get_param(remaining, username) || !get_param(remaining, mode)
     	|| !get_param(remaining, unused) || remaining.size() < 2 || remaining[0] != ':')
     {
-        this->send_reply(client_fd, ":ircserv 461 * USER :Not enough parameters\r\n");
+        this->send_reply(client_fd, ":" + this->_name + " 461 * USER :Not enough parameters\r\n");
         return;
     }
     realname = remaining.substr(1); // extract realname from remaining removing colon

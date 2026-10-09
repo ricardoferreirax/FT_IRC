@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/08 21:22:40 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/09 12:55:05 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@ extern volatile sig_atomic_t running;
 class Server
 {
     private:
+		std::string _name;
         std::string _pass;
         int _port;
         int _listen_fd;
