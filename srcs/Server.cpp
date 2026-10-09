@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/09 14:59:38 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/09 23:11:41 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,7 @@
 #include <stdexcept>
 #include <sys/epoll.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 
 // port: where server will listen for incoming tcp connections
 // pass: password clients will need during irc registration
@@ -118,9 +119,12 @@ void Server::monitor_epoll_events()
 void Server::accept_client()
 {
 	epoll_event	event;
-	int				client_fd;
+	sockaddr_in	client_addr; // addr information (ip and port) of accepted connection
+	socklen_t	client_len; // 
+	int			client_fd;
 
-	client_fd = accept(this->_listen_fd, NULL, NULL); // accept connection from new client and return its socket fd
+	client_len = sizeof(client_addr);
+	client_fd = accept(this->_listen_fd, reinterpret_cast<sockaddr *>(&client_addr), &client_len); // accept connection from new client and return its socket fd, store its addr info in client_addr
 	if (client_fd < 0)
 		throw std::runtime_error("IRC: accept() failed.");
 	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0) // set client non-blocking
@@ -136,9 +140,11 @@ void Server::accept_client()
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 	}
 	this->_clients[client_fd] = Client(client_fd); // create and store client with its socket fd
-	std::cout << "\n==========================================" << std::endl;
-    std::cout << "        [CLIENT " << client_fd << "] CONNECTED!" << std::endl;
-    std::cout << "==========================================\n" << std::endl;
+	this->_clients[client_fd].set_hostname(inet_ntoa(client_addr.sin_addr)); // store client ip address in client
+	std::cout << "==========================================" << std::endl;
+	std::cout << "CLIENT " << client_fd << " CONNECTED! " << std::endl;
+	std::cout << "HOST: " << this->_clients[client_fd].get_hostname() << std::endl;
+	std::cout << "==========================================\n" << std::endl;
 }
 
 // receives data from client and processes complete messages
@@ -212,9 +218,9 @@ void Server::process_message(int client_fd, std::string &client_buffer)
 				params = ""; // no space was found -> no params
 			this->send_reply(client_fd, "Msg: " + msg + " | Cmd: " + cmd + " | Params: " + params + "\r\n");
 			this->handle_cmd(client_fd, cmd, params); // process msg executing its cmd with its params
-			this->send_reply(client_fd, "\r\n");
 			if (this->_clients.count(client_fd) == 0) // client disconnected -> don't send data
 				return;
+			this->send_reply(client_fd, "\r\n");
 		}
 		pos = client_buffer.find("\r\n"); // find next complete msg in buffer
 	}
@@ -246,7 +252,7 @@ void Server::register_client(int client_fd)
 		this->_clients[client_fd].set_registered(true); // mark client as registered
 		nick = this->_clients[client_fd].get_nick(); // store nick that has completed regist
 		std::cout << "\n==========================================" << std::endl;
-		std::cout << "     [CLIENT " << client_fd << "] REGISTERED!" << std::endl;
+		std::cout << "     CLIENT " << client_fd << " REGISTERED!" << std::endl;
 		std::cout << "==========================================\n" << std::endl;
 		this->send_reply(client_fd, "\r\n");
 		this->send_reply(client_fd, ":" + this->_name + " 001 " + nick + " :Welcome to the IRC server\r\n");
@@ -290,7 +296,7 @@ void Server::disconnect_client(int client_fd)
 	close(client_fd);
     this->_clients.erase(client_fd); // remove client from server container
     std::cout << "==========================================" << std::endl;
-    std::cout << "     [CLIENT " << client_fd << "] DISCONNECTED!" << std::endl;
+    std::cout << "     CLIENT " << client_fd << " DISCONNECTED!" << std::endl;
     std::cout << "==========================================\n" << std::endl;
 }
 

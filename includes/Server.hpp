@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/09 12:55:05 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/09 22:54:01 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,8 +20,6 @@
 #include "Client.hpp"
 
 extern volatile sig_atomic_t running;
-
-typedef struct s_ip t_ip;
 
 class Server
 {

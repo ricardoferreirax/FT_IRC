@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:28:03 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/09 15:12:40 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/09 22:56:16 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,9 +15,6 @@
 
 #include <iostream>
 #include <string>
-#include <sys/socket.h>
-#include <netinet/in.h>
-
 
 class Client
 {
@@ -29,7 +26,8 @@ class Client
 		std::string _send_buffer;
 		std::string _nick;
 		std::string _user;
-
+		std::string _hostname;
+		
     public:
         Client();
         Client(int fd);
