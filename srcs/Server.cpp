@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/08 23:04:51 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/09 14:59:38 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@
 // pass: password clients will need during irc registration
 Server::Server(int port, const std::string &pass)
 {
+	this->_name = "ircserv";
 	this->_pass = pass;
 	this->_port = port;
 	this->_listen_fd = -1;
@@ -252,7 +253,7 @@ void Server::register_client(int client_fd)
 		std::cout << "     [CLIENT " << client_fd << "] REGISTERED!" << std::endl;
 		std::cout << "==========================================\n" << std::endl;
 		this->send_reply(client_fd, "\r\n");
-		this->send_reply(client_fd, ":ircserv 001 " + nick + " :Welcome to the IRC server\r\n");
+		this->send_reply(client_fd, ":" + this->_name + " 001 " + nick + " :Welcome to the IRC server\r\n");
 	}
 }
 
@@ -260,7 +261,7 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
 {
     if ((cmd == "PASS" || cmd == "USER") && this->_clients[client_fd].get_registered())
     {
-        this->send_reply(client_fd, ":ircserv 462 * :You may not reregister\r\n"); // ERR_ALREADYREGISTRED
+        this->send_reply(client_fd, ":" + this->_name + " 462 * :You may not reregister\r\n"); // ERR_ALREADYREGISTRED
         return;
     }
     if (cmd == "PASS")
@@ -278,7 +279,7 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
 	}
     else
     {
-        this->send_reply(client_fd, ":ircserv 421 * " + cmd + " :Unknown command\r\n"); // ERR_UNKNOWNCOMMAND
+        this->send_reply(client_fd, ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n"); // ERR_UNKNOWNCOMMAND
         return;
     }
     this->register_client(client_fd);
