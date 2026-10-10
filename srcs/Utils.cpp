@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/10 00:14:44 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/10 14:20:21 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 static bool is_nick_special(char c)
 {
 	if (c == '[' || c == ']' || c == '\\' || c == '`' || c == '_' || c == '^' 
-		|| c == '{' || c == '|' || c == '}')
+		|| c == '{' || c == '|' || c == '}' || c == '-')
 		return (true);
 	return (false);
 }
@@ -28,7 +28,7 @@ bool is_valid_nick(const std::string &nick)
 		return (false);
 	for (size_t i = 1; i < nick.size(); i++)
 	{
-		if (!std::isalnum(nick[i]) && !is_nick_special(nick[i]) && nick[i] != '-') // nick can have alnum, special chars and '-'
+		if (!std::isalnum(nick[i]) && !is_nick_special(nick[i])) // nick can have alnum and special chars
 			return (false);
 	}
 	return (true);
@@ -40,7 +40,7 @@ bool same_nick(const std::string &nick1, const std::string &nick2)
 		return (false);
 	for (size_t i = 0; i < nick1.size(); i++)
 	{
-		if (std::tolower(nick1[i]) != std::tolower(nick2[i]))
+		if (std::tolower(nick1[i]) != std::tolower(nick2[i])) // compare nicks ignoring case
 			return (false);
 	}
 	return (true);

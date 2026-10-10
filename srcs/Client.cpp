@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:31:53 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/09 23:41:13 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/10 00:28:16 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,6 +53,11 @@ const std::string &Client::get_user() const
 const std::string &Client::get_host_ip() const
 {
 	return (this->_host_ip);
+}
+
+bool Client::get_auth() const
+{
+	return (this->_auth);
 }
 
 bool Client::get_registered() const
