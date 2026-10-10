@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/09 23:44:59 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/10 15:06:50 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -223,7 +223,7 @@ void Server::process_message(int client_fd, std::string &client_buffer)
 				params = msg.substr(space + 1); // get params
 			else
 				params = ""; // no space was found -> no params
-			this->send_reply(client_fd, "Msg: " + msg + " | Cmd: " + cmd + " | Params: " + params + "\r\n");
+			// this->send_reply(client_fd, "Msg: " + msg + " | Cmd: " + cmd + " | Params: " + params + "\r\n");
 			this->handle_cmd(client_fd, cmd, params); // process msg executing its cmd with its params
 			if (this->_clients.count(client_fd) == 0) // client disconnected -> don't send data
 				return;
@@ -279,6 +279,15 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
         this->handle_nick(client_fd, params);
     else if (cmd == "USER")
         this->handle_user(client_fd, params);
+	else if (cmd == "PRIVMSG")
+	{
+		if (!this->_clients[client_fd].get_registered())
+		{
+			this->send_reply(client_fd, ":" + this->_name + " 451 * :You have not registered\r\n");
+			return;
+		}
+		this->handle_privmsg(client_fd, params);
+	}
 	else if (cmd == "PING")
     	this->handle_ping(client_fd, params);
 	else if (cmd == "QUIT")

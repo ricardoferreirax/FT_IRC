@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/10 14:17:56 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/10 15:05:00 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,11 @@
 
 void Server::handle_pass(int client_fd, const std::string &params)
 {
+	if (this->_clients[client_fd].get_auth())
+	{
+		this->send_reply(client_fd, ":" + this->_name + " NOTICE * :Password already validated\r\n");
+		return;
+	}
 	if (params.empty())
 	{
 		this->send_reply(client_fd, ":" + this->_name + " 461 PASS :Not enough parameters\r\n");
@@ -91,6 +96,34 @@ void Server::handle_user(int client_fd, const std::string &params)
 	realname = remaining.substr(1);
 	this->_clients[client_fd].set_user(username);
 	this->send_reply(client_fd, ":" + this->_name + " NOTICE * :Set username to " + username + "\r\n");
+}
+
+void Server::handle_privmsg(int client_fd, const std::string &params)
+{
+	std::map<int, Client>::iterator	it;
+	std::string						remaining;
+	std::string						target;
+
+	remaining = params;
+	if (!get_param(remaining, target)) // if no target is provided
+	{
+		this->send_reply(client_fd, ":" + this->_name + " 411 * :No recipient given (PRIVMSG)\r\n");
+		return;
+	}
+	if (remaining.empty() || remaining[0] != ':') // if no msg is provided
+	{
+		this->send_reply(client_fd, ":" + this->_name + " 412 * :No text to send\r\n");
+		return;
+	}
+	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
+	{
+		if (same_nick(it->second.get_nick(), target)) // if target is a valid nick of a connected client
+		{
+			this->send_reply(it->first, this->get_client_prefix(client_fd) + " PRIVMSG " + target + " " + remaining + "\r\n");
+			return;
+		}
+	}
+	this->send_reply(client_fd, ":" + this->_name + " 401 * " + target + " :No such nick/channel\r\n");
 }
 
 void Server::handle_ping(int client_fd, const std::string &params)
