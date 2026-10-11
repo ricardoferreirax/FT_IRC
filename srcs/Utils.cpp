@@ -6,11 +6,52 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/10 14:20:21 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/11 22:26:28 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Utils.hpp"
+#include <iostream>
+
+bool	validate_args(char **av, int &port)
+{
+	if (av[1][0] == '\0')
+	{
+		std::cerr << "IRC: invalid port!" << std::endl;
+		return (false);
+	}
+	port = 0;
+	for (size_t i = 0; av[1][i] != '\0'; i++)
+	{
+		if (av[1][i] < '0' || av[1][i] > '9')
+		{
+			std::cerr << "IRC: port must contain only numbers!" << std::endl;
+			return (false);
+		}
+		if (port > 6553)
+		{
+			std::cerr << "IRC: port must be between 1 and 65535!" << std::endl;
+			return (false);
+		}
+		port = port * 10 + (av[1][i] - '0');
+		if (port > 65535)
+		{
+			std::cerr << "IRC: port must be between 1 and 65535!" << std::endl;
+			return (false);
+		}
+	}
+	if (port < 1024)
+	{
+		std::cerr << "IRC: privileged port! Use a port above 1023!" << std::endl;
+		return (false);
+	}
+	if (av[2][0] == '\0')
+	{
+		std::cerr << "IRC: a server password is required!" << std::endl;
+		return (false);
+	}
+	return (true);
+}
 
 static bool is_nick_special(char c)
 {
@@ -50,20 +91,20 @@ bool get_param(std::string &remaining, std::string &param)
 {
 	size_t space;
 
-	if (remaining.empty())
+	if (remaining.empty()) // no params to extract
 		return (false);
-	space = remaining.find(' ');
-	if (space == 0)
+	space = remaining.find(' '); // space separates params
+	if (space == 0) // if space is at beginning -> no param was provided
 		return (false);
-	if (space == std::string::npos)
+	if (space == std::string::npos) // has no space -> remaining is last param
 	{
 		param = remaining;
-		remaining.clear();
+		remaining.clear(); // remove param from remaining
 	}
-	else
+	else // has space -> remaining has more params
 	{
-		param = remaining.substr(0, space);
-		remaining.erase(0, space + 1);
+		param = remaining.substr(0, space); // extract param from remaining
+		remaining.erase(0, space + 1); // remove param from remaining
 	}
 	return (true);
 }
