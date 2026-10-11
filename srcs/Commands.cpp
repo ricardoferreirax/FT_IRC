@@ -6,16 +6,19 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/10 15:05:00 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/11 11:47:56 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
 #include "../includes/Utils.hpp"
 
-void Server::handle_pass(int client_fd, const std::string &params)
+void Server::handle_pass(Client &client, const std::string &params)
 {
-	if (this->_clients[client_fd].get_auth())
+	int								client_fd;
+
+	client_fd = client.get_client_fd();
+	if (client.get_auth())
 	{
 		this->send_reply(client_fd, ":" + this->_name + " NOTICE * :Password already validated\r\n");
 		return;
@@ -35,17 +38,19 @@ void Server::handle_pass(int client_fd, const std::string &params)
 		this->send_reply(client_fd, ":" + this->_name + " 464 * :Password incorrect\r\n");
 		return;
 	}
-	this->_clients[client_fd].set_auth(true);
+	client.set_auth(true);
 	this->send_reply(client_fd, ":" + this->_name + " NOTICE * :Password accepted\r\n");
 }
 
-void Server::handle_nick(int client_fd, const std::string &params)
+void Server::handle_nick(Client &client, const std::string &params)
 {
 	std::map<int, Client>::iterator	it;
 	std::string						remaining;
 	std::string						nick;
+	int								client_fd;
 
-	if (!this->_clients[client_fd].get_auth())
+	client_fd = client.get_client_fd();
+	if (!client.get_auth())
 	{
 		this->send_reply(client_fd, ":" + this->_name + " NOTICE * :PASS must be accepted before NICK\r\n");
 		return;
@@ -63,25 +68,27 @@ void Server::handle_nick(int client_fd, const std::string &params)
 	}
 	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
-		if (it->first != client_fd && same_nick(it->second.get_nick(), nick)) // check if nick is already in use by another client
+		if (it->first != client_fd && same_nick(it->second.get_nick(), nick))
 		{
 			this->send_reply(client_fd, ":" + this->_name + " 433 * " + nick + " :Nickname is already in use\r\n");
 			return;
 		}
 	}
-	this->_clients[client_fd].set_nick(nick);
+	client.set_nick(nick);
 	this->send_reply(client_fd, ":" + this->_name + " NOTICE * :Nickname set to " + nick + "\r\n");
 }
 
-void Server::handle_user(int client_fd, const std::string &params)
+void Server::handle_user(Client &client, const std::string &params)
 {
 	std::string	remaining;
 	std::string	username;
 	std::string	mode;
 	std::string	unused;
 	std::string	realname;
+	int	client_fd;
 
-	if (this->_clients[client_fd].get_nick().empty())
+	client_fd = client.get_client_fd();
+	if (client.get_nick().empty())
 	{
 		this->send_reply(client_fd, ":" + this->_name + " NOTICE * :NICK must be set before USER\r\n");
 		return;
@@ -94,30 +101,32 @@ void Server::handle_user(int client_fd, const std::string &params)
 		return;
 	}
 	realname = remaining.substr(1);
-	this->_clients[client_fd].set_user(username);
+	client.set_user(username);
 	this->send_reply(client_fd, ":" + this->_name + " NOTICE * :Set username to " + username + "\r\n");
 }
 
-void Server::handle_privmsg(int client_fd, const std::string &params)
+void Server::handle_privmsg(Client &client, const std::string &params)
 {
 	std::map<int, Client>::iterator	it;
 	std::string						remaining;
 	std::string						target;
-
+	int								client_fd;
+	
+	client_fd = client.get_client_fd();
 	remaining = params;
-	if (!get_param(remaining, target)) // if no target is provided
+	if (!get_param(remaining, target))
 	{
 		this->send_reply(client_fd, ":" + this->_name + " 411 * :No recipient given (PRIVMSG)\r\n");
 		return;
 	}
-	if (remaining.empty() || remaining[0] != ':') // if no msg is provided
+	if (remaining.empty() || remaining[0] != ':')
 	{
 		this->send_reply(client_fd, ":" + this->_name + " 412 * :No text to send\r\n");
 		return;
 	}
 	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
-		if (same_nick(it->second.get_nick(), target)) // if target is a valid nick of a connected client
+		if (same_nick(it->second.get_nick(), target))
 		{
 			this->send_reply(it->first, this->get_client_prefix(client_fd) + " PRIVMSG " + target + " " + remaining + "\r\n");
 			return;
@@ -128,16 +137,14 @@ void Server::handle_privmsg(int client_fd, const std::string &params)
 
 void Server::handle_ping(int client_fd, const std::string &params)
 {
-    if (params.empty())
-	{
+	if (params.empty())
 		return;
-	}
 	this->send_reply(client_fd, "\r\n");
-    this->send_reply(client_fd, ":" + this->_name + " NOTICE * :PONG " + params + "\r\n");
+	this->send_reply(client_fd, ":" + this->_name + " NOTICE * :PONG " + params + "\r\n");
 }
 
 void Server::handle_quit(int client_fd, const std::string &params)
 {
-    (void)params;
-    this->disconnect_client(client_fd);
+	(void)params;
+	this->disconnect_client(client_fd);
 }

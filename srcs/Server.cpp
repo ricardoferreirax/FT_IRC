@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/10 15:06:50 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/11 11:39:30 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -268,39 +268,41 @@ void Server::register_client(int client_fd)
 
 void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string &params)
 {
-    if ((cmd == "PASS" || cmd == "USER") && this->_clients[client_fd].get_registered())
-    {
-        this->send_reply(client_fd, ":" + this->_name + " 462 * :You may not reregister\r\n"); // ERR_ALREADYREGISTRED
-        return;
-    }
-    if (cmd == "PASS")
-        this->handle_pass(client_fd, params);
-    else if (cmd == "NICK")
-        this->handle_nick(client_fd, params);
-    else if (cmd == "USER")
-        this->handle_user(client_fd, params);
+	Client	&client = this->_clients[client_fd];
+	
+	if ((cmd == "PASS" || cmd == "USER") && client.get_registered())
+	{
+		this->send_reply(client_fd, ":" + this->_name + " 462 * :You may not reregister\r\n");
+		return;
+	}
+	if (cmd == "PASS")
+		this->handle_pass(client, params);
+	else if (cmd == "NICK")
+		this->handle_nick(client, params);
+	else if (cmd == "USER")
+		this->handle_user(client, params);
 	else if (cmd == "PRIVMSG")
 	{
-		if (!this->_clients[client_fd].get_registered())
+		if (!client.get_registered())
 		{
 			this->send_reply(client_fd, ":" + this->_name + " 451 * :You have not registered\r\n");
 			return;
 		}
-		this->handle_privmsg(client_fd, params);
+		this->handle_privmsg(client, params);
 	}
 	else if (cmd == "PING")
-    	this->handle_ping(client_fd, params);
+		this->handle_ping(client_fd, params);
 	else if (cmd == "QUIT")
 	{
 		this->handle_quit(client_fd, params);
 		return;
 	}
-    else
-    {
-        this->send_reply(client_fd, ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n"); // ERR_UNKNOWNCOMMAND
-        return;
-    }
-    this->register_client(client_fd);
+	else
+	{
+		this->send_reply(client_fd, ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n");
+		return;
+	}
+	this->register_client(client_fd);
 }
 
 // removes disconnected client from epoll, deletes its client object and closes socket associated with the connection

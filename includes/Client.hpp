@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:28:03 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/10 00:27:44 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/11 11:50:08 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,7 @@
 class Client
 {
     private:
-		int _fd;
+		int _client_fd;
         bool _auth;
         bool _registered;
 		std::string _recv_buffer;
@@ -35,7 +35,7 @@ class Client
         std::string &get_recv_buffer();
         std::string &get_send_buffer();
 	
-		int get_fd() const;
+		int get_client_fd() const;
 		bool get_auth() const;
         bool get_registered() const;
         const std::string &get_nick() const;
