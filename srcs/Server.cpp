@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/11 11:39:30 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/11 18:20:15 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -181,25 +181,20 @@ void Server::receive_client_data(int client_fd)
 // send() -> SERVER -> CLIENT
 void Server::send_client_data(int client_fd)
 {
-	epoll_event	event;
+	std::string	&send_buffer = this->_clients[client_fd].get_send_buffer();
 	ssize_t		bytes;
 
-	if (this->_clients[client_fd].get_send_buffer().empty()) // no pending data to send to client
+	if (send_buffer.empty())
 		return;
-	bytes = send(client_fd, this->_clients[client_fd].get_send_buffer().c_str(), this->_clients[client_fd].get_send_buffer().size(), 0); // server sends/writes data TO client through client socket
+	bytes = send(client_fd, send_buffer.c_str(), send_buffer.size(), 0);
 	if (bytes < 0)
 	{
 		std::cerr << "[CLIENT " << client_fd << "] send() failed." << std::endl;
 		return;
 	}
-	this->_clients[client_fd].get_send_buffer().erase(0, bytes); // removes bytes that send() has successfully sent
-	if (this->_clients[client_fd].get_send_buffer().empty()) // if all data was sent
-	{
-		event.events = EPOLLIN; // monitor client only for incoming data
-		event.data.fd = client_fd; // store client fd in event
-		if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0) // update client events -> remove EPOLLOUT since there is nothing left to send
-			throw std::runtime_error("IRC: epoll_ctl() failed.");
-	}
+	send_buffer.erase(0, bytes);
+	if (send_buffer.empty())
+		this->update_epoll(client_fd, EPOLLIN);
 }
 
 void Server::process_message(int client_fd, std::string &client_buffer)
@@ -223,56 +218,53 @@ void Server::process_message(int client_fd, std::string &client_buffer)
 				params = msg.substr(space + 1); // get params
 			else
 				params = ""; // no space was found -> no params
-			// this->send_reply(client_fd, "Msg: " + msg + " | Cmd: " + cmd + " | Params: " + params + "\r\n");
 			this->handle_cmd(client_fd, cmd, params); // process msg executing its cmd with its params
 			if (this->_clients.count(client_fd) == 0) // client disconnected -> don't send data
 				return;
-			this->send_reply(client_fd, "\r\n");
 		}
 		pos = client_buffer.find("\r\n"); // find next complete msg in buffer
 	}
 }
 
-void Server::send_reply(int client_fd, const std::string &reply)
+void Server::update_epoll(int client_fd, int events)
 {
 	epoll_event	event;
 
-	if (this->_clients.count(client_fd) == 0) // if client disconnected -> don't send data
-		return;
-	this->_clients[client_fd].get_send_buffer() += reply; // += allows multiple replies to not replace each other
-	event.events = EPOLLIN | EPOLLOUT; // monitor client for both incoming data and writting
-	event.data.fd = client_fd; // store client fd in event
-	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0) // update client events to add EPOLLOUT
+	event.events = events;
+	event.data.fd = client_fd;
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 }
 
 void Server::register_client(int client_fd)
 {
-    std::string nick; // store nick of client that completed registration
+	Client &client = this->_clients[client_fd];
+	std::string	&send_buffer = client.get_send_buffer();
+	std::string	nick;
 
-    if (this->_clients[client_fd].get_registered()) // if client is already registered
+	if (client.get_registered())
+		return;
+	if (client.can_register())
 	{
-        return;
-	}
-	if (this->_clients[client_fd].can_register())
-	{
-		this->_clients[client_fd].set_registered(true); // mark client as registered
-		nick = this->_clients[client_fd].get_nick(); // store nick that has completed regist
+		client.set_registered(true);
+		nick = client.get_nick();
 		std::cout << "\n==========================================" << std::endl;
 		std::cout << "     CLIENT " << client_fd << " REGISTERED!" << std::endl;
 		std::cout << "==========================================\n" << std::endl;
-		this->send_reply(client_fd, "\r\n");
-		this->send_reply(client_fd, ":" + this->_name + " 001 " + nick + " :Welcome to the IRC server\r\n");
+		send_buffer += ":" + this->_name + " 001 " + nick + " :Welcome to the IRC server\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 	}
 }
 
 void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string &params)
 {
-	Client	&client = this->_clients[client_fd];
-	
+	Client &client = this->_clients[client_fd];
+	std::string	&send_buffer = client.get_send_buffer();
+
 	if ((cmd == "PASS" || cmd == "USER") && client.get_registered())
 	{
-		this->send_reply(client_fd, ":" + this->_name + " 462 * :You may not reregister\r\n");
+		send_buffer += ":" + this->_name + " 462 * :You may not reregister\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
 	if (cmd == "PASS")
@@ -285,7 +277,8 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
 	{
 		if (!client.get_registered())
 		{
-			this->send_reply(client_fd, ":" + this->_name + " 451 * :You have not registered\r\n");
+			send_buffer += ":" + this->_name + " 451 * :You have not registered\r\n";
+			this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 			return;
 		}
 		this->handle_privmsg(client, params);
@@ -299,7 +292,8 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
 	}
 	else
 	{
-		this->send_reply(client_fd, ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n");
+		send_buffer += ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
 	this->register_client(client_fd);
@@ -316,10 +310,4 @@ void Server::disconnect_client(int client_fd)
     std::cout << "==========================================" << std::endl;
     std::cout << "     CLIENT " << client_fd << " DISCONNECTED!" << std::endl;
     std::cout << "==========================================\n" << std::endl;
-}
-
-std::string Server::get_client_prefix(int client_fd)
-{
-	Client &client = this->_clients[client_fd];
-	return (":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip());
 }

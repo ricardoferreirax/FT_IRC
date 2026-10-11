@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/11 11:47:56 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/11 18:21:32 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,36 +15,43 @@
 
 void Server::handle_pass(Client &client, const std::string &params)
 {
-	int								client_fd;
+	std::string	&send_buffer = client.get_send_buffer();
+	int			client_fd;
 
 	client_fd = client.get_client_fd();
 	if (client.get_auth())
 	{
-		this->send_reply(client_fd, ":" + this->_name + " NOTICE * :Password already validated\r\n");
+		send_buffer += ":" + this->_name + " NOTICE * :Password already validated\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
 	if (params.empty())
 	{
-		this->send_reply(client_fd, ":" + this->_name + " 461 PASS :Not enough parameters\r\n");
+		send_buffer += ":" + this->_name + " 461 PASS :Not enough parameters\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
 	if (params.find(' ') != std::string::npos)
 	{
-		this->send_reply(client_fd, ":" + this->_name + " NOTICE * :PASS accepts only one parameter\r\n");
+		send_buffer += ":" + this->_name + " NOTICE * :PASS accepts only one parameter\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
 	if (params != this->_pass)
 	{
-		this->send_reply(client_fd, ":" + this->_name + " 464 * :Password incorrect\r\n");
+		send_buffer += ":" + this->_name + " 464 * :Password incorrect\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
 	client.set_auth(true);
-	this->send_reply(client_fd, ":" + this->_name + " NOTICE * :Password accepted\r\n");
+	send_buffer += ":" + this->_name + " NOTICE * :Password accepted\r\n";
+	this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 }
 
 void Server::handle_nick(Client &client, const std::string &params)
 {
 	std::map<int, Client>::iterator	it;
+	std::string						&send_buffer = client.get_send_buffer();
 	std::string						remaining;
 	std::string						nick;
 	int								client_fd;
@@ -52,95 +59,113 @@ void Server::handle_nick(Client &client, const std::string &params)
 	client_fd = client.get_client_fd();
 	if (!client.get_auth())
 	{
-		this->send_reply(client_fd, ":" + this->_name + " NOTICE * :PASS must be accepted before NICK\r\n");
+		send_buffer += ":" + this->_name + " NOTICE * :PASS must be accepted before NICK\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
 	remaining = params;
 	if (!get_param(remaining, nick))
 	{
-		this->send_reply(client_fd, ":" + this->_name + " 431 * :No nickname given\r\n");
+		send_buffer += ":" + this->_name + " 431 * :No nickname given\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
 	if (!is_valid_nick(nick))
 	{
-		this->send_reply(client_fd, ":" + this->_name + " 432 * " + nick + " :Erroneous nickname\r\n");
+		send_buffer += ":" + this->_name + " 432 * " + nick + " :Erroneous nickname\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
 	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
 		if (it->first != client_fd && same_nick(it->second.get_nick(), nick))
 		{
-			this->send_reply(client_fd, ":" + this->_name + " 433 * " + nick + " :Nickname is already in use\r\n");
+			send_buffer += ":" + this->_name + " 433 * " + nick + " :Nickname is already in use\r\n";
+			this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 			return;
 		}
 	}
 	client.set_nick(nick);
-	this->send_reply(client_fd, ":" + this->_name + " NOTICE * :Nickname set to " + nick + "\r\n");
+	send_buffer += ":" + this->_name + " NOTICE * :Nickname set to " + nick + "\r\n";
+	this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 }
 
 void Server::handle_user(Client &client, const std::string &params)
 {
+	std::string	&send_buffer = client.get_send_buffer();
 	std::string	remaining;
 	std::string	username;
 	std::string	mode;
 	std::string	unused;
 	std::string	realname;
-	int	client_fd;
+	int			client_fd;
 
 	client_fd = client.get_client_fd();
 	if (client.get_nick().empty())
 	{
-		this->send_reply(client_fd, ":" + this->_name + " NOTICE * :NICK must be set before USER\r\n");
+		send_buffer += ":" + this->_name + " NOTICE * :NICK must be set before USER\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
 	remaining = params;
 	if (!get_param(remaining, username) || !get_param(remaining, mode) || !get_param(remaining, unused)
 		|| remaining.size() < 2 || remaining[0] != ':')
 	{
-		this->send_reply(client_fd, ":" + this->_name + " 461 USER :Not enough parameters\r\n");
+		send_buffer += ":" + this->_name + " 461 USER :Not enough parameters\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
 	realname = remaining.substr(1);
 	client.set_user(username);
-	this->send_reply(client_fd, ":" + this->_name + " NOTICE * :Set username to " + username + "\r\n");
+	send_buffer += ":" + this->_name + " NOTICE * :Set username to " + username + "\r\n";
+	this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 }
 
 void Server::handle_privmsg(Client &client, const std::string &params)
 {
 	std::map<int, Client>::iterator	it;
+	std::string						&send_buffer = client.get_send_buffer();
 	std::string						remaining;
 	std::string						target;
+	std::string						prefix;
 	int								client_fd;
-	
+
 	client_fd = client.get_client_fd();
 	remaining = params;
+	prefix = ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip();
 	if (!get_param(remaining, target))
 	{
-		this->send_reply(client_fd, ":" + this->_name + " 411 * :No recipient given (PRIVMSG)\r\n");
+		send_buffer += ":" + this->_name + " 411 * :No recipient given (PRIVMSG)\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
 	if (remaining.empty() || remaining[0] != ':')
 	{
-		this->send_reply(client_fd, ":" + this->_name + " 412 * :No text to send\r\n");
+		send_buffer += ":" + this->_name + " 412 * :No text to send\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
 	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
 		if (same_nick(it->second.get_nick(), target))
 		{
-			this->send_reply(it->first, this->get_client_prefix(client_fd) + " PRIVMSG " + target + " " + remaining + "\r\n");
+			it->second.get_send_buffer() += prefix + " PRIVMSG " + target + " " + remaining + "\r\n";
+			this->update_epoll(it->first, EPOLLIN | EPOLLOUT);
 			return;
 		}
 	}
-	this->send_reply(client_fd, ":" + this->_name + " 401 * " + target + " :No such nick/channel\r\n");
+	send_buffer += ":" + this->_name + " 401 * " + target + " :No such nick/channel\r\n";
+	this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 }
 
 void Server::handle_ping(int client_fd, const std::string &params)
 {
+	std::string	&send_buffer = this->_clients[client_fd].get_send_buffer();
+
 	if (params.empty())
 		return;
-	this->send_reply(client_fd, "\r\n");
-	this->send_reply(client_fd, ":" + this->_name + " NOTICE * :PONG " + params + "\r\n");
+	send_buffer += ":" + this->_name + " NOTICE * :PONG " + params + "\r\n";
+	this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 }
 
 void Server::handle_quit(int client_fd, const std::string &params)

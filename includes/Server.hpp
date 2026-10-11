@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/11 11:36:18 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/11 12:16:57 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 # include <csignal>
 # include <map>
 # include <string>
+# include <sys/epoll.h>
 
 # include "Client.hpp"
 
@@ -35,6 +36,7 @@ class Server
 		void	accept_client();
 		void	receive_client_data(int client_fd);
 		void	send_client_data(int client_fd);
+		void	update_epoll(int client_fd, int events);
 		void	process_message(int client_fd, std::string &client_buffer);
 		void	send_reply(int client_fd, const std::string &reply);
 		void	register_client(int client_fd);
@@ -49,8 +51,6 @@ class Server
 
 		void	handle_ping(int client_fd, const std::string &params);
 		void	handle_quit(int client_fd, const std::string &params);
-
-		std::string	get_client_prefix(int client_fd);
 
 	public:
 		Server(int port, const std::string &pass);
