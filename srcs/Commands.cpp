@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/11 18:57:17 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/11 19:45:32 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -176,7 +176,7 @@ void Server::handle_quit(int client_fd, const std::string &params)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 	close(client_fd);
 	this->_clients.erase(client_fd);
-	std::cout << "==========================================" << std::endl;
-	std::cout << "     CLIENT " << client_fd << " DISCONNECTED!" << std::endl;
-	std::cout << "==========================================\n" << std::endl;
+	std::cout << "\n=====================================================" << std::endl;
+	std::cout << "          CLIENT " << client_fd << " DISCONNECTED!" << std::endl;
+	std::cout << "=====================================================" << std::endl;
 }

@@ -6,11 +6,52 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/10 14:20:21 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/11 19:07:42 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Utils.hpp"
+#include <iostream>
+
+bool	validate_args(char **av, int &port)
+{
+	if (av[1][0] == '\0')
+	{
+		std::cerr << "IRC: invalid port!" << std::endl;
+		return (false);
+	}
+	port = 0;
+	for (size_t i = 0; av[1][i] != '\0'; i++)
+	{
+		if (av[1][i] < '0' || av[1][i] > '9')
+		{
+			std::cerr << "IRC: port must contain only numbers!" << std::endl;
+			return (false);
+		}
+		if (port > 6553)
+		{
+			std::cerr << "IRC: port must be between 1 and 65535!" << std::endl;
+			return (false);
+		}
+		port = port * 10 + (av[1][i] - '0');
+		if (port > 65535)
+		{
+			std::cerr << "IRC: port must be between 1 and 65535!" << std::endl;
+			return (false);
+		}
+	}
+	if (port < 1024)
+	{
+		std::cerr << "IRC: privileged port! Use a port above 1023!" << std::endl;
+		return (false);
+	}
+	if (av[2][0] == '\0')
+	{
+		std::cerr << "IRC: a server password is required!" << std::endl;
+		return (false);
+	}
+	return (true);
+}
 
 static bool is_nick_special(char c)
 {

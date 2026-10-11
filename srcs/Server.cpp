@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/11 18:56:41 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/11 19:45:48 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -158,11 +158,11 @@ void Server::accept_client()
 	}
 	this->_clients[client_fd] = Client(client_fd); // create and store client with its socket fd
 	this->_clients[client_fd].set_host_ip(inet_ntoa(client_addr.sin_addr)); // store client ip address in client
-	std::cout << "\n==========================================" << std::endl;
-	std::cout << "         CLIENT " << client_fd << " CONNECTED!\n" << std::endl;
-	std::cout << "CLIENT IP: " << inet_ntoa(client_addr.sin_addr) << " (HOST)"<<std::endl;
-	std::cout << "SERVER IP: " << inet_ntoa(server_addr.sin_addr) << std::endl;
-	std::cout << "==========================================\n" << std::endl;
+	std::cout << "\n=====================================================" << std::endl;
+	std::cout << "                CLIENT " << client_fd << " CONNECTED!" << std::endl;
+	std::cout << "=====================================================" << std::endl;
+	std::cout << "[SERVER] Local connection accepted on " << inet_ntoa(server_addr.sin_addr) << ":" << ntohs(server_addr.sin_port) << std::endl;
+	std::cout << "=====================================================\n" << std::endl;
 }
 
 // handles incoming or outgoing client data depending on the event
@@ -189,9 +189,9 @@ void Server::handle_client_data(int client_fd, int event)
 				throw std::runtime_error("IRC: epoll_ctl() failed.");
 			close(client_fd);
 			this->_clients.erase(client_fd);
-			std::cout << "==========================================" << std::endl;
-			std::cout << "     CLIENT " << client_fd << " DISCONNECTED!" << std::endl;
-			std::cout << "==========================================\n" << std::endl;
+			std::cout << "\n=====================================================" << std::endl;
+			std::cout << "          CLIENT " << client_fd << " DISCONNECTED!" << std::endl;
+			std::cout << "=====================================================" << std::endl;
 			return;
 		}
 		recv_buffer.append(buffer, bytes);
@@ -283,9 +283,9 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
 	if (!client.get_registered() && client.can_register())
 	{
 		client.set_registered(true);
-		std::cout << "\n==========================================" << std::endl;
-		std::cout << "     CLIENT " << client_fd << " REGISTERED!" << std::endl;
-		std::cout << "==========================================\n" << std::endl;
+		std::cout << "=====================================================" << std::endl;
+		std::cout << "          CLIENT " << client_fd << " REGISTERED!" << std::endl;
+		std::cout << "=====================================================" << std::endl;
 		send_buffer += ":" + this->_name + " 001 " + client.get_nick() + " :Welcome to the IRC server\r\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 	}
