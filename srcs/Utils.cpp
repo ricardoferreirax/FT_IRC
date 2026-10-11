@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/11 19:07:42 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/11 22:26:28 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -91,20 +91,20 @@ bool get_param(std::string &remaining, std::string &param)
 {
 	size_t space;
 
-	if (remaining.empty())
+	if (remaining.empty()) // no params to extract
 		return (false);
-	space = remaining.find(' ');
-	if (space == 0)
+	space = remaining.find(' '); // space separates params
+	if (space == 0) // if space is at beginning -> no param was provided
 		return (false);
-	if (space == std::string::npos)
+	if (space == std::string::npos) // has no space -> remaining is last param
 	{
 		param = remaining;
-		remaining.clear();
+		remaining.clear(); // remove param from remaining
 	}
-	else
+	else // has space -> remaining has more params
 	{
-		param = remaining.substr(0, space);
-		remaining.erase(0, space + 1);
+		param = remaining.substr(0, space); // extract param from remaining
+		remaining.erase(0, space + 1); // remove param from remaining
 	}
 	return (true);
 }
