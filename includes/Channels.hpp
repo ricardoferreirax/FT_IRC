@@ -24,7 +24,7 @@ typedef enum e_mode
 	CHANNEL_KEY,
 	OPERATOR_PRIV,
 	USER_LIMIT
-};
+} t_mode;
 
 class Channel
 {
@@ -33,8 +33,6 @@ class Channel
 		int _mode;
 		std::set<int> _chanops;
 		std::map<int, Client> _clients;
-		std::set<t_ip> _invite_ips;
-		std::set<t_ip> _naughtyList;
 		Channel(void);
 	public:
 		Channel(std::string name, int mode, Client chanop);
