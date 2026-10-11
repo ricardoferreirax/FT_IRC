@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/11 18:21:32 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/11 18:26:34 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@
 void Server::handle_pass(Client &client, const std::string &params)
 {
 	std::string	&send_buffer = client.get_send_buffer();
-	int			client_fd;
+	int	client_fd;
 
 	client_fd = client.get_client_fd();
 	if (client.get_auth())
@@ -51,10 +51,10 @@ void Server::handle_pass(Client &client, const std::string &params)
 void Server::handle_nick(Client &client, const std::string &params)
 {
 	std::map<int, Client>::iterator	it;
-	std::string						&send_buffer = client.get_send_buffer();
-	std::string						remaining;
-	std::string						nick;
-	int								client_fd;
+	std::string	&send_buffer = client.get_send_buffer();
+	std::string	remaining;
+	std::string	nick;
+	int	client_fd;
 
 	client_fd = client.get_client_fd();
 	if (!client.get_auth())
@@ -98,7 +98,7 @@ void Server::handle_user(Client &client, const std::string &params)
 	std::string	mode;
 	std::string	unused;
 	std::string	realname;
-	int			client_fd;
+	int	client_fd;
 
 	client_fd = client.get_client_fd();
 	if (client.get_nick().empty())
@@ -124,11 +124,11 @@ void Server::handle_user(Client &client, const std::string &params)
 void Server::handle_privmsg(Client &client, const std::string &params)
 {
 	std::map<int, Client>::iterator	it;
-	std::string						&send_buffer = client.get_send_buffer();
-	std::string						remaining;
-	std::string						target;
-	std::string						prefix;
-	int								client_fd;
+	std::string	&send_buffer = client.get_send_buffer();
+	std::string	remaining;
+	std::string	target;
+	std::string	prefix;
+	int	client_fd;
 
 	client_fd = client.get_client_fd();
 	remaining = params;

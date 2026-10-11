@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/11 18:20:15 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/11 18:36:19 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -113,6 +113,16 @@ void Server::monitor_epoll_events()
 				this->send_client_data(current_fd); // send pending data to client
 		}
 	}
+}
+
+void Server::update_epoll(int client_fd, int events)
+{
+	epoll_event	event;
+
+	event.events = events;
+	event.data.fd = client_fd;
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0)
+		throw std::runtime_error("IRC: epoll_ctl() failed.");
 }
 
 // accepts a new client and adds it to epoll
@@ -226,36 +236,6 @@ void Server::process_message(int client_fd, std::string &client_buffer)
 	}
 }
 
-void Server::update_epoll(int client_fd, int events)
-{
-	epoll_event	event;
-
-	event.events = events;
-	event.data.fd = client_fd;
-	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0)
-		throw std::runtime_error("IRC: epoll_ctl() failed.");
-}
-
-void Server::register_client(int client_fd)
-{
-	Client &client = this->_clients[client_fd];
-	std::string	&send_buffer = client.get_send_buffer();
-	std::string	nick;
-
-	if (client.get_registered())
-		return;
-	if (client.can_register())
-	{
-		client.set_registered(true);
-		nick = client.get_nick();
-		std::cout << "\n==========================================" << std::endl;
-		std::cout << "     CLIENT " << client_fd << " REGISTERED!" << std::endl;
-		std::cout << "==========================================\n" << std::endl;
-		send_buffer += ":" + this->_name + " 001 " + nick + " :Welcome to the IRC server\r\n";
-		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
-	}
-}
-
 void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string &params)
 {
 	Client &client = this->_clients[client_fd];
@@ -267,6 +247,12 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
+	if (cmd == "PRIVMSG" && !client.get_registered())
+	{
+		send_buffer += ":" + this->_name + " 451 * :You have not registered\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
+		return;
+	}
 	if (cmd == "PASS")
 		this->handle_pass(client, params);
 	else if (cmd == "NICK")
@@ -274,15 +260,7 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
 	else if (cmd == "USER")
 		this->handle_user(client, params);
 	else if (cmd == "PRIVMSG")
-	{
-		if (!client.get_registered())
-		{
-			send_buffer += ":" + this->_name + " 451 * :You have not registered\r\n";
-			this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
-			return;
-		}
 		this->handle_privmsg(client, params);
-	}
 	else if (cmd == "PING")
 		this->handle_ping(client_fd, params);
 	else if (cmd == "QUIT")
@@ -296,7 +274,15 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
-	this->register_client(client_fd);
+	if (!client.get_registered() && client.can_register())
+	{
+		client.set_registered(true);
+		std::cout << "\n==========================================" << std::endl;
+		std::cout << "     CLIENT " << client_fd << " REGISTERED!" << std::endl;
+		std::cout << "==========================================\n" << std::endl;
+		send_buffer += ":" + this->_name + " 001 " + client.get_nick() + " :Welcome to the IRC server\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
+	}
 }
 
 // removes disconnected client from epoll, deletes its client object and closes socket associated with the connection

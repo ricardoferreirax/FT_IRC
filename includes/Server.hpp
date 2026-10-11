@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/11 12:16:57 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/11 18:35:07 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,8 +38,6 @@ class Server
 		void	send_client_data(int client_fd);
 		void	update_epoll(int client_fd, int events);
 		void	process_message(int client_fd, std::string &client_buffer);
-		void	send_reply(int client_fd, const std::string &reply);
-		void	register_client(int client_fd);
 		void	disconnect_client(int client_fd);
 
 		void	handle_cmd(int client_fd, const std::string &cmd, const std::string &params);
