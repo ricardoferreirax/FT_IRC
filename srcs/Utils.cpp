@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/11 22:26:28 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/12 16:40:29 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -107,4 +107,16 @@ bool get_param(std::string &remaining, std::string &param)
 		remaining.erase(0, space + 1); // remove param from remaining
 	}
 	return (true);
+}
+
+bool is_valid_user_mode(const std::string &mode)
+{
+    if (mode.empty())
+        return (false);
+    for (size_t i = 0; i < mode.size(); i++)
+    {
+        if (mode[i] < '0' || mode[i] > '9')
+            return (false);
+    }
+    return (true);
 }

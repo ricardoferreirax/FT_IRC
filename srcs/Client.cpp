@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:31:53 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/11 20:01:41 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/12 17:05:15 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,7 @@ Client::Client()
     this->_client_fd = -1;
     this->_auth = false;
     this->_registered = false;
+	this->_quit = false;
 }
 
 Client::Client(int client_fd)
@@ -24,6 +25,7 @@ Client::Client(int client_fd)
     this->_client_fd = client_fd;
     this->_auth = false;
     this->_registered = false;
+	this->_quit = false;
 }
 
 std::string &Client::get_recv_buffer()
@@ -65,6 +67,11 @@ bool Client::get_registered() const
     return (this->_registered);
 }
 
+bool Client::get_quit() const
+{
+	return (this->_quit);
+}
+
 void Client::set_nick(const std::string &nick)
 {
     this->_nick = nick;
@@ -88,6 +95,11 @@ void Client::set_auth(bool auth)
 void Client::set_registered(bool registered)
 {
     this->_registered = registered;
+}
+
+void Client::set_quit(bool quit)
+{
+	this->_quit = quit;
 }
 
 bool Client::can_register() const
