@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/12 16:56:45 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/12 19:15:13 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -230,13 +230,21 @@ void Server::handle_ping(Client &client, const std::string &params)
 
 void Server::handle_quit(int client_fd, const std::string &params)
 {
-	(void)params;
+	Client		&client = this->_clients[client_fd];
+	std::string	&send_buffer = client.get_send_buffer();
+	std::string	reason;
+	std::string	client_name;
 
-	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0)
-		throw std::runtime_error("IRC: epoll_ctl() failed.");
-	close(client_fd);
-	this->_clients.erase(client_fd);
-	std::cout << "\n=====================================================" << std::endl;
-	std::cout << "          CLIENT " << client_fd << " DISCONNECTED!" << std::endl;
-	std::cout << "=====================================================" << std::endl;
+	reason = params;
+	if (!reason.empty() && reason[0] == ':')
+		reason.erase(0, 1); // remove ':' from trailing param
+	if (reason.empty())
+		reason = "Client Quit"; // fallback for unregistered client
+	if (client.get_nick().empty())
+		client_name = "unregistered client"; // if client has no nick set -> use unregistered client as name
+	else
+		client_name = client.get_nick(); // if client has nick set -> use it as name
+	send_buffer += "ERROR :Closing connection for " + client_name + ": " + reason + "\r\n";
+	client.set_quit(true); // mark client for disconnection
+	this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 }

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/12 16:32:16 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/12 19:03:07 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -178,12 +178,13 @@ void Server::accept_client()
 // EPOLLOUT -> send() writes/sends pending data FROM send_buffer TO client
 void Server::handle_client_data(int client_fd, int event)
 {
+	Client		&client = this->_clients[client_fd];
 	char		buffer[1024]; // temp buffer used by recv() to store received data
 	ssize_t		bytes; // nb of bytes received or sent
 
 	if (event == EPOLLIN)
 	{
-		std::string	&recv_buffer = this->_clients[client_fd].get_recv_buffer();
+		std::string	&recv_buffer = client.get_recv_buffer();
 		bytes = recv(client_fd, buffer, sizeof(buffer), 0); // server receives data FROM client through client socket
 		if (bytes < 0)
 		{
@@ -202,11 +203,11 @@ void Server::handle_client_data(int client_fd, int event)
 			return;
 		}
 		recv_buffer.append(buffer, bytes); // append received bytes to client's receive buffer
-		this->process_message(client_fd, recv_buffer); // process complete irc nsgs stored in recv_buffer
+		this->process_message(client_fd, recv_buffer); // process complete irc msgs stored in recv_buffer
 	}
 	else if (event == EPOLLOUT)
 	{
-		std::string	&send_buffer = this->_clients[client_fd].get_send_buffer();
+		std::string	&send_buffer = client.get_send_buffer();
 		if (send_buffer.empty()) // no pending data to send to client
 			return;
 		bytes = send(client_fd, send_buffer.c_str(), send_buffer.size(), 0); // server sends data TO client through client socket
@@ -217,13 +218,27 @@ void Server::handle_client_data(int client_fd, int event)
 		}
 		send_buffer.erase(0, bytes); // remove only bytes successfully sent
 		if (send_buffer.empty()) // if all pending data was successfully sent
-			this->update_epoll(client_fd, EPOLLIN); // stop monitoring EPOLLOUT till new data needs to be sent
+		{
+			if (client.get_quit()) // if client sent quit and all pending data was sent, disconnect it
+			{
+				if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0)
+					throw std::runtime_error("IRC: epoll_ctl() failed.");
+				close(client_fd);
+				this->_clients.erase(client_fd);
+				std::cout << "\n=====================================================" << std::endl;
+				std::cout << "          CLIENT " << client_fd << " DISCONNECTED!" << std::endl;
+				std::cout << "=====================================================" << std::endl;
+				return;
+			}
+			this->update_epoll(client_fd, EPOLLIN);
+		}
 	}
 }
 
 // process complete irc msgs stored in client's receive buffer
 // irc msgs end with \r\n, which separates one complete msg from the next one
 // incomplete msgs remain in client_buffer till more data is received with recv()
+// if client sent quit -> stop processing msgs and disconnect it after sending pending data
 void Server::process_message(int client_fd, std::string &client_buffer)
 {
 	std::string	msg;
@@ -235,28 +250,30 @@ void Server::process_message(int client_fd, std::string &client_buffer)
 	pos = client_buffer.find("\r\n"); // find end of first complete msg
 	while (pos != std::string::npos) // process msgs while complete msgs exist
 	{
-		msg = client_buffer.substr(0, pos);
+		msg = client_buffer.substr(0, pos); // extract complete msg from client_buffer
 		client_buffer.erase(0, pos + 2);
 		if (!msg.empty())
 		{
-			space = msg.find(' '); // find separator between cmd and param
-			cmd = msg.substr(0, space); // extract cmd
+			space = msg.find(' ');
+			cmd = msg.substr(0, space); // extract cmd from msg
 			if (space != std::string::npos) // if cmd has params
 			{
 				while (space < msg.size() && msg[space] == ' ')
 					space++; // skip separator spaces
 				if (space < msg.size()) // if there are chars after spaces
-					params = msg.substr(space); // extract params
-				else // if there are no chars after spaces
-					params = ""; // msg contains only cmd
+					params = msg.substr(space); // extract params from msg
+				else
+					params = ""; // otherwise msg contains only cmd and no params
 			}
 			else
-				params = ""; // cmd has no params
-			this->handle_cmd(client_fd, cmd, params); // execute cmd with its params
+				params = "";
+			this->handle_cmd(client_fd, cmd, params);
 			if (this->_clients.count(client_fd) == 0) // cmd may have removed client
 				return;
+			if (this->_clients[client_fd].get_quit())
+				return;
 		}
-		pos = client_buffer.find("\r\n"); // search for next complete msg
+		pos = client_buffer.find("\r\n");
 	}
 }
 
