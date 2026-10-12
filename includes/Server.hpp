@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/11 18:57:31 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/12 14:48:45 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,7 +43,7 @@ class Server
 		void	handle_nick(Client &client, const std::string &params);
 		void	handle_user(Client &client, const std::string &params);
 		void	handle_privmsg(Client &client, const std::string &params);
-		void	handle_ping(int client_fd, const std::string &params);
+		void	handle_ping(Client &client, const std::string &params);
 		void	handle_quit(int client_fd, const std::string &params);
 
 	public:

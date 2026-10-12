@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/11 22:29:39 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/12 15:18:37 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -158,13 +158,33 @@ void Server::handle_privmsg(Client &client, const std::string &params)
 	this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 }
 
-void Server::handle_ping(int client_fd, const std::string &params)
+// ping is used to check if connection between client and server is still active.
+// receiver must respond with pong containing corresponding param
+void Server::handle_ping(Client &client, const std::string &params)
 {
-	std::string	&send_buffer = this->_clients[client_fd].get_send_buffer();
+	std::string	&send_buffer = client.get_send_buffer();
+	std::string	token;
+	int			client_fd;
 
-	if (params.empty())
+	client_fd = client.get_client_fd();
+	token = params;
+	while (!token.empty() && token[0] == ' ')
+		token.erase(0, 1); // remove spaces before param
+	if (token.empty()) // ping has no param
+	{
+		send_buffer += ":" + this->_name + " 409 * :No origin specified\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
-	send_buffer += ":" + this->_name + " NOTICE * :PONG " + params + "\r\n";
+	}
+	if (token[0] == ':')
+		token.erase(0, 1); // remove ':' from param
+	if (token.empty()) // if had a ':' but param is empty
+	{
+		send_buffer += ":" + this->_name + " 409 * :No origin specified\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
+		return;
+	}
+	send_buffer += ":" + this->_name + " PONG " + this->_name + " :" + token + "\r\n";
 	this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 }
 

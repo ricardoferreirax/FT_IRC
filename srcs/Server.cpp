@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/12 14:32:29 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/12 14:51:57 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -223,7 +223,6 @@ void Server::handle_client_data(int client_fd, int event)
 
 // process complete irc msgs stored in client's receive buffer
 // irc msgs end with \r\n, which separates one complete msg from the next one
-// split each msg into cmd and params and send them to handle_cmd()
 // incomplete msgs remain in client_buffer till more data is received with recv()
 void Server::process_message(int client_fd, std::string &client_buffer)
 {
@@ -282,7 +281,7 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
 	else if (cmd == "PRIVMSG")
 		this->handle_privmsg(client, params);
 	else if (cmd == "PING")
-		this->handle_ping(client_fd, params);
+		this->handle_ping(client, params);
 	else if (cmd == "QUIT")
 	{
 		this->handle_quit(client_fd, params); // disconnect and remove client
