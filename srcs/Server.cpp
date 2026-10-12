@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/12 14:51:57 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/12 15:48:40 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -235,18 +235,25 @@ void Server::process_message(int client_fd, std::string &client_buffer)
 	pos = client_buffer.find("\r\n"); // find end of first complete msg
 	while (pos != std::string::npos) // process msgs while complete msgs exist
 	{
-		msg = client_buffer.substr(0, pos); // extract complete msg without \r\n
-		client_buffer.erase(0, pos + 2); // remove processed msg and \r\n from buffer
+		msg = client_buffer.substr(0, pos);
+		client_buffer.erase(0, pos + 2);
 		if (!msg.empty())
 		{
-			space = msg.find(' '); // find separator between cmd and params
+			space = msg.find(' '); // find separator between cmd and param
 			cmd = msg.substr(0, space); // extract cmd
-			if (space != std::string::npos)
-				params = msg.substr(space + 1); // extract everything after cmd as params
+			if (space != std::string::npos) // if cmd has params
+			{
+				while (space < msg.size() && msg[space] == ' ')
+					space++; // skip separator spaces
+				if (space < msg.size()) // if there are chars after spaces
+					params = msg.substr(space); // extract params
+				else // if there are no chars after spaces
+					params = ""; // msg contains only cmd
+			}
 			else
-				params = ""; // cmd has no parameters
-			this->handle_cmd(client_fd, cmd, params); // execute cmd with its parameters
-			if (this->_clients.count(client_fd) == 0) // cmd may have disconnected and removed client
+				params = ""; // cmd has no params
+			this->handle_cmd(client_fd, cmd, params); // execute cmd with its params
+			if (this->_clients.count(client_fd) == 0) // cmd may have removed client
 				return;
 		}
 		pos = client_buffer.find("\r\n"); // search for next complete msg

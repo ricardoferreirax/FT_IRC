@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/12 15:18:37 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/12 15:51:53 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -168,8 +168,6 @@ void Server::handle_ping(Client &client, const std::string &params)
 
 	client_fd = client.get_client_fd();
 	token = params;
-	while (!token.empty() && token[0] == ' ')
-		token.erase(0, 1); // remove spaces before param
 	if (token.empty()) // ping has no param
 	{
 		send_buffer += ":" + this->_name + " 409 * :No origin specified\r\n";
@@ -178,7 +176,7 @@ void Server::handle_ping(Client &client, const std::string &params)
 	}
 	if (token[0] == ':')
 		token.erase(0, 1); // remove ':' from param
-	if (token.empty()) // if had a ':' but param is empty
+	if (token.empty()) // ':' was provided but param is empty
 	{
 		send_buffer += ":" + this->_name + " 409 * :No origin specified\r\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
