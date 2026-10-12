@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/12 15:48:40 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/12 16:32:16 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -276,6 +276,7 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
 	if (cmd == "PRIVMSG" && !client.get_registered()) // client must be registered before sending privmsg
 	{
 		send_buffer += ":" + this->_name + " 451 * :You have not registered\r\n";
+		send_buffer += "\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
@@ -297,6 +298,7 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
 	else
 	{
 		send_buffer += ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n";
+		send_buffer += "\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
@@ -306,7 +308,8 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
 		std::cout << "=====================================================" << std::endl;
 		std::cout << "          CLIENT " << client_fd << " REGISTERED!" << std::endl;
 		std::cout << "=====================================================" << std::endl;
-		send_buffer += ":" + this->_name + " 001 " + client.get_nick() + " :Welcome to the IRC server\r\n" + "\r\n";
+		send_buffer += ":" + this->_name + " 001 " + client.get_nick() + " :Welcome to the IRC server\r\n";
+		send_buffer += "\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 	}
 }
