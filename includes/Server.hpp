@@ -6,19 +6,20 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/12 14:48:45 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/13 22:20:16 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
-# include <csignal>
-# include <map>
-# include <string>
-# include <sys/epoll.h>
+#include <csignal>
+#include <map>
+#include <vector>
+#include <string>
+#include <sys/epoll.h>
 
-# include "Client.hpp"
+#include "Client.hpp"
 
 extern volatile sig_atomic_t running;
 
@@ -37,14 +38,14 @@ class Server
 		void	handle_client_data(int client_fd, int event);
 		void	update_epoll(int client_fd, int events);
 		void	process_message(int client_fd, std::string &client_buffer);
-
-		void	handle_cmd(int client_fd, const std::string &cmd, const std::string &params);
-		void	handle_pass(Client &client, const std::string &params);
-		void	handle_nick(Client &client, const std::string &params);
-		void	handle_user(Client &client, const std::string &params);
-		void	handle_privmsg(Client &client, const std::string &params);
-		void	handle_ping(Client &client, const std::string &params);
-		void	handle_quit(int client_fd, const std::string &params);
+	
+		void	handle_cmd(int client_fd, const std::string &cmd, const std::vector<std::string> &params);
+		void	handle_pass(Client &client, const std::vector<std::string> &params);
+		void	handle_nick(Client &client, const std::vector<std::string> &params);
+		void	handle_user(Client &client, const std::vector<std::string> &params);
+		void	handle_privmsg(Client &client, const std::vector<std::string> &params);
+		void	handle_ping(Client &client, const std::vector<std::string> &params);
+		void	handle_quit(int client_fd, const std::vector<std::string> &params);
 
 	public:
 		Server(int port, const std::string &pass);

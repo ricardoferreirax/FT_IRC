@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/12 16:40:29 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/13 22:40:42 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -87,26 +87,30 @@ bool same_nick(const std::string &nick1, const std::string &nick2)
 	return (true);
 }
 
-bool get_param(std::string &remaining, std::string &param)
+void parse_params(std::string params, std::vector<std::string> &parsed)
 {
 	size_t space;
 
-	if (remaining.empty()) // no params to extract
-		return (false);
-	space = remaining.find(' '); // space separates params
-	if (space == 0) // if space is at beginning -> no param was provided
-		return (false);
-	if (space == std::string::npos) // has no space -> remaining is last param
+	while (!params.empty())
 	{
-		param = remaining;
-		remaining.clear(); // remove param from remaining
+		while (!params.empty() && params[0] == ' ')
+			params.erase(0, 1); // remove spaces before next param
+		if (params.empty())
+			break;
+		if (params[0] == ':') // after ':' is one single param
+		{
+			parsed.push_back(params.substr(1)); // add this single param to parsed
+			break;
+		}
+		space = params.find(' '); // space separates params
+		if (space == std::string::npos) // no space ->  is last param
+		{
+			parsed.push_back(params); // add last param
+			break;
+		}
+		parsed.push_back(params.substr(0, space)); // add param to parsed
+		params.erase(0, space); // remove it so loop can parse next one
 	}
-	else // has space -> remaining has more params
-	{
-		param = remaining.substr(0, space); // extract param from remaining
-		remaining.erase(0, space + 1); // remove param from remaining
-	}
-	return (true);
 }
 
 bool is_valid_user_mode(const std::string &mode)
