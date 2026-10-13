@@ -36,7 +36,7 @@ class Server
 		int						_epoll_fd;
 
 		std::map<int, Client>	_clients;
-		// std::map<std::string, Channel>	_channels;
+		std::map<std::string, Channel>	_channels;
 
 		void	accept_client();
 		void	handle_client_data(int client_fd, int event);
@@ -49,6 +49,7 @@ class Server
 		void	handle_privmsg(Client &client, const std::string &params);
 		void	handle_ping(Client &client, const std::string &params);
 		void	handle_quit(int client_fd, const std::string &params);
+		void	handle_join(Client &client, const std::string &params);
 
 	public:
 		Server(int port, const std::string &pass);

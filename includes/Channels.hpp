@@ -28,6 +28,7 @@ typedef struct s_mode
 	std::string topic_restricted;
 	std::string topic;
 	t_ulimit users;
+	std::string key;
 } t_cmode;
 
 class Channel
@@ -44,5 +45,6 @@ class Channel
 		Channel(std::string name, t_cmode mode, Client chanop, Server &serv);
 		~Channel(void);
 		bool joinChannel(Client guest);
+		bool joinChannel(Client guest, std::string key);
 		bool inviteUser(Client guest);
 };

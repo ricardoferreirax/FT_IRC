@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
+#include "../includes/Channels.hpp"
 #include <iostream>
 #include <unistd.h>
 #include <cstring>
@@ -278,6 +279,20 @@ void Server::process_message(int client_fd, std::string &client_buffer)
 	}
 }
 
+void Server::handle_join(Client &client,const std::string &params)
+{
+	std::string &to_send = client.get_send_buffer();
+	if(params.empty())
+	{
+		to_send += ":" + this->_name + " XXX *: Need more params\r\n";
+		update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
+		return;
+	}
+	if(this->_channels.find(params) == this->_channels.end())
+	{
+	}
+}
+
 // dispatch received cmd to its corresponding cmd handler
 // when registration is complete, mark client as registered and send welcome reply
 void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string &params)
@@ -308,6 +323,8 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string
 		this->handle_privmsg(client, params);
 	else if (cmd == "PING")
 		this->handle_ping(client, params);
+	else if (cmd == "JOIN")
+		this->handle_join(client, params);
 	else if (cmd == "QUIT")
 	{
 		this->handle_quit(client_fd, params); // disconnect and remove client
