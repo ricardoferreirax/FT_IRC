@@ -62,6 +62,16 @@ void Server::handle_nick(int client_fd, const std::string &params)
 	this->send_reply(client_fd, "NICK set to: " + nick + "\r\n");
 }
 
+void Server::handle_join(int client_fd, const std::string &params)
+{
+	if(params.find_first_of(' ') != std::string::npos)
+		this->send_reply(client_fd, ":something something, params are wrong");
+	if(this->_channels.find(params) != this->_channels.end())
+	{
+		// do somthing
+	}
+}
+
 void Server::handle_user(int client_fd, const std::string &params)
 {
     std::string username;

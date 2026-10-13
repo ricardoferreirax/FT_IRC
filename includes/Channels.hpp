@@ -12,32 +12,35 @@
 
 #include <iostream>
 #include "Client.hpp"
-#include "Server.hpp"
 # include <map>
 #include <set>
 
-typedef enum e_mode
+typedef struct s_ulimit
 {
-	NONE,
-	INVITE_ONLY,
-	TOPIC_RESTRICTED,
-	CHANNEL_KEY,
-	OPERATOR_PRIV,
-	USER_LIMIT
-};
+	size_t u_limit;
+	size_t u_count;
+} t_ulimit;
+
+typedef struct s_mode
+{
+	bool invite_only;
+	std::string topic_restricted;
+	std::string topic;
+	t_ulimit users;
+} t_cmode;
 
 class Channel
 {
 	private:
 		std::string _name;
-		int _mode;
+		t_cmode	_mode;
 		std::set<int> _chanops;
 		std::map<int, Client> _clients;
-		std::set<t_ip> _invite_ips;
-		std::set<t_ip> _naughtyList;
+		std::set <int> _invites;
 		Channel(void);
 	public:
-		Channel(std::string name, int mode, Client chanop);
+		Channel(std::string name, t_cmode mode, Client chanop);
 		~Channel(void);
 		bool joinChannel(Client guest);
+		bool inviteUser(Client guest);
 };

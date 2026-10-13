@@ -37,3 +37,4 @@ bool get_param(std::string &remaining, std::string &param)
     remaining.erase(0, space + 1);
     return (true);
 }
+

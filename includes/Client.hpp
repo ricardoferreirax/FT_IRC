@@ -13,41 +13,42 @@
 #ifndef CLIENT_HPP
 # define CLIENT_HPP
 
-#include <iostream>
-#include <string>
-#include <sys/socket.h>
-#include <netinet/in.h>
-
+# include <iostream>
+# include <netinet/in.h>
+# include <string>
+# include <sys/socket.h>
 
 class Client
 {
-    private:
-		int _fd;
-        bool _auth;
-        bool _registered;
-		std::string _recv_buffer;
-		std::string _send_buffer;
-		std::string _nick;
-		std::string _user;
+  private:
+	int _fd;
+	bool _auth;
+	bool _registered;
+	std::string _recv_buffer;
+	std::string _send_buffer;
+	std::string _nick;
+	std::string _user;
 
+  public:
+	Client();
+	Client(int fd);
 
-    public:
-        Client();
-        Client(int fd);
+	std::string &get_recv_buffer();
+	std::string &get_send_buffer();
 
-        std::string &get_recv_buffer();
-        std::string &get_send_buffer();
-	
-		int get_fd() const;
-        bool get_registered() const;
-        const std::string &get_nick() const;
+	int get_fd() const;
+	bool get_registered() const;
+	const std::string &get_nick() const;
 
-        void set_nick(const std::string &nick);
-        void set_user(const std::string &user);
-        void set_auth(bool auth);
-        void set_registered(bool registered);
+	void set_nick(const std::string &nick);
+	void set_user(const std::string &user);
+	void set_auth(bool auth);
+	void set_registered(bool registered);
 
-        bool can_register() const;
+	bool can_register() const;
+	bool is_registered();
+	std::string getNick();
+	std::string getUser();
 };
 
 #endif

@@ -15,7 +15,7 @@
 
 # include <string>
 
-bool is_valid_nick(const std::string &nick);
-bool get_param(std::string &remaining, std::string &param);
+bool	is_valid_nick(const std::string &nick);
+bool	get_param(std::string &remaining, std::string &param);
 
 #endif

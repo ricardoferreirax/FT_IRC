@@ -13,53 +13,57 @@
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
+# include "Client.hpp"
 # include <csignal>
 # include <map>
 # include <string>
+# include "Channels.hpp"
 
-#include "Client.hpp"
+extern volatile sig_atomic_t	running;
 
-extern volatile sig_atomic_t running;
-
-typedef struct s_ip t_ip;
+typedef struct s_ip				t_ip;
 
 class Server
 {
 	// protected:
-	//        std::map<int, Client> _clients; // store all connected clients with their socket fd corresponding to their client
+	//        std::map<int, Client> _clients;
+		// store all connected clients with their socket fd corresponding to their client
 
-    private:
-        std::string _pass;
-        int _port;
-        int _listen_fd;
-        int _epoll_fd;
+  private:
+	std::string _pass;
+	int _port;
+	int _listen_fd;
+	int _epoll_fd;
 
-        std::map<int, Client> _clients; // store all connected clients
-        void accept_client();
-		void receive_client_data(int client_fd);
-		void send_client_data(int client_fd);
-        void process_message(int client_fd, std::string &client_buffer);
-		void send_reply(int client_fd, const std::string &reply);
-        void register_client(int client_fd);
-        void disconnect_client(int client_fd);
+	std::map<int, Client> _clients; // store all connected clients
+	std::map<std::string, Channel> _channels;
+	void accept_client();
+	void receive_client_data(int client_fd);
+	void send_client_data(int client_fd);
+	void process_message(int client_fd, std::string &client_buffer);
+	void send_reply(int client_fd, const std::string &reply);
+	void register_client(int client_fd);
+	void disconnect_client(int client_fd);
 
-        void handle_cmd(int client_fd, const std::string &cmd, const std::string &params);
-        void handle_pass(int client_fd, const std::string &params);
-        void handle_nick(int client_fd, const std::string &params);
-        void handle_user(int client_fd, const std::string &params);
-		void handle_ping(int client_fd, const std::string &params);
-		void handle_quit(int client_fd, const std::string &params);
+	void handle_cmd(int client_fd, const std::string &cmd,
+		const std::string &params);
+	void handle_pass(int client_fd, const std::string &params);
+	void handle_nick(int client_fd, const std::string &params);
+	void handle_join(int client_fd, const std::string &params);
+	void handle_user(int client_fd, const std::string &params);
+	void handle_ping(int client_fd, const std::string &params);
+	void handle_quit(int client_fd, const std::string &params);
 
-    public:
-        Server(int port, const std::string &pass);
-        ~Server();
+  public:
+	Server(int port, const std::string &pass);
+	~Server();
 
-        void start_socket();
-        void monitor_epoll_events();
-		std::map<int, Client> &getClients();
+	void start_socket();
+	void monitor_epoll_events();
+	std::map<int, Client> &getClients();
 };
 
-void handle_signal(int signal);
-void setup_signals(void);
+void							handle_signal(int signal);
+void							setup_signals(void);
 
 #endif

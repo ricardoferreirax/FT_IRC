@@ -75,3 +75,9 @@ bool Client::can_register() const
 {
     return (this->_auth && !this->_nick.empty() && !this->_user.empty());
 }
+
+bool Client::is_registered(void)
+{
+	return this->_registered;
+}
+
