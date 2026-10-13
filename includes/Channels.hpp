@@ -12,6 +12,7 @@
 
 #include <iostream>
 #include "Client.hpp"
+#include "Server.hpp"
 # include <map>
 #include <set>
 
@@ -37,9 +38,10 @@ class Channel
 		std::set<int> _chanops;
 		std::map<int, Client> _clients;
 		std::set <int> _invites;
+		Server &_serv;
 		Channel(void);
 	public:
-		Channel(std::string name, t_cmode mode, Client chanop);
+		Channel(std::string name, t_cmode mode, Client chanop, Server &serv);
 		~Channel(void);
 		bool joinChannel(Client guest);
 		bool inviteUser(Client guest);

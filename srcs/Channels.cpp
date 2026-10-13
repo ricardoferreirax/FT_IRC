@@ -6,36 +6,49 @@
 /*   By: pedro </var/spool/mail/pedro>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:50:09 by pedro             #+#    #+#             */
-/*   Updated: 2026/10/07 14:18:26 by pedro            ###   ########.fr       */
+/*   Updated: 2026/10/13 13:22:31 by pedro            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Channels.hpp"
 #include "../includes/Server.hpp"
 
-Channel::Channel(std::string name, t_cmode mode, Client chanop) : _name(name),
-	_mode(mode)
+Channel::Channel(std::string name, t_cmode mode, Client chanop, Server &serv) : _name(name),
+	_mode(mode), _serv(serv)
 {
 	std::cout << "New Channel " << this->_name << " has been created.";
-	this->_chanops.insert(chanop.get_fd());
-	this->_clients.insert(std::make_pair(chanop.get_fd(), chanop));
+	this->_chanops.insert(chanop.get_client_fd());
+	this->_clients.insert(std::make_pair(chanop.get_client_fd(), chanop));
 }
 
 bool Channel::joinChannel(Client guest)
 {
+	std::string &to_send = guest.get_send_buffer();
+
 	if(!guest.is_registered())
 	{
-		send(guest.get_fd(), "Client is not registered\r\n", 27, 0);
-	}
-	if(this->_clients.find(guest.get_fd()) != this->_clients.end())
-	{
-		std::cout << "User already in Channel #" << this->_name << std::endl;
+		to_send += "NOTICE: Client is not registered\r\n";
+		this->_serv.update_epoll(guest.get_client_fd(), EPOLLIN | EPOLLOUT);
 		return false;
 	}
-	if(this->_mode.invite_only && !(this->_invites.find(guest.get_fd()) != this->_invites.end()))
+	if(this->_clients.find(guest.get_client_fd()) != this->_clients.end())
 	{
-		std::cout << "You weren't invited to the boys club. Access denied\n";
+		to_send += "NOTICE: User is already in Channel\r\n";
+		this->_serv.update_epoll(guest.get_client_fd(), EPOLLIN | EPOLLOUT);
 		return false;
 	}
+	if(this->_mode.invite_only && !(this->_invites.find(guest.get_client_fd()) != this->_invites.end()))
+	{
+		to_send += ":" + this->_serv.getName() + " 473 *: #" + this->_name + " You weren't invited to the boys club. Access denied\r\n";
+		this->_serv.update_epoll(guest.get_client_fd(), EPOLLIN | EPOLLOUT);
+		return false;
+	}
+	if(this->_mode.users.u_count + 1 > this->_mode.users.u_limit)
+	{
+		to_send += ":" + this->_serv.getName() + " XXX *: #" + this->_name + " This place is full, get yo ass outta here\r\n";
+		this->_serv.update_epoll(guest.get_client_fd(), EPOLLIN | EPOLLOUT);
+		return false;
+	}
+
 	return true;
 }
