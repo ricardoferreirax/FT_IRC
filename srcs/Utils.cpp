@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/13 16:41:20 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/13 22:27:39 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -87,24 +87,30 @@ bool same_nick(const std::string &nick1, const std::string &nick2)
 	return (true);
 }
 
-bool get_param(std::string &remaining, std::string &param)
+void parse_params(std::string params, std::vector<std::string> &parsed)
 {
 	size_t space;
 
-	if (remaining.empty()) // no param to extract
-		return (false);
-	space = remaining.find(' '); // space separates params
-	if (space == std::string::npos) // has no space -> remaining is last param
+	while (!params.empty()) // parse params until no more params exist
 	{
-		param = remaining;
-		remaining.clear();
-		return (true);
+		while (!params.empty() && params[0] == ' ')
+			params.erase(0, 1); // skip leading spaces
+		if (params.empty()) // no more params exist
+			break;
+		if (params[0] == ':') // ':' param -> all remaining chars are part of it
+		{
+			parsed.push_back(params.substr(1)); // remove ':' from trailing param
+			break;
+		}
+		space = params.find(' '); // space separates params
+		if (space == std::string::npos) // no space -> remaining is last param
+		{
+			parsed.push_back(params); // add last param to parsed
+			break;
+		}
+		parsed.push_back(params.substr(0, space)); // add param to parsed
+		params.erase(0, space); // remove param and spaces
 	}
-	param = remaining.substr(0, space); // extract param
-	while (space < remaining.size() && remaining[space] == ' ')
-		space++; // skip spaces after param
-	remaining.erase(0, space); // remove param and spaces after it
-	return (true);
 }
 
 bool is_valid_user_mode(const std::string &mode)

@@ -6,11 +6,12 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/13 15:02:26 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/13 22:24:44 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
+#include "../includes/Utils.hpp"
 #include <iostream>
 #include <unistd.h>
 #include <cstring>
@@ -241,36 +242,32 @@ void Server::handle_client_data(int client_fd, int event)
 // if client sent quit -> stop processing msgs and disconnect it after sending pending data
 void Server::process_message(int client_fd, std::string &client_buffer)
 {
+	std::vector<std::string> params;
 	std::string	msg;
 	std::string	cmd;
-	std::string	params;
+	std::string	remaining;
 	size_t		pos;
 	size_t		space;
 
-	pos = client_buffer.find("\r\n"); // find end of first complete msg
+	pos = client_buffer.find("\r\n");
 	while (pos != std::string::npos) // process msgs while complete msgs exist
 	{
 		msg = client_buffer.substr(0, pos); // extract complete msg from client_buffer
-		client_buffer.erase(0, pos + 2);
+		client_buffer.erase(0, pos + 2); // remove processed msg from client_buffer
 		if (!msg.empty())
 		{
-			space = msg.find(' ');
-			cmd = msg.substr(0, space); // extract cmd from msg
-			if (space != std::string::npos) // if cmd has params
-			{
-				while (space < msg.size() && msg[space] == ' ')
-					space++; // skip separator spaces
-				if (space < msg.size()) // if there are chars after spaces
-					params = msg.substr(space); // extract params from msg
-				else
-					params = ""; // otherwise msg contains only cmd and no params
-			}
+			space = msg.find(' '); // space separates cmd from params
+			cmd = msg.substr(0, space);
+			if (space != std::string::npos)
+				remaining = msg.substr(space + 1); // if cmd has params extract them from msg
 			else
-				params = "";
+				remaining = ""; // otherwise msg contains only cmd and no params
+			params.clear(); // clear params vector to store parsed params
+			parse_params(remaining, params); // parse params and store them in params vector
 			this->handle_cmd(client_fd, cmd, params);
-			if (this->_clients.count(client_fd) == 0) // cmd may have removed client
+			if (this->_clients.count(client_fd) == 0) // if cmd removed client -> stop processing msgs
 				return;
-			if (this->_clients[client_fd].get_quit())
+			if (this->_clients[client_fd].get_quit()) // client sent quit
 				return;
 		}
 		pos = client_buffer.find("\r\n");
@@ -279,7 +276,7 @@ void Server::process_message(int client_fd, std::string &client_buffer)
 
 // dispatch received cmd to its corresponding cmd handler
 // when registration is complete, mark client as registered and send welcome reply
-void Server::handle_cmd(int client_fd, const std::string &cmd, const std::string &params)
+void Server::handle_cmd(int client_fd, const std::string &cmd, const std::vector<std::string> &params)
 {
 	Client		&client = this->_clients[client_fd]; // get client that sent the cmd
 	std::string	&send_buffer = client.get_send_buffer(); // get buffer used to queue responses to client
