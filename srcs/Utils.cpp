@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/13 22:27:39 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/13 22:40:42 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -91,25 +91,25 @@ void parse_params(std::string params, std::vector<std::string> &parsed)
 {
 	size_t space;
 
-	while (!params.empty()) // parse params until no more params exist
+	while (!params.empty())
 	{
 		while (!params.empty() && params[0] == ' ')
-			params.erase(0, 1); // skip leading spaces
-		if (params.empty()) // no more params exist
+			params.erase(0, 1); // remove spaces before next param
+		if (params.empty())
 			break;
-		if (params[0] == ':') // ':' param -> all remaining chars are part of it
+		if (params[0] == ':') // after ':' is one single param
 		{
-			parsed.push_back(params.substr(1)); // remove ':' from trailing param
+			parsed.push_back(params.substr(1)); // add this single param to parsed
 			break;
 		}
 		space = params.find(' '); // space separates params
-		if (space == std::string::npos) // no space -> remaining is last param
+		if (space == std::string::npos) // no space ->  is last param
 		{
-			parsed.push_back(params); // add last param to parsed
+			parsed.push_back(params); // add last param
 			break;
 		}
 		parsed.push_back(params.substr(0, space)); // add param to parsed
-		params.erase(0, space); // remove param and spaces
+		params.erase(0, space); // remove it so loop can parse next one
 	}
 }
 

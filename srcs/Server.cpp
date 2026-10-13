@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/13 22:24:44 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/13 23:14:06 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -203,8 +203,8 @@ void Server::handle_client_data(int client_fd, int event)
 			std::cout << "=====================================================" << std::endl;
 			return;
 		}
-		recv_buffer.append(buffer, bytes); // append received bytes to client's receive buffer
-		this->process_message(client_fd, recv_buffer); // process complete irc msgs stored in recv_buffer
+		recv_buffer.append(buffer, bytes); // store received data cause an msg may arrive in parts
+		this->process_message(client_fd, recv_buffer); // process all complete msgs currently in recv_buffer
 	}
 	else if (event == EPOLLOUT)
 	{
@@ -220,7 +220,7 @@ void Server::handle_client_data(int client_fd, int event)
 		send_buffer.erase(0, bytes); // remove only bytes successfully sent
 		if (send_buffer.empty()) // if all pending data was successfully sent
 		{
-			if (client.get_quit()) // if client sent quit and all pending data was sent, disconnect it
+			if (client.get_quit()) // if QUIT was received -> disconnect client
 			{
 				if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0)
 					throw std::runtime_error("IRC: epoll_ctl() failed.");
@@ -231,7 +231,7 @@ void Server::handle_client_data(int client_fd, int event)
 				std::cout << "=====================================================" << std::endl;
 				return;
 			}
-			this->update_epoll(client_fd, EPOLLIN);
+			this->update_epoll(client_fd, EPOLLIN); // disable EPOLLOUT cause there's no more data to send
 		}
 	}
 }
@@ -252,8 +252,8 @@ void Server::process_message(int client_fd, std::string &client_buffer)
 	pos = client_buffer.find("\r\n");
 	while (pos != std::string::npos) // process msgs while complete msgs exist
 	{
-		msg = client_buffer.substr(0, pos); // extract complete msg from client_buffer
-		client_buffer.erase(0, pos + 2); // remove processed msg from client_buffer
+		msg = client_buffer.substr(0, pos);
+		client_buffer.erase(0, pos + 2);
 		if (!msg.empty())
 		{
 			space = msg.find(' '); // space separates cmd from params
@@ -262,8 +262,8 @@ void Server::process_message(int client_fd, std::string &client_buffer)
 				remaining = msg.substr(space + 1); // if cmd has params extract them from msg
 			else
 				remaining = ""; // otherwise msg contains only cmd and no params
-			params.clear(); // clear params vector to store parsed params
-			parse_params(remaining, params); // parse params and store them in params vector
+			params.clear(); // remove params from previous msg
+			parse_params(remaining, params); // store params from current msg in params vector
 			this->handle_cmd(client_fd, cmd, params);
 			if (this->_clients.count(client_fd) == 0) // if cmd removed client -> stop processing msgs
 				return;
@@ -278,19 +278,19 @@ void Server::process_message(int client_fd, std::string &client_buffer)
 // when registration is complete, mark client as registered and send welcome reply
 void Server::handle_cmd(int client_fd, const std::string &cmd, const std::vector<std::string> &params)
 {
-	Client		&client = this->_clients[client_fd]; // get client that sent the cmd
-	std::string	&send_buffer = client.get_send_buffer(); // get buffer used to queue responses to client
+	Client	&client = this->_clients[client_fd]; // get client that sent the cmd
+	std::string	&to_send = client.get_send_buffer(); // get buffer used to queue responses to client
 
 	if ((cmd == "PASS" || cmd == "USER") && client.get_registered()) // registered client cannot put pass or user again
 	{
-		send_buffer += ":" + this->_name + " 462 * :You may not reregister\r\n";
+		to_send += ":" + this->_name + " 462 * :You may not reregister\r\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT); // enable EPOLLOUT to send queued reply
 		return;
 	}
 	if (cmd == "PRIVMSG" && !client.get_registered()) // client must be registered before sending privmsg
 	{
-		send_buffer += ":" + this->_name + " 451 * :You have not registered\r\n";
-		send_buffer += "\n";
+		to_send += ":" + this->_name + " 451 * :You have not registered\r\n";
+		to_send += "\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
@@ -311,8 +311,8 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::vector
 	}
 	else
 	{
-		send_buffer += ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n";
-		send_buffer += "\n";
+		to_send += ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n";
+		to_send += "\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
@@ -322,8 +322,8 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::vector
 		std::cout << "=====================================================" << std::endl;
 		std::cout << "          CLIENT " << client_fd << " REGISTERED!" << std::endl;
 		std::cout << "=====================================================" << std::endl;
-		send_buffer += ":" + this->_name + " 001 " + client.get_nick() + " :Welcome to the IRC server\r\n";
-		send_buffer += "\n";
+		to_send += ":" + this->_name + " 001 " + client.get_nick() + " :Welcome to the IRC server\r\n";
+		to_send += "\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 	}
 }
