@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/12 19:15:13 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/13 14:46:27 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -137,6 +137,7 @@ void Server::handle_user(Client &client, const std::string &params)
 	if (!is_valid_user_mode(mode)) // USER mode must contain only numbers
     {
         send_buffer += ":" + this->_name + " NOTICE " + client.get_nick() + " :Invalid USER mode: only numbers are allowed\r\n";
+		send_buffer += "\n";
         this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
         return;
     }
@@ -150,51 +151,47 @@ void Server::handle_user(Client &client, const std::string &params)
 void Server::handle_privmsg(Client &client, const std::string &params)
 {
 	std::map<int, Client>::iterator	it;
-	std::string	&send_buffer = client.get_send_buffer();
-	std::string	remaining;
-	std::string	target;
-	std::string	prefix;
-	int client_fd;
+	std::string						&send_buffer = client.get_send_buffer();
+	std::string						remaining;
+	std::string						target;
+	std::string						prefix;
+	int								client_fd;
 
 	client_fd = client.get_client_fd();
 	remaining = params;
-	send_buffer += "\n";
-	prefix = ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip();
-	send_buffer += "\n";
-	if (!get_param(remaining, target)) // no target was provided
+	if (!get_param(remaining, target))
 	{
-		send_buffer += ":" + this->_name + " 411 * :No recipient given (PRIVMSG)\r\n";
+		send_buffer += ":" + this->_name + " 411 " + client.get_nick() + " :No recipient given (PRIVMSG)\r\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
-	if (remaining.empty()) // no msg was provided
+	if (remaining.empty())
 	{
-		send_buffer += ":" + this->_name + " 412 * :No text to send\r\n";
-		send_buffer += "\n";
+		send_buffer += ":" + this->_name + " 412 " + client.get_nick() + " :No text to send\r\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
 	if (remaining[0] == ':')
-		remaining.erase(0, 1); // remove ':' that marks trailing param
-	if (remaining.empty()) // ':' was provided but msg is empty
+		remaining.erase(0, 1);
+	else if (remaining.find(' ') != std::string::npos)
+		remaining = remaining.substr(0, remaining.find(' '));
+	if (remaining.empty())
 	{
-		send_buffer += ":" + this->_name + " 412 * :No text to send\r\n";
-		send_buffer += "\n";
+		send_buffer += ":" + this->_name + " 412 " + client.get_nick() + " :No text to send\r\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
-	for (it = this->_clients.begin(); it != this->_clients.end(); ++it) // iterate all clients to find target client to send msg
+	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
-		if (same_nick(it->second.get_nick(), target)) // if target nick matches client nick -> send msg to target client
+		if (same_nick(it->second.get_nick(), target))
 		{
-			send_buffer += "\n";
+			prefix = ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip();
 			it->second.get_send_buffer() += prefix + " PRIVMSG " + target + " :" + remaining + "\r\n";
-			send_buffer += "\n";
 			this->update_epoll(it->first, EPOLLIN | EPOLLOUT);
 			return;
 		}
 	}
-	send_buffer += ":" + this->_name + " 401 * " + target + " :No such nick/channel\r\n";
+	send_buffer += ":" + this->_name + " 401 " + client.get_nick() + " " + target + " :No such nick/channel\r\n";
 	this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 }
 
@@ -211,6 +208,7 @@ void Server::handle_ping(Client &client, const std::string &params)
 	if (token.empty()) // ping has no param
 	{
 		send_buffer += ":" + this->_name + " 409 * :No origin specified\r\n";
+		send_buffer += "\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
@@ -220,9 +218,9 @@ void Server::handle_ping(Client &client, const std::string &params)
 	{
 		send_buffer += ":" + this->_name + " 409 * :No origin specified\r\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
+		send_buffer += "\n";
 		return;
 	}
-	send_buffer += "\n";
 	send_buffer += ":" + this->_name + " PONG " + this->_name + " :" + token + "\r\n";
 	send_buffer += "\n";
 	this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
