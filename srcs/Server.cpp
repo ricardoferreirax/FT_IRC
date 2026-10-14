@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/14 17:31:31 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/14 17:36:05 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -282,7 +282,7 @@ void Server::handle_cmd(Client &client, const std::string &cmd, const std::vecto
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
-	if (cmd == "PRIVMSG" && !client.get_registered()) // cant privmsg before registration
+	if ((cmd == "PRIVMSG" || cmd == "JOIN") && !client.get_registered()) // cant privmsg before registration
 	{
 		send_buffer += ":" + this->_name + " 451 * :You have not registered\r\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
@@ -296,6 +296,8 @@ void Server::handle_cmd(Client &client, const std::string &cmd, const std::vecto
 		this->handle_user(client, params);
 	else if (cmd == "PRIVMSG")
 		this->handle_privmsg(client, params);
+	else if (cmd == "JOIN")
+		this->handle_join(client, params);
 	else if (cmd == "PING")
 		this->handle_ping(client, params);
 	else if (cmd == "QUIT")
@@ -318,4 +320,9 @@ void Server::handle_cmd(Client &client, const std::string &cmd, const std::vecto
 		send_buffer += ":" + this->_name + " 001 " + client.get_nick() + " :Welcome to the IRC server\r\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 	}
+}
+
+std::string Server::getName(void) const
+{
+	return (this->_name);
 }

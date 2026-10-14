@@ -6,12 +6,24 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/13 22:40:42 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/14 17:42:01 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Utils.hpp"
-#include <iostream>
+
+t_cmode	default_mode(void)
+{
+	t_cmode	def;
+
+	def.invite_only = false;
+	def.topic_restricted = false;
+	def.topic = "";
+	def.users.u_count = 1;
+	def.users.u_limit = 0;
+	def.key = "";
+	return (def);
+}
 
 bool	validate_args(char **av, int &port)
 {
@@ -123,4 +135,33 @@ bool is_valid_user_mode(const std::string &mode)
             return (false);
     }
     return (true);
+}
+
+std::vector<std::string> ft_split(const std::string &s, char delim)
+{
+	std::vector<std::string> result;
+	std::stringstream ss(s);
+	std::string item;
+	
+	while (getline(ss, item, delim))
+	{
+		if (item.empty())
+			continue ;
+		result.push_back(item);
+	}
+	return (result);
+}
+
+std::string generateRandomString(int length)
+{
+	const std::string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	std::string random_string = "";
+	int	index;
+
+	for (int i = 0; i < length; ++i)
+	{
+		index = rand() % chars.size();
+		random_string += chars[index];
+	}
+	return (random_string);
 }

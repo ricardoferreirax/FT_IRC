@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/14 17:25:30 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/14 17:46:07 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,8 @@
 
 extern volatile sig_atomic_t running;
 
+class Channel;
+
 class Server
 {
 	private:
@@ -33,6 +35,7 @@ class Server
 		int						_epoll_fd;
 
 		std::map<int, Client>	_clients;
+		std::map<std::string, Channel>	_channels;
 
 		void	accept_client();
 		void	handle_client_data(int client_fd, int event);
@@ -47,12 +50,17 @@ class Server
 		void	handle_ping(Client &client, const std::vector<std::string> &params);
 		void	handle_quit(Client &client, const std::vector<std::string> &params);
 
+		void handle_join(Client &client, const std::vector<std::string> &params);
+		void	handle_fast(Client &client);
+
 	public:
 		Server(int port, const std::string &pass);
 		~Server();
 
 		void	start_socket();
 		void	monitor_epoll_events();
+
+		std::string getName(void) const;
 };
 
 void	handle_signal(int signal);

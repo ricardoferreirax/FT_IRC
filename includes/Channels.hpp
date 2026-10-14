@@ -3,12 +3,15 @@
 /*                                                        :::      ::::::::   */
 /*   Channels.hpp                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: pedro </var/spool/mail/pedro>              +#+  +:+       +#+        */
+/*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 14:11:26 by pedro             #+#    #+#             */
-/*   Updated: 2026/10/07 14:18:07 by pedro            ###   ########.fr       */
+/*   Updated: 2026/10/14 17:39:41 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
+#ifndef CHANNELS_HPP
+#define CHANNELS_HPP
 
 #include <iostream>
 #include "Client.hpp"
@@ -16,28 +19,36 @@
 # include <map>
 #include <set>
 
-typedef enum e_mode
+typedef struct s_ulimit
 {
-	NONE,
-	INVITE_ONLY,
-	TOPIC_RESTRICTED,
-	CHANNEL_KEY,
-	OPERATOR_PRIV,
-	USER_LIMIT
-};
+	size_t u_limit;
+	size_t u_count;
+} t_ulimit;
+
+typedef struct s_mode
+{
+	bool invite_only;
+	bool topic_restricted;
+	std::string topic;
+	t_ulimit users;
+	std::string key;
+} t_cmode;
 
 class Channel
 {
 	private:
 		std::string _name;
-		int _mode;
+		t_cmode	_mode;
 		std::set<int> _chanops;
 		std::map<int, Client> _clients;
-		std::set<t_ip> _invite_ips;
-		std::set<t_ip> _naughtyList;
+		std::set <int> _invites;
 		Channel(void);
 	public:
-		Channel(std::string name, int mode, Client chanop);
+		Channel(std::string name, t_cmode mode, Client chanop);
 		~Channel(void);
 		bool joinChannel(Client guest);
+		int joinChannel(Client guest, std::string key);
+		bool inviteUser(Client guest);
 };
+
+#endif
