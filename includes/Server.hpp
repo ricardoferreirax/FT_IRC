@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/13 22:20:16 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/14 17:46:07 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,8 @@
 
 extern volatile sig_atomic_t running;
 
+class Channel;
+
 class Server
 {
 	private:
@@ -33,19 +35,23 @@ class Server
 		int						_epoll_fd;
 
 		std::map<int, Client>	_clients;
+		std::map<std::string, Channel>	_channels;
 
 		void	accept_client();
 		void	handle_client_data(int client_fd, int event);
 		void	update_epoll(int client_fd, int events);
-		void	process_message(int client_fd, std::string &client_buffer);
+		void	process_message(Client &client, std::string &client_buffer);
 	
-		void	handle_cmd(int client_fd, const std::string &cmd, const std::vector<std::string> &params);
+		void	handle_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params);
 		void	handle_pass(Client &client, const std::vector<std::string> &params);
 		void	handle_nick(Client &client, const std::vector<std::string> &params);
 		void	handle_user(Client &client, const std::vector<std::string> &params);
 		void	handle_privmsg(Client &client, const std::vector<std::string> &params);
 		void	handle_ping(Client &client, const std::vector<std::string> &params);
-		void	handle_quit(int client_fd, const std::vector<std::string> &params);
+		void	handle_quit(Client &client, const std::vector<std::string> &params);
+
+		void handle_join(Client &client, const std::vector<std::string> &params);
+		void	handle_fast(Client &client);
 
 	public:
 		Server(int port, const std::string &pass);
@@ -53,6 +59,8 @@ class Server
 
 		void	start_socket();
 		void	monitor_epoll_events();
+
+		std::string getName(void) const;
 };
 
 void	handle_signal(int signal);

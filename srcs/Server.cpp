@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/13 23:52:46 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/14 18:04:25 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -91,8 +91,8 @@ void Server::monitor_epoll_events()
 	if (this->_epoll_fd < 0)
 		throw std::runtime_error("IRC: epoll_create1() failed.");
 	event.events = EPOLLIN; // monitor listening socket for incoming connections
-	event.data.fd = this->_listen_fd; // store fd to identify its events
-	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0) // add listening socket to epoll
+	event.data.fd = this->_listen_fd; // store fd to identify which socket generated event
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 	while (running) // keep monitoring events till server is stopped
 	{
@@ -108,13 +108,13 @@ void Server::monitor_epoll_events()
 			current_fd = events[i].data.fd; // get fd that generated event
 			if (current_fd == this->_listen_fd) // listening socket ready -> a new client connection is waiting
 			{
-				this->accept_client(); // accept client and add its socket to epoll
-				continue; // skip to next event
+				this->accept_client();
+				continue;
 			}
 			if (events[i].events & EPOLLIN) // EPOLLIN -> client socket has incoming data ready to be received
 				this->handle_client_data(current_fd, EPOLLIN); // read/receive data FROM client and process it
-			if (this->_clients.find(current_fd) == this->_clients.end()) // client may have disconnected
-				continue; // skip to next event
+			if (this->_clients.find(current_fd) == this->_clients.end())
+				continue;
 			if (events[i].events & EPOLLOUT) // EPOLLOUT -> client socket is ready to send pending data
 				this->handle_client_data(current_fd, EPOLLOUT); // send/write pending data TO client
 		}
@@ -126,7 +126,7 @@ void Server::update_epoll(int client_fd, int events)
 	epoll_event	event;
 
 	event.events = events; // set EPOLLIN -> monitor for incoming data, EPOLLOUT -> monitor for pending data to be sent
-	event.data.fd = client_fd; // store fd to identify which client generated event
+	event.data.fd = client_fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0) // modify client socket to monitor for specified events
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 }
@@ -147,7 +147,7 @@ void Server::accept_client()
 	client_fd = accept(this->_listen_fd, reinterpret_cast<sockaddr *>(&client_addr), &addr_len);
 	if (client_fd < 0)
 		throw std::runtime_error("IRC: accept() failed.");
-	addr_len = sizeof(server_addr); // size available to store server local address
+	addr_len = sizeof(server_addr);
 	if (getsockname(client_fd, reinterpret_cast<sockaddr *>(&server_addr), &addr_len) < 0)
 	{
 		close(client_fd);
@@ -174,28 +174,28 @@ void Server::accept_client()
 	std::cout << "=====================================================\n" << std::endl;
 }
 
-// handle client socket i/o depending on event received from epoll
-// EPOLLIN -> recv() reads/receives incoming data FROM client and stores it in recv_buffer
-// EPOLLOUT -> send() writes/sends pending data FROM send_buffer TO client
+// handle client socket I/O depending on the event received from epoll
+// EPOLLIN  -> receive data FROM the client
+// EPOLLOUT -> send pending data TO the client
 void Server::handle_client_data(int client_fd, int event)
 {
-	Client		&client = this->_clients[client_fd];
-	char		buffer[1024]; // temp buffer used by recv() to store received data
-	ssize_t		bytes; // nb of bytes received or sent
-	
+	Client &client = this->_clients[client_fd];
+	char buffer[1024];
+	ssize_t bytes;
+
 	if (event == EPOLLIN)
 	{
-		std::string	&recv_buffer = client.get_recv_buffer();
-		bytes = recv(client_fd, buffer, sizeof(buffer), 0); // server receives data FROM client through client socket
+		std::string &recv_buffer = client.get_recv_buffer();
+		bytes = recv(client_fd, buffer, sizeof(buffer), 0); // receive data FROM the client through the client socket
 		if (bytes < 0)
 		{
 			std::cerr << "[CLIENT " << client_fd << "] recv() failed." << std::endl;
 			return;
 		}
-		if (bytes == 0) // client closed its side of tcp connection
+		if (bytes == 0)
 		{
-			if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0) // remove client socket from epoll
-			throw std::runtime_error("IRC: epoll_ctl() failed.");
+			if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) < 0)
+				throw std::runtime_error("IRC: epoll_ctl() failed.");
 			close(client_fd);
 			this->_clients.erase(client_fd);
 			std::cout << "\n=====================================================" << std::endl;
@@ -203,17 +203,15 @@ void Server::handle_client_data(int client_fd, int event)
 			std::cout << "=====================================================" << std::endl;
 			return;
 		}
-		recv_buffer.append(buffer, bytes); // store received data cause an msg may arrive in parts
-		// send_buffer += "Received: " + std::string(buffer, bytes) + "\r\n";
-		// send_buffer += "Buffer: " + recv_buffer + "\r\n";
-		this->process_message(client_fd, recv_buffer); // process all complete msgs currently in recv_buffer
+		recv_buffer.append(buffer, bytes); // append received data cause msg may arrive in parts
+		this->process_message(client, recv_buffer); // process all complete messages currently in recv_buffer
 	}
 	else if (event == EPOLLOUT)
 	{
-		std::string	&send_buffer = client.get_send_buffer();
+		std::string &send_buffer = client.get_send_buffer();
 		if (send_buffer.empty()) // no pending data to send to client
 			return;
-		bytes = send(client_fd, send_buffer.c_str(), send_buffer.size(), 0); // server sends data TO client through client socket
+		bytes = send(client_fd, send_buffer.c_str(), send_buffer.size(), 0); // send data TO the client through the client socket
 		if (bytes < 0)
 		{
 			std::cerr << "[CLIENT " << client_fd << "] send() failed." << std::endl;
@@ -238,60 +236,55 @@ void Server::handle_client_data(int client_fd, int event)
 	}
 }
 
-// process complete irc msgs stored in client's receive buffer
 // irc msgs end with \r\n, which separates one complete msg from the next one
 // incomplete msgs remain in client_buffer till more data is received with recv()
-void Server::process_message(int client_fd, std::string &client_buffer)
+void Server::process_message(Client &client, std::string &client_buffer)
 {
 	std::vector<std::string> params;
-	std::string	msg;
-	std::string	cmd;
-	std::string	remaining;
-	size_t		pos;
-	size_t		space;
+	std::string msg;
+	std::string cmd;
+	std::string remaining;
+	size_t pos;
+	size_t space;
 
 	pos = client_buffer.find("\r\n");
-	while (pos != std::string::npos) // process msgs while complete msgs exist
+	while (pos != std::string::npos)
 	{
-		msg = client_buffer.substr(0, pos);
-		client_buffer.erase(0, pos + 2);
+		msg = client_buffer.substr(0, pos); // extract one complete msg
+		client_buffer.erase(0, pos + 2); // rmv msg from buffer
 		if (!msg.empty())
 		{
-			space = msg.find(' '); // space separates cmd from params
+			space = msg.find(' ');
 			cmd = msg.substr(0, space);
 			if (space != std::string::npos)
-				remaining = msg.substr(space + 1); // if cmd has params extract them from msg
+				remaining = msg.substr(space + 1); // if cmd has params -> extract everything after cmd
 			else
-				remaining = ""; // otherwise msg contains only cmd and no params
-			params.clear(); // remove params from previous msg
-			parse_params(remaining, params); // store params from current msg in params vector
-			this->handle_cmd(client_fd, cmd, params);
-			if (this->_clients.count(client_fd) == 0) // if cmd removed client -> stop processing msgs
-				return;
-			if (this->_clients[client_fd].get_quit()) // client sent quit
+				remaining = "";
+			params.clear(); // rmv params from previous msg
+			parse_params(remaining, params);
+			this->handle_cmd(client, cmd, params);
+			if (client.get_quit()) // stop processing if client sent QUIT
 				return;
 		}
-		pos = client_buffer.find("\r\n");
+		pos = client_buffer.find("\r\n"); // search for another complete msg
 	}
 }
 
-// dispatch received cmd to its corresponding cmd handler
-// when registration is complete, mark client as registered and send welcome reply
-void Server::handle_cmd(int client_fd, const std::string &cmd, const std::vector<std::string> &params)
+void Server::handle_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
 {
-	Client	&client = this->_clients[client_fd]; // get client that sent the cmd
-	std::string	&to_send = client.get_send_buffer(); // get buffer used to queue responses to client
+	std::string &send_buffer = client.get_send_buffer();
+	int client_fd;
 
-	if ((cmd == "PASS" || cmd == "USER") && client.get_registered()) // registered client cannot put pass or user again
+	client_fd = client.get_client_fd();
+	if ((cmd == "PASS" || cmd == "USER") && client.get_registered()) // registered client cant put pass or user again
 	{
-		to_send += ":" + this->_name + " 462 * :You may not reregister\r\n";
-		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT); // enable EPOLLOUT to send queued reply
+		send_buffer += ":" + this->_name + " 462 * :You may not reregister\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
-	if (cmd == "PRIVMSG" && !client.get_registered()) // client must be registered before sending privmsg
+	if ((cmd == "PRIVMSG" || cmd == "JOIN") && !client.get_registered()) // cant privmsg before registration
 	{
-		to_send += ":" + this->_name + " 451 * :You have not registered\r\n";
-		to_send += "\n";
+		send_buffer += ":" + this->_name + " 451 * :You have not registered\r\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
@@ -303,28 +296,35 @@ void Server::handle_cmd(int client_fd, const std::string &cmd, const std::vector
 		this->handle_user(client, params);
 	else if (cmd == "PRIVMSG")
 		this->handle_privmsg(client, params);
+	else if (cmd == "JOIN")
+		this->handle_join(client, params);
 	else if (cmd == "PING")
 		this->handle_ping(client, params);
+	else if (cmd == "FAST")
+		this->handle_fast(client);
 	else if (cmd == "QUIT")
 	{
-		this->handle_quit(client_fd, params); // disconnect and remove client
+		this->handle_quit(client, params);
 		return;
 	}
 	else
 	{
-		to_send += ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n";
-		to_send += "\n";
+		send_buffer += ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
-	if (!client.get_registered() && client.can_register()) // if registration is complete
+	if (!client.get_registered() && client.can_register()) // if not registered yet and registration is complete
 	{
 		client.set_registered(true); // mark client as fully registered
 		std::cout << "=====================================================" << std::endl;
 		std::cout << "          CLIENT " << client_fd << " REGISTERED!" << std::endl;
 		std::cout << "=====================================================" << std::endl;
-		to_send += ":" + this->_name + " 001 " + client.get_nick() + " :Welcome to the IRC server\r\n";
-		to_send += "\n";
+		send_buffer += ":" + this->_name + " 001 " + client.get_nick() + " :Welcome to the IRC server\r\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 	}
+}
+
+std::string Server::getName(void) const
+{
+	return (this->_name);
 }

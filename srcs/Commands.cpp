@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/13 22:55:48 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/14 17:51:56 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -194,22 +194,126 @@ void Server::handle_ping(Client &client, const std::vector<std::string> &params)
 	this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 }
 
-void Server::handle_quit(int client_fd, const std::vector<std::string> &params)
+void Server::handle_quit(Client &client, const std::vector<std::string> &params)
 {
-	Client &client = this->_clients[client_fd];
-	std::string &to_send = client.get_send_buffer();
+	std::map<int, Client>::iterator it;
+	std::string &send_buffer = client.get_send_buffer();
 	std::string reason;
+	std::string message;
 	std::string client_name;
-	
-	if (params.empty() || params[0].empty()) // if no reason is provided use default reason
-		reason = "Client Quit";
+	int client_fd;
+
+	client_fd = client.get_client_fd();
+	if (params.empty() || params[0].empty()) 
+		reason = client.get_nick(); // if no reason is provided -> use nick as reason
 	else
-		reason = params[0]; // use provided reason
-	if (client.get_nick().empty()) // if client has no nick set
-		client_name = "Unregistered client";
+		reason = params[0]; // otherwise use provided reason
+	if (client.get_nick().empty())
+		client_name = "unregistered client"; // if client has no nick set
 	else
 		client_name = client.get_nick();
-	to_send += "Closing connection for " + client_name + ": " + reason + "\r\n";
-	client.set_quit(true); // mark client removed after sending this message
-	this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
+	message = ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip() + " QUIT :" + reason + "\r\n"; // msg for other clients
+	for (it = this->_clients.begin(); it != this->_clients.end(); ++it) // notify all other clients about client quitting
+	{
+		if (it->first == client_fd) // dont notify leaving client about its own quit
+			continue;
+		it->second.get_send_buffer() += message; // add quit msg to other client's send buffer
+		this->update_epoll(it->first, EPOLLIN | EPOLLOUT); // enable EPOLLOUT so msg can be sent
+	}
+	send_buffer += "Closing connection for " + client_name + ": " + reason + "\r\n";
+	client.set_quit(true); // disconnect client
+	this->update_epoll(client_fd, EPOLLIN | EPOLLOUT); // enable EPOLLOUT to send final msg
+}
+
+void Server::handle_join(Client &client, const std::vector<std::string> &params)
+{
+	std::map<std::string, Channel>::iterator it;
+	std::vector<std::string> c_names;
+	std::vector<std::string> keys;
+	std::string key;
+	size_t i;
+	int ret;
+
+	std::string &to_send = client.get_send_buffer();
+	if (params.empty())
+	{
+		to_send += ":" + this->_name + " XXX * :Need more params\r\n";
+		this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
+		return;
+	}
+	if (params.size() > 2)
+	{
+		to_send += ":" + this->_name + " XXX * :Too many params\r\n";
+		this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
+		return;
+	}
+	c_names = ft_split(params[0], ',');
+	if (params.size() > 1)
+		keys = ft_split(params[1], ',');
+	i = -1;
+	while (++i < c_names.size())
+	{
+		std::string chan_name = c_names[i];
+		if (chan_name.empty() || (chan_name[0] != '#' && chan_name[0] != '&'))
+		{
+			to_send += "You fucked up homie, channel can only start with # or &\r\n";
+			this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
+			continue;
+		}
+		if (i < keys.size())
+			key = keys[i];
+		else
+			key = "";
+		it = this->_channels.find(chan_name);
+		if (it == this->_channels.end())
+		{
+			Channel ch(chan_name, default_mode(), client);
+			this->_channels.insert(std::pair<std::string, Channel>(chan_name, ch));
+			to_send += "You created Channel " + chan_name + "\r\n";
+			this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
+		}
+		else
+		{
+			ret = it->second.joinChannel(client, key);
+			if (ret)
+			{
+				switch (ret)
+				{
+					case 1:
+						to_send += "NOTICE: User is already in Channel\r\n";
+						break;
+					case 2:
+						to_send += ":" + this->getName() + " XXX * :" + chan_name + " This place is full, get yo ass outta here\r\n";
+						break;
+					case 3:
+						to_send += ":" + this->getName() + " 473 * :" + chan_name + " You weren't invited to the boys club. Access denied\r\n";
+						break;
+					case 4:
+						to_send += ":" + this->getName() + " XXX * :" + chan_name + " What's the pass? This is boys only club\r\n";
+						break;
+				}
+				this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
+			}
+			else
+			{
+				to_send += "You joined " + chan_name + "\r\n";
+				this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
+			}
+		}
+	}
+}
+
+void Server::handle_fast(Client &client)
+{
+	client.set_auth(true);
+	client.set_nick(generateRandomString(9));
+	client.set_user(generateRandomString(9));
+	client.set_registered(true);
+	client.set_host_ip(generateRandomString(9));
+	std::string &to_send = client.get_send_buffer();
+	to_send += "You shall be named: " + client.get_nick() + "\n";
+	to_send += "Your home kingdom shall be: " + client.get_host_ip() + "\n";
+	to_send += "Thy user shall be sung as: " + client.get_user() +  "\n";
+	to_send += "Go forth, make haste, child of Mercury\r\n";
+	this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
 }
