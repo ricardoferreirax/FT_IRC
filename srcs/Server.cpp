@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/14 17:36:05 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/14 18:04:25 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -300,6 +300,8 @@ void Server::handle_cmd(Client &client, const std::string &cmd, const std::vecto
 		this->handle_join(client, params);
 	else if (cmd == "PING")
 		this->handle_ping(client, params);
+	else if (cmd == "FAST")
+		this->handle_fast(client);
 	else if (cmd == "QUIT")
 	{
 		this->handle_quit(client, params);
