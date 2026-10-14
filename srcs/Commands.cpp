@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/13 22:55:48 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/14 15:41:19 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -194,22 +194,33 @@ void Server::handle_ping(Client &client, const std::vector<std::string> &params)
 	this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 }
 
-void Server::handle_quit(int client_fd, const std::vector<std::string> &params)
+void Server::handle_quit(Client &client, const std::vector<std::string> &params)
 {
-	Client &client = this->_clients[client_fd];
-	std::string &to_send = client.get_send_buffer();
+	std::map<int, Client>::iterator it;
+	std::string &send_buffer = client.get_send_buffer();
 	std::string reason;
+	std::string message;
 	std::string client_name;
-	
-	if (params.empty() || params[0].empty()) // if no reason is provided use default reason
-		reason = "Client Quit";
+	int client_fd;
+
+	client_fd = client.get_client_fd();
+	if (params.empty() || params[0].empty()) 
+		reason = client.get_nick(); // if no reason is provided -> use nick as reason
 	else
-		reason = params[0]; // use provided reason
-	if (client.get_nick().empty()) // if client has no nick set
-		client_name = "Unregistered client";
+		reason = params[0]; // otherwise use provided reason
+	if (client.get_nick().empty())
+		client_name = "unregistered client"; // if client has no nick set
 	else
 		client_name = client.get_nick();
-	to_send += "Closing connection for " + client_name + ": " + reason + "\r\n";
-	client.set_quit(true); // mark client removed after sending this message
-	this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
+	message = ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip() + " QUIT :" + reason + "\r\n"; // msg for other clients
+	for (it = this->_clients.begin(); it != this->_clients.end(); ++it) // notify all other clients about client quitting
+	{
+		if (it->first == client_fd) // dont notify leaving client about its own quit
+			continue;
+		it->second.get_send_buffer() += message; // add quit msg to other client's send buffer
+		this->update_epoll(it->first, EPOLLIN | EPOLLOUT); // enable EPOLLOUT so msg can be sent
+	}
+	send_buffer += "Closing connection for " + client_name + ": " + reason + "\r\n";
+	client.set_quit(true); // disconnect client
+	this->update_epoll(client_fd, EPOLLIN | EPOLLOUT); // enable EPOLLOUT to send final msg
 }
