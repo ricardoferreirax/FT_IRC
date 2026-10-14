@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/14 18:04:25 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/14 18:37:40 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -139,7 +139,6 @@ void Server::accept_client()
 {
 	epoll_event	event;
 	sockaddr_in	client_addr;
-	sockaddr_in	server_addr;
 	socklen_t	addr_len;
 	int			client_fd;
 
@@ -147,12 +146,6 @@ void Server::accept_client()
 	client_fd = accept(this->_listen_fd, reinterpret_cast<sockaddr *>(&client_addr), &addr_len);
 	if (client_fd < 0)
 		throw std::runtime_error("IRC: accept() failed.");
-	addr_len = sizeof(server_addr);
-	if (getsockname(client_fd, reinterpret_cast<sockaddr *>(&server_addr), &addr_len) < 0)
-	{
-		close(client_fd);
-		throw std::runtime_error("IRC: getsockname() failed.");
-	}
 	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0) // set socket non-blocking to not block event loop
 	{
 		close(client_fd);
@@ -170,8 +163,6 @@ void Server::accept_client()
 	std::cout << "\n=====================================================" << std::endl;
 	std::cout << "                CLIENT " << client_fd << " CONNECTED!" << std::endl;
 	std::cout << "=====================================================" << std::endl;
-	std::cout << "[SERVER] Local connection accepted on " << inet_ntoa(server_addr.sin_addr) << ":" << ntohs(server_addr.sin_port) << std::endl;
-	std::cout << "=====================================================\n" << std::endl;
 }
 
 // handle client socket I/O depending on the event received from epoll
@@ -276,12 +267,6 @@ void Server::handle_cmd(Client &client, const std::string &cmd, const std::vecto
 	int client_fd;
 
 	client_fd = client.get_client_fd();
-	if ((cmd == "PASS" || cmd == "USER") && client.get_registered()) // registered client cant put pass or user again
-	{
-		send_buffer += ":" + this->_name + " 462 * :You may not reregister\r\n";
-		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
-		return;
-	}
 	if ((cmd == "PRIVMSG" || cmd == "JOIN") && !client.get_registered()) // cant privmsg before registration
 	{
 		send_buffer += ":" + this->_name + " 451 * :You have not registered\r\n";
@@ -319,7 +304,7 @@ void Server::handle_cmd(Client &client, const std::string &cmd, const std::vecto
 		std::cout << "=====================================================" << std::endl;
 		std::cout << "          CLIENT " << client_fd << " REGISTERED!" << std::endl;
 		std::cout << "=====================================================" << std::endl;
-		send_buffer += ":" + this->_name + " 001 " + client.get_nick() + " :Welcome to the IRC server\r\n";
+		send_buffer += ":" + this->_name + " 001 " + client.get_nick() + " :Welcome to the IRC server\r\n" + "\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 	}
 }
