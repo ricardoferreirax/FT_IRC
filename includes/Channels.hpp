@@ -10,6 +10,10 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+
+#ifndef CHANNELS_HPP
+#define CHANNELS_HPP
+
 #include <iostream>
 #include "Client.hpp"
 #include "Server.hpp"
@@ -25,7 +29,7 @@ typedef struct s_ulimit
 typedef struct s_mode
 {
 	bool invite_only;
-	std::string topic_restricted;
+	bool topic_restricted;
 	std::string topic;
 	t_ulimit users;
 	std::string key;
@@ -39,12 +43,14 @@ class Channel
 		std::set<int> _chanops;
 		std::map<int, Client> _clients;
 		std::set <int> _invites;
-		Server &_serv;
 		Channel(void);
 	public:
-		Channel(std::string name, t_cmode mode, Client chanop, Server &serv);
+		Channel(std::string name, t_cmode mode, Client chanop);
 		~Channel(void);
 		bool joinChannel(Client guest);
-		bool joinChannel(Client guest, std::string key);
+		int joinChannel(Client guest, std::string key);
 		bool inviteUser(Client guest);
 };
+
+#endif // !CHANNELS_HPP
+

@@ -11,7 +11,19 @@
 /* ************************************************************************** */
 
 #include "../includes/Utils.hpp"
-#include <iostream>
+
+t_cmode	default_mode(void)
+{
+	t_cmode	def;
+
+	def.invite_only = false;
+	def.topic_restricted = false;
+	def.topic = "";
+	def.users.u_count = 1;
+	def.users.u_limit = 0;
+	def.key = "";
+	return (def);
+}
 
 bool	validate_args(char **av, int &port)
 {
@@ -53,15 +65,15 @@ bool	validate_args(char **av, int &port)
 	return (true);
 }
 
-static bool is_nick_special(char c)
+static bool	is_nick_special(char c)
 {
-	if (c == '[' || c == ']' || c == '\\' || c == '`' || c == '_' || c == '^' 
+	if (c == '[' || c == ']' || c == '\\' || c == '`' || c == '_' || c == '^'
 		|| c == '{' || c == '|' || c == '}' || c == '-')
 		return (true);
 	return (false);
 }
 
-bool is_valid_nick(const std::string &nick)
+bool	is_valid_nick(const std::string &nick)
 {
 	if (nick.empty() || nick.size() > 9)
 		return (false);
@@ -69,32 +81,35 @@ bool is_valid_nick(const std::string &nick)
 		return (false);
 	for (size_t i = 1; i < nick.size(); i++)
 	{
-		if (!std::isalnum(nick[i]) && !is_nick_special(nick[i])) // nick can have alnum and special chars
+		if (!std::isalnum(nick[i]) && !is_nick_special(nick[i]))
+			// nick can have alnum and special chars
 			return (false);
 	}
 	return (true);
 }
 
-bool same_nick(const std::string &nick1, const std::string &nick2)
+bool	same_nick(const std::string &nick1, const std::string &nick2)
 {
-	if (nick1.size() != nick2.size()) // nicks with different sizes are not equal
+	if (nick1.size() != nick2.size())
+		// nicks with different sizes are not equal
 		return (false);
 	for (size_t i = 0; i < nick1.size(); i++)
 	{
-		if (std::tolower(nick1[i]) != std::tolower(nick2[i])) // compare nicks ignoring case
+		if (std::tolower(nick1[i]) != std::tolower(nick2[i]))
+			// compare nicks ignoring case
 			return (false);
 	}
 	return (true);
 }
 
-bool get_param(std::string &remaining, std::string &param)
+bool	get_param(std::string &remaining, std::string &param)
 {
-	size_t space;
+	size_t	space;
 
 	if (remaining.empty()) // no params to extract
 		return (false);
 	space = remaining.find(' '); // space separates params
-	if (space == 0) // if space is at beginning -> no param was provided
+	if (space == 0)              // if space is at beginning -> no param was provided
 		return (false);
 	if (space == std::string::npos) // has no space -> remaining is last param
 	{
@@ -104,20 +119,48 @@ bool get_param(std::string &remaining, std::string &param)
 	else // has space -> remaining has more params
 	{
 		param = remaining.substr(0, space); // extract param from remaining
-		remaining.erase(0, space + 1); // remove param from remaining
+		remaining.erase(0, space + 1);      // remove param from remaining
 	}
 	return (true);
 }
 
-bool is_valid_user_mode(const std::string &mode)
+bool	is_valid_user_mode(const std::string &mode)
 {
-    if (mode.empty())
-        return (false);
-    for (size_t i = 0; i < mode.size(); i++)
-    {
-        if (mode[i] < '0' || mode[i] > '9')
-            return (false);
-    }
-    return (true);
+	if (mode.empty())
+		return (false);
+	for (size_t i = 0; i < mode.size(); i++)
+	{
+		if (mode[i] < '0' || mode[i] > '9')
+			return (false);
+	}
+	return (true);
 }
 
+// Função totalmente original e não foi roubada do Github, juro
+std::vector<std::string> ft_split(const std::string &s, char delim)
+{
+	std::vector<std::string> result;
+	std::stringstream ss(s);
+	std::string item;
+	while (getline(ss, item, delim))
+	{
+		if (item.empty())
+			continue ;
+		result.push_back(item);
+	}
+	return (result);
+}
+
+std::string generateRandomString(int length)
+{
+	int	index;
+
+	const std::string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	std::string random_string = "";
+	for (int i = 0; i < length; ++i)
+	{
+		index = rand() % chars.size();
+		random_string += chars[index];
+	}
+	return (random_string);
+}

@@ -19,8 +19,6 @@
 # include <string>
 # include <sys/epoll.h>
 
-# include "Client.hpp"
-
 extern volatile sig_atomic_t running;
 
 class Channel;
@@ -50,6 +48,7 @@ class Server
 		void	handle_ping(Client &client, const std::string &params);
 		void	handle_quit(int client_fd, const std::string &params);
 		void	handle_join(Client &client, const std::string &params);
+		void	handle_fast(Client &client);
 
 	public:
 		Server(int port, const std::string &pass);
