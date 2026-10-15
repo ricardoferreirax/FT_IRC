@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/15 16:30:44 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/15 17:48:54 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -144,13 +144,17 @@ void Server::monitor_epoll_events()
 	}
 }
 
-void Server::update_epoll(int client_fd, int events)
+void Server::send_msg(Client &client, const std::string &msg, int events)
 {
-	epoll_event	event;
+	epoll_event event;
+	int client_fd;
 
-	event.events = events; // set EPOLLIN -> monitor for incoming data, EPOLLOUT -> monitor for pending data to be sent
+	client_fd = client.get_client_fd();
+	client.get_send_buffer() += msg;
+	event.events = events;
 	event.data.fd = client_fd;
-	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0) // modify client socket to monitor for specified events
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD,
+			client_fd, &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 }
 
@@ -245,7 +249,7 @@ void Server::handle_client_data(int client_fd, int event)
 				std::cout << "=====================================================" << std::endl;
 				return;
 			}
-			this->update_epoll(client_fd, EPOLLIN); // disable EPOLLOUT cause there's no more data to send
+			this->send_msg(client, "", EPOLLIN); // remove EPOLLOUT from epoll events for this client socket
 		}
 	}
 }
@@ -277,13 +281,12 @@ void Server::process_msg(Client &client, std::string &client_buffer)
 
 void Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
 {
-	std::string &send_buffer = client.get_send_buffer();
-	int client_fd = client.get_client_fd();
+	int client_fd;
 
+	client_fd = client.get_client_fd();
 	if ((cmd == "PRIVMSG" || cmd == "JOIN") && !client.get_registered())
 	{
-		send_buffer += ":" + this->_name + " 451 * :You have not registered\r\n";
-		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
+		this->send_msg(client, ":" + this->_name + " 451 * :You have not registered\r\n", EPOLLIN | EPOLLOUT);
 		return;
 	}
 	if (cmd == "PASS")
@@ -307,16 +310,14 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 		this->handle_fast(client);
 	else
 	{
-		send_buffer += ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n";
-		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
+		this->send_msg(client, ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n", EPOLLIN | EPOLLOUT);
 		return;
 	}
 	if (!client.get_registered() && client.can_register())
 	{
 		client.set_registered(true);
 		std::cout << "[CLIENT " << client_fd << "] REGISTERED!" << std::endl;
-		send_buffer += registration_reply(client, this->_name, this->_date);
-		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
+		this->send_msg(client, registration_reply(client, this->_name, this->_date), EPOLLIN | EPOLLOUT);
 	}
 }
 
