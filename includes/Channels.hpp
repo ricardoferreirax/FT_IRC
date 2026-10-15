@@ -3,13 +3,12 @@
 /*                                                        :::      ::::::::   */
 /*   Channels.hpp                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: pedro </var/spool/mail/pedro>              +#+  +:+       +#+        */
+/*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 14:11:26 by pedro             #+#    #+#             */
-/*   Updated: 2026/10/07 14:18:07 by pedro            ###   ########.fr       */
+/*   Updated: 2026/10/14 18:17:24 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
 
 #ifndef CHANNELS_HPP
 #define CHANNELS_HPP
@@ -53,4 +52,3 @@ class Channel
 };
 
 #endif // !CHANNELS_HPP
-

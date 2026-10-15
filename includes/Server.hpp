@@ -6,22 +6,37 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/12 14:48:45 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/15 12:28:02 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
-# include "Client.hpp"
-# include <csignal>
-# include <map>
-# include <string>
-# include <sys/epoll.h>
+#include <csignal>
+#include <map>
+#include <vector>
+#include <string>
+#include <sys/epoll.h>
+
+#include "Client.hpp"
 
 extern volatile sig_atomic_t running;
 
 class Channel;
+
+enum e_cmd
+{
+	CMD_PASS,
+	CMD_NICK,
+	CMD_USER,
+	CMD_PRIVMSG,
+	CMD_JOIN,
+	CMD_PING,
+	CMD_QUIT,
+	CMD_FAST,
+	CMD_UNKNOWN
+};
 
 class Server
 {
@@ -38,16 +53,17 @@ class Server
 
 		void	accept_client();
 		void	handle_client_data(int client_fd, int event);
-		void	process_message(int client_fd, std::string &client_buffer);
+		void	process_msg(Client &client, std::string &client_buffer);
+		void 	execute_cmd(Client &client, e_cmd cmd, const std::vector<std::string> &params);
+		
+		void	handle_pass(Client &client, const std::vector<std::string> &params);
+		void	handle_nick(Client &client, const std::vector<std::string> &params);
+		void	handle_user(Client &client, const std::vector<std::string> &params);
+		void	handle_privmsg(Client &client, const std::vector<std::string> &params);
+		void	handle_ping(Client &client, const std::vector<std::string> &params);
+		void	handle_quit(Client &client, const std::vector<std::string> &params);
 
-		void	handle_cmd(int client_fd, const std::string &cmd, const std::string &params);
-		void	handle_pass(Client &client, const std::string &params);
-		void	handle_nick(Client &client, const std::string &params);
-		void	handle_user(Client &client, const std::string &params);
-		void	handle_privmsg(Client &client, const std::string &params);
-		void	handle_ping(Client &client, const std::string &params);
-		void	handle_quit(int client_fd, const std::string &params);
-		void	handle_join(Client &client, const std::string &params);
+		void 	handle_join(Client &client, const std::vector<std::string> &params);
 		void	handle_fast(Client &client);
 
 	public:
@@ -56,9 +72,9 @@ class Server
 		~Server();
 
 		std::string getName(void) const;
+		void	update_epoll(int client_fd, int events);
 		void	start_socket();
 		void	monitor_epoll_events();
-		void	update_epoll(int client_fd, int events);
 };
 
 void	handle_signal(int signal);

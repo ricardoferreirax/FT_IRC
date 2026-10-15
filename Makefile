@@ -6,7 +6,7 @@
 #    By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/09/27 23:34:05 by rmedeiro          #+#    #+#              #
-#    Updated: 2026/10/10 14:36:13 by rmedeiro         ###   ########.fr        #
+#    Updated: 2026/10/14 17:53:19 by rmedeiro         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -26,8 +26,13 @@ SRCS = srcs/main.cpp \
 	   srcs/Server.cpp \
 	   srcs/Client.cpp \
 	   srcs/Commands.cpp \
+<<<<<<< HEAD
 	   srcs/Utils.cpp \
 	   srcs/Channels.cpp
+=======
+	   srcs/Channels.cpp \
+	   srcs/Utils.cpp
+>>>>>>> main
 
 OBJS = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 DBG_OBJS = $(SRCS:%.cpp=$(DBG_DIR)/%.o)
