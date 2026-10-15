@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/15 12:28:19 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/15 13:20:43 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -229,75 +229,67 @@ void Server::handle_client_data(int client_fd, int event)
 
 // irc msgs end with \r\n, which separates one complete msg from the next one.
 // incomplete msgs remain in client_buffer till more data is received with recv()
+// IRC msgs end with \r\n, which separates one complete msg from the next one.
+// Incomplete msgs remain in client_buffer till more data is received with recv().
 void Server::process_msg(Client &client, std::string &client_buffer)
 {
 	std::vector<std::string> params;
 	std::string msg;
-	e_cmd cmd;
+	std::string cmd;
 	size_t pos;
 
-	pos = client_buffer.find("\r\n"); // find complete msg
-	while (pos != std::string::npos) // while there's at least one complete msg in client_buffer
+	pos = client_buffer.find("\r\n");
+	while (pos != std::string::npos)
 	{
 		msg = client_buffer.substr(0, pos);
 		client_buffer.erase(0, pos + 2);
 		if (!msg.empty())
 		{
-			cmd = parse_message(msg, params); // parse msg to get cmd and its params
-			if (cmd == CMD_UNKNOWN)
-			{
-				client.get_send_buffer() += ":" + this->_name + " 421 * " + msg.substr(0, msg.find(' ')) + " :Unknown command\r\n";
-				this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
-			}
-			else
-				this->execute_cmd(client, cmd, params);
-			if (client.get_quit()) // if QUIT was received -> disconnect client
+			parse_msg(msg, cmd, params);
+			this->execute_cmd(client, cmd, params);
+			if (client.get_quit())
 				return;
 		}
-		pos = client_buffer.find("\r\n"); // find next complete msg
+		pos = client_buffer.find("\r\n");
 	}
 }
 
-void Server::execute_cmd(Client &client, e_cmd cmd, const std::vector<std::string> &params)
+void Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
 {
 	std::string &send_buffer = client.get_send_buffer();
-	int client_fd;
+	int client_fd = client.get_client_fd();
 
-	client_fd = client.get_client_fd();
-	if ((cmd == CMD_PRIVMSG || cmd == CMD_JOIN) && !client.get_registered())
+	if ((cmd == "PRIVMSG" || cmd == "JOIN") && !client.get_registered())
 	{
 		send_buffer += ":" + this->_name + " 451 * :You have not registered\r\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
-	switch (cmd)
+	if (cmd == "PASS")
+		this->handle_pass(client, params);
+	else if (cmd == "NICK")
+		this->handle_nick(client, params);
+	else if (cmd == "USER")
+		this->handle_user(client, params);
+	else if (cmd == "PRIVMSG")
+		this->handle_privmsg(client, params);
+	else if (cmd == "JOIN")
+		this->handle_join(client, params);
+	else if (cmd == "PING")
+		this->handle_ping(client, params);
+	else if (cmd == "QUIT")
 	{
-		case CMD_PASS:
-			this->handle_pass(client, params);
-			break;
-		case CMD_NICK:
-			this->handle_nick(client, params);
-			break;
-		case CMD_USER:
-			this->handle_user(client, params);
-			break;
-		case CMD_PRIVMSG:
-			this->handle_privmsg(client, params);
-			break;
-		case CMD_JOIN:
-			this->handle_join(client, params);
-			break;
-		case CMD_PING:
-			this->handle_ping(client, params);
-			break;
-		case CMD_QUIT:
-			this->handle_quit(client, params);
-			return;
-		case CMD_FAST:
-			this->handle_fast(client);
-			break;
-		default:
-			return;
+		this->handle_quit(client, params);
+		return;
+	}
+	else if (cmd == "FAST")
+		this->handle_fast(client);
+	else
+	{
+		send_buffer += ":" + this->_name + " 421 * "
+			+ cmd + " :Unknown command\r\n";
+		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
+		return;
 	}
 	if (!client.get_registered() && client.can_register())
 	{
