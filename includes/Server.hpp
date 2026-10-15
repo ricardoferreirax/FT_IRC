@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/15 13:22:55 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/15 16:24:02 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include <vector>
 #include <string>
 #include <sys/epoll.h>
+#include <ctime>
 
 #include "Client.hpp"
 
@@ -28,11 +29,12 @@ class Channel;
 class Server
 {
 	private:
-		std::string				_name;
-		std::string				_pass;
-		int						_port;
-		int						_listen_fd;
-		int						_epoll_fd;
+		std::string		_name;
+		std::string		_pass;
+		std::string		_date;
+		int				_port;
+		int				_listen_fd;
+		int				_epoll_fd;
 
 		std::map<int, Client>	_clients;
 		std::map<std::string, Channel>	_channels;
@@ -54,7 +56,7 @@ class Server
 		void	handle_fast(Client &client);
 
 	public:
-		Server(int port, const std::string &pass);
+		Server(const std::string &port, const std::string &pass);
 		~Server();
 
 		void	start_socket();

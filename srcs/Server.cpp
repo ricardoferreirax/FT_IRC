@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/15 13:20:43 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/15 16:30:44 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,13 +24,37 @@
 
 // port: where server will listen for incoming tcp connections
 // pass: password clients will need during irc registration
-Server::Server(int port, const std::string &pass)
+Server::Server(const std::string &port, const std::string &pass)
 {
-	this->_name = "ircserv";
+	int value;
+	time_t now;
+
+	if (port.empty())
+		throw std::runtime_error("IRC: invalid port!");
+	value = 0;
+	for (size_t i = 0; i < port.size(); i++)
+	{
+		if (port[i] < '0' || port[i] > '9')
+			throw std::runtime_error("IRC: port must contain only numbers!");
+		if (value > 6553)
+			throw std::runtime_error("IRC: port must be between 1024 and 65535!");
+		value = value * 10 + (port[i] - '0');
+		if (value > 65535)
+			throw std::runtime_error("IRC: port must be between 1024 and 65535!");
+	}
+	if (value < 1024)
+		throw std::runtime_error("IRC: privileged port! Use a port above 1023!");
+	if (pass.empty())
+		throw std::runtime_error("IRC: a server password is required!");
+	this->_port = value;
 	this->_pass = pass;
-	this->_port = port;
 	this->_listen_fd = -1;
 	this->_epoll_fd = -1;
+	this->_name = "ircserv";
+	now = time(NULL);
+	this->_date = ctime(&now);
+	if (!this->_date.empty())
+		this->_date.erase(this->_date.size() - 1);
 }
 
 Server::~Server()
@@ -48,17 +72,16 @@ Server::~Server()
     std::cout << "[SERVER] Closed!" << std::endl;
 }
 
-// create and configure tcp listening socket used by irc server
+// create ipv4 tcp listening socket (and return its fd) used by irc server 
 // setsockopt() allow local address to be reused after server restart
 // bind() associates socket with local ipv4 and server port
 // listen() changes socket into a listening socket ready to accept connections
-// ss -ltnp | grep 6667 -> check if server is listening on the port
 void Server::start_socket()
 {
 	int			socket_opt;
 	sockaddr_in	server_addr;
 
-	this->_listen_fd = socket(AF_INET, SOCK_STREAM, 0); // create ipv4 tcp socket and return its fd
+	this->_listen_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (this->_listen_fd < 0)
 		throw std::runtime_error("IRC: socket() failed.");
 	server_addr.sin_family = AF_INET; // use ipv4 address
@@ -229,8 +252,6 @@ void Server::handle_client_data(int client_fd, int event)
 
 // irc msgs end with \r\n, which separates one complete msg from the next one.
 // incomplete msgs remain in client_buffer till more data is received with recv()
-// IRC msgs end with \r\n, which separates one complete msg from the next one.
-// Incomplete msgs remain in client_buffer till more data is received with recv().
 void Server::process_msg(Client &client, std::string &client_buffer)
 {
 	std::vector<std::string> params;
@@ -286,8 +307,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 		this->handle_fast(client);
 	else
 	{
-		send_buffer += ":" + this->_name + " 421 * "
-			+ cmd + " :Unknown command\r\n";
+		send_buffer += ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
@@ -295,7 +315,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	{
 		client.set_registered(true);
 		std::cout << "[CLIENT " << client_fd << "] REGISTERED!" << std::endl;
-		send_buffer += ":" + this->_name + " 001 " + client.get_nick() + " :Welcome to the IRC server\r\n";
+		send_buffer += registration_reply(client, this->_name, this->_date);
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 	}
 }

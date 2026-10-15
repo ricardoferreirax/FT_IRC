@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/15 13:23:41 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/15 16:36:42 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,46 +23,6 @@ t_cmode	default_mode(void)
 	def.users.u_limit = 0;
 	def.key = "";
 	return (def);
-}
-
-bool	validate_args(char **av, int &port)
-{
-	if (av[1][0] == '\0')
-	{
-		std::cerr << "IRC: invalid port!" << std::endl;
-		return (false);
-	}
-	port = 0;
-	for (size_t i = 0; av[1][i] != '\0'; i++)
-	{
-		if (av[1][i] < '0' || av[1][i] > '9')
-		{
-			std::cerr << "IRC: port must contain only numbers!" << std::endl;
-			return (false);
-		}
-		if (port > 6553)
-		{
-			std::cerr << "IRC: port must be between 1 and 65535!" << std::endl;
-			return (false);
-		}
-		port = port * 10 + (av[1][i] - '0');
-		if (port > 65535)
-		{
-			std::cerr << "IRC: port must be between 1 and 65535!" << std::endl;
-			return (false);
-		}
-	}
-	if (port < 1024)
-	{
-		std::cerr << "IRC: privileged port! Use a port above 1023!" << std::endl;
-		return (false);
-	}
-	if (av[2][0] == '\0')
-	{
-		std::cerr << "IRC: a server password is required!" << std::endl;
-		return (false);
-	}
-	return (true);
 }
 
 static bool is_nick_special(char c)
@@ -99,41 +59,59 @@ bool same_nick(const std::string &nick1, const std::string &nick2)
 	return (true);
 }
 
+// space separates: cmd from params and params from each other
 void parse_msg(const std::string &msg, std::string &cmd, std::vector<std::string> &params)
 {
 	std::string remaining;
 	std::string trailing;
 	size_t space;
 
-	params.clear(); // clear to avoid appending to previous params
-	space = msg.find(' '); // space separates cmd from params
+	params.clear(); // clear previous params
+	space = msg.find(' ');
 	cmd = msg.substr(0, space);
 	if (space == std::string::npos) // no space -> no params
 		return;
 	remaining = msg.substr(space + 1); // everything after cmd is params
-	while (!remaining.empty()) // parse params till no more are left
+	while (!remaining.empty())
 	{
 		while (!remaining.empty() && remaining[0] == ' ')
 			remaining.erase(0, 1); // rmv spaces before next param
 		if (remaining.empty())
 			break;
-		if (remaining[0] == ':' || params.size() == 14) // after ':' is one single param
+		if (remaining[0] == ':' || params.size() == 14)
 		{
-			trailing = remaining; // store this single param
+			trailing = remaining; // after ':' is single param -> store it in trailing
 			if (trailing[0] == ':') 
-				trailing.erase(0, 1); // rmv ':' if present
+				trailing.erase(0, 1);
 			params.push_back(trailing); // add this single param
 			break;
 		}
-		space = remaining.find(' '); // space separates params
+		space = remaining.find(' ');
 		if (space == std::string::npos) // no space -> last param
 		{
 			params.push_back(remaining); // add last param
 			break;
 		}
-		params.push_back(remaining.substr(0, space)); // if space found -> add param
-		remaining.erase(0, space + 1); // remove it so loop can parse next one
+		params.push_back(remaining.substr(0, space)); // with space -> add param
+		remaining.erase(0, space + 1); // rmv it so loop can parse next one
 	}
+}
+
+std::string registration_reply(const Client &client, const std::string &_name, const std::string &date)
+{
+	std::string nick;
+	std::string user;
+	std::string host;
+	std::string reply;
+	
+	nick = client.get_nick();
+	user = client.get_user();
+	host = client.get_host_ip();
+	reply += ":" + _name + " 001 " + nick + " :Welcome to the IRC Network " + nick + "!" + user + "@" + host + "\r\n";
+	reply += ":" + _name + " 002 " + nick + " :Your host is " + _name + ", running version 1.0\r\n";
+	reply += ":" + _name + " 003 " + nick + " :This server was created " + date + "\r\n";
+	reply += ":" + _name + " 004 " + nick + " " + _name + " version 1.0 o itkol\r\n" + "\n";
+	return (reply);
 }
 
 bool is_valid_user_mode(const std::string &mode)
