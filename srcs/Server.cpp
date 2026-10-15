@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/14 18:37:40 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/15 12:28:19 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -195,7 +195,7 @@ void Server::handle_client_data(int client_fd, int event)
 			return;
 		}
 		recv_buffer.append(buffer, bytes); // append received data cause msg may arrive in parts
-		this->process_message(client, recv_buffer); // process all complete messages currently in recv_buffer
+		this->process_msg(client, recv_buffer); // process all complete messages currently in recv_buffer
 	}
 	else if (event == EPOLLOUT)
 	{
@@ -227,84 +227,83 @@ void Server::handle_client_data(int client_fd, int event)
 	}
 }
 
-// irc msgs end with \r\n, which separates one complete msg from the next one
+// irc msgs end with \r\n, which separates one complete msg from the next one.
 // incomplete msgs remain in client_buffer till more data is received with recv()
-void Server::process_message(Client &client, std::string &client_buffer)
+void Server::process_msg(Client &client, std::string &client_buffer)
 {
 	std::vector<std::string> params;
 	std::string msg;
-	std::string cmd;
-	std::string remaining;
+	e_cmd cmd;
 	size_t pos;
-	size_t space;
 
-	pos = client_buffer.find("\r\n");
-	while (pos != std::string::npos)
+	pos = client_buffer.find("\r\n"); // find complete msg
+	while (pos != std::string::npos) // while there's at least one complete msg in client_buffer
 	{
-		msg = client_buffer.substr(0, pos); // extract one complete msg
-		client_buffer.erase(0, pos + 2); // rmv msg from buffer
+		msg = client_buffer.substr(0, pos);
+		client_buffer.erase(0, pos + 2);
 		if (!msg.empty())
 		{
-			space = msg.find(' ');
-			cmd = msg.substr(0, space);
-			if (space != std::string::npos)
-				remaining = msg.substr(space + 1); // if cmd has params -> extract everything after cmd
+			cmd = parse_message(msg, params); // parse msg to get cmd and its params
+			if (cmd == CMD_UNKNOWN)
+			{
+				client.get_send_buffer() += ":" + this->_name + " 421 * " + msg.substr(0, msg.find(' ')) + " :Unknown command\r\n";
+				this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
+			}
 			else
-				remaining = "";
-			params.clear(); // rmv params from previous msg
-			parse_params(remaining, params);
-			this->handle_cmd(client, cmd, params);
-			if (client.get_quit()) // stop processing if client sent QUIT
+				this->execute_cmd(client, cmd, params);
+			if (client.get_quit()) // if QUIT was received -> disconnect client
 				return;
 		}
-		pos = client_buffer.find("\r\n"); // search for another complete msg
+		pos = client_buffer.find("\r\n"); // find next complete msg
 	}
 }
 
-void Server::handle_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
+void Server::execute_cmd(Client &client, e_cmd cmd, const std::vector<std::string> &params)
 {
 	std::string &send_buffer = client.get_send_buffer();
 	int client_fd;
 
 	client_fd = client.get_client_fd();
-	if ((cmd == "PRIVMSG" || cmd == "JOIN") && !client.get_registered()) // cant privmsg before registration
+	if ((cmd == CMD_PRIVMSG || cmd == CMD_JOIN) && !client.get_registered())
 	{
 		send_buffer += ":" + this->_name + " 451 * :You have not registered\r\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 		return;
 	}
-	if (cmd == "PASS")
-		this->handle_pass(client, params);
-	else if (cmd == "NICK")
-		this->handle_nick(client, params);
-	else if (cmd == "USER")
-		this->handle_user(client, params);
-	else if (cmd == "PRIVMSG")
-		this->handle_privmsg(client, params);
-	else if (cmd == "JOIN")
-		this->handle_join(client, params);
-	else if (cmd == "PING")
-		this->handle_ping(client, params);
-	else if (cmd == "FAST")
-		this->handle_fast(client);
-	else if (cmd == "QUIT")
+	switch (cmd)
 	{
-		this->handle_quit(client, params);
-		return;
+		case CMD_PASS:
+			this->handle_pass(client, params);
+			break;
+		case CMD_NICK:
+			this->handle_nick(client, params);
+			break;
+		case CMD_USER:
+			this->handle_user(client, params);
+			break;
+		case CMD_PRIVMSG:
+			this->handle_privmsg(client, params);
+			break;
+		case CMD_JOIN:
+			this->handle_join(client, params);
+			break;
+		case CMD_PING:
+			this->handle_ping(client, params);
+			break;
+		case CMD_QUIT:
+			this->handle_quit(client, params);
+			return;
+		case CMD_FAST:
+			this->handle_fast(client);
+			break;
+		default:
+			return;
 	}
-	else
+	if (!client.get_registered() && client.can_register())
 	{
-		send_buffer += ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n";
-		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
-		return;
-	}
-	if (!client.get_registered() && client.can_register()) // if not registered yet and registration is complete
-	{
-		client.set_registered(true); // mark client as fully registered
-		std::cout << "=====================================================" << std::endl;
-		std::cout << "          CLIENT " << client_fd << " REGISTERED!" << std::endl;
-		std::cout << "=====================================================" << std::endl;
-		send_buffer += ":" + this->_name + " 001 " + client.get_nick() + " :Welcome to the IRC server\r\n" + "\n";
+		client.set_registered(true);
+		std::cout << "[CLIENT " << client_fd << "] REGISTERED!" << std::endl;
+		send_buffer += ":" + this->_name + " 001 " + client.get_nick() + " :Welcome to the IRC server\r\n";
 		this->update_epoll(client_fd, EPOLLIN | EPOLLOUT);
 	}
 }

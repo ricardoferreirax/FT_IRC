@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/14 17:46:07 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/15 12:28:02 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,6 +25,19 @@ extern volatile sig_atomic_t running;
 
 class Channel;
 
+enum e_cmd
+{
+	CMD_PASS,
+	CMD_NICK,
+	CMD_USER,
+	CMD_PRIVMSG,
+	CMD_JOIN,
+	CMD_PING,
+	CMD_QUIT,
+	CMD_FAST,
+	CMD_UNKNOWN
+};
+
 class Server
 {
 	private:
@@ -40,9 +53,9 @@ class Server
 		void	accept_client();
 		void	handle_client_data(int client_fd, int event);
 		void	update_epoll(int client_fd, int events);
-		void	process_message(Client &client, std::string &client_buffer);
-	
-		void	handle_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params);
+		void	process_msg(Client &client, std::string &client_buffer);
+		void 	execute_cmd(Client &client, e_cmd cmd, const std::vector<std::string> &params);
+		
 		void	handle_pass(Client &client, const std::vector<std::string> &params);
 		void	handle_nick(Client &client, const std::vector<std::string> &params);
 		void	handle_user(Client &client, const std::vector<std::string> &params);
@@ -50,7 +63,7 @@ class Server
 		void	handle_ping(Client &client, const std::vector<std::string> &params);
 		void	handle_quit(Client &client, const std::vector<std::string> &params);
 
-		void handle_join(Client &client, const std::vector<std::string> &params);
+		void 	handle_join(Client &client, const std::vector<std::string> &params);
 		void	handle_fast(Client &client);
 
 	public:
