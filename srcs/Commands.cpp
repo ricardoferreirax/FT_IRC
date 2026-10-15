@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/14 17:51:56 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/15 13:25:54 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -206,7 +206,7 @@ void Server::handle_quit(Client &client, const std::vector<std::string> &params)
 
 	client_fd = client.get_client_fd();
 	if (params.empty() || params[0].empty()) 
-		reason = client.get_nick(); // if no reason is provided -> use nick as reason
+		reason = "Client quit"; // if no reason is provided -> use nick as reason
 	else
 		reason = params[0]; // otherwise use provided reason
 	if (client.get_nick().empty())

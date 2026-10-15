@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/08 16:14:29 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/15 10:49:47 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/15 13:23:13 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,7 +31,7 @@ std::string generateRandomString(int length);
 
 t_cmode	default_mode(void);
 
-e_cmd parse_message(const std::string &msg, std::vector<std::string> &params);
+void parse_msg(const std::string &msg, std::string &cmd, std::vector<std::string> &params);
 std::vector<std::string> ft_split(const std::string &s, char delim);
 std::string generateRandomString(int length);
 
