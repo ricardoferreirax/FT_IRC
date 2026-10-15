@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/15 17:48:54 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/15 18:26:06 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -100,8 +100,9 @@ void Server::start_socket()
 }
 
 // monitor listening and client sockets for events using epoll
-// listening socket uses EPOLLIN to detect new pending client connections
-// client sockets use EPOLLIN to receive data and EPOLLOUT to send pending data
+// EPOLLIN on listening socket -> a new client connection is waiting -> accept it
+// EPOLLIN on client socket -> has incoming data ready to be received -> read data FROM client
+// EPOLLOUT on client socket -> is ready to send pending data -> write data TO client
 // epoll_wait wait till at least one registered socket becomes ready -> return how many are ready
 void Server::monitor_epoll_events()
 {
@@ -129,17 +130,17 @@ void Server::monitor_epoll_events()
 		for (int i = 0; i < ready_events; i++) // process every socket that became ready
 		{
 			current_fd = events[i].data.fd; // get fd that generated event
-			if (current_fd == this->_listen_fd) // listening socket ready -> a new client connection is waiting
+			if (current_fd == this->_listen_fd)
 			{
 				this->accept_client();
 				continue;
 			}
-			if (events[i].events & EPOLLIN) // EPOLLIN -> client socket has incoming data ready to be received
-				this->handle_client_data(current_fd, EPOLLIN); // read/receive data FROM client and process it
+			if (events[i].events & EPOLLIN)
+				this->handle_client_data(current_fd, EPOLLIN);
 			if (this->_clients.find(current_fd) == this->_clients.end())
 				continue;
-			if (events[i].events & EPOLLOUT) // EPOLLOUT -> client socket is ready to send pending data
-				this->handle_client_data(current_fd, EPOLLOUT); // send/write pending data TO client
+			if (events[i].events & EPOLLOUT)
+				this->handle_client_data(current_fd, EPOLLOUT);
 		}
 	}
 }
@@ -153,13 +154,11 @@ void Server::send_msg(Client &client, const std::string &msg, int events)
 	client.get_send_buffer() += msg;
 	event.events = events;
 	event.data.fd = client_fd;
-	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD,
-			client_fd, &event) < 0)
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 }
 
 // accept pending connection from new client -> return a new socket fd for that client and store its address in client_addr
-// get local ip address used by server for this connection and store it in server_addr
 // add client socket to epoll to monitor it for incoming data
 // sin_addr stores ipv4 address in network byte order, inet_ntoa() converts this address from binary to readable string
 void Server::accept_client()
@@ -192,9 +191,7 @@ void Server::accept_client()
 	std::cout << "=====================================================" << std::endl;
 }
 
-// handle client socket I/O depending on the event received from epoll
-// EPOLLIN  -> receive data FROM the client
-// EPOLLOUT -> send pending data TO the client
+// EPOLLIN  -> receive data FROM the client |  EPOLLOUT -> send pending data TO the client
 void Server::handle_client_data(int client_fd, int event)
 {
 	Client &client = this->_clients[client_fd];
@@ -221,8 +218,8 @@ void Server::handle_client_data(int client_fd, int event)
 			std::cout << "=====================================================" << std::endl;
 			return;
 		}
-		recv_buffer.append(buffer, bytes); // append received data cause msg may arrive in parts
-		this->process_msg(client, recv_buffer); // process all complete messages currently in recv_buffer
+		recv_buffer.append(buffer, bytes); // append bytes to buffer cause recv() may not receive all data at once
+		this->process_msg(client, recv_buffer); // process all complete msgs currently in buffer
 	}
 	else if (event == EPOLLOUT)
 	{
@@ -235,7 +232,7 @@ void Server::handle_client_data(int client_fd, int event)
 			std::cerr << "[CLIENT " << client_fd << "] send() failed." << std::endl;
 			return;
 		}
-		send_buffer.erase(0, bytes); // remove only bytes successfully sent
+		send_buffer.erase(0, bytes); // rmv only bytes successfully sent
 		if (send_buffer.empty()) // if all pending data was successfully sent
 		{
 			if (client.get_quit()) // if QUIT was received -> disconnect client
@@ -316,8 +313,10 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	if (!client.get_registered() && client.can_register())
 	{
 		client.set_registered(true);
-		std::cout << "[CLIENT " << client_fd << "] REGISTERED!" << std::endl;
-		this->send_msg(client, registration_reply(client, this->_name, this->_date), EPOLLIN | EPOLLOUT);
+		std::cout << "\n=====================================================" << std::endl;
+		std::cout << "          CLIENT " << client_fd << " REGISTERED!" << std::endl;
+		std::cout << "=====================================================" << std::endl;
+		this->send_msg(client, registration_reply(client, this->_name, this->_date) + "\n", EPOLLIN | EPOLLOUT);
 	}
 }
 

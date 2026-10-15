@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/15 17:44:16 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/15 18:22:47 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,7 +36,7 @@ void Server::handle_pass(Client &client, const std::vector<std::string> &params)
 		return;
 	}
 	client.set_auth(true);
-	this->send_msg(client, ":" + this->_name + " NOTICE * :PASS accepted\r\n", EPOLLIN | EPOLLOUT);
+	this->send_msg(client, ":" + this->_name + " NOTICE * :PASS accepted\r\n" + "\n", EPOLLIN | EPOLLOUT);
 }
 
 void Server::handle_nick(Client &client, const std::vector<std::string> &params)
@@ -71,12 +71,12 @@ void Server::handle_nick(Client &client, const std::vector<std::string> &params)
 	{
 		if (it->first != client_fd && same_nick(it->second.get_nick(), nick))
 		{
-			this->send_msg(client, ":" + this->_name + " 433 * " + nick + " :Nickname is already in use\r\n", EPOLLIN | EPOLLOUT);
+			this->send_msg(client, ":" + this->_name + " 433 * " + nick + " :Nickname is already in use\r\n" + "\n", EPOLLIN | EPOLLOUT);
 			return;
 		}
 	}
 	client.set_nick(nick);
-	this->send_msg(client, ":" + this->_name + " NOTICE * :Set nickname to " + nick + "\r\n", EPOLLIN | EPOLLOUT);
+	this->send_msg(client, ":" + this->_name + " NOTICE * :Set nickname to " + nick + "\r\n" + "\n", EPOLLIN | EPOLLOUT);
 }
 
 void Server::handle_user(Client &client, const std::vector<std::string> &params)
@@ -106,7 +106,7 @@ void Server::handle_user(Client &client, const std::vector<std::string> &params)
 		return;
 	}
 	client.set_user(username);
-	this->send_msg(client, ":" + this->_name + " NOTICE * :Set username to " + username + "\r\n", EPOLLIN | EPOLLOUT);
+	this->send_msg(client, ":" + this->_name + " NOTICE * :Set username to " + username + "\r\n" + "\n", EPOLLIN | EPOLLOUT);
 }
 
 void Server::handle_privmsg(Client &client, const std::vector<std::string> &params)
@@ -133,7 +133,7 @@ void Server::handle_privmsg(Client &client, const std::vector<std::string> &para
 		if (same_nick(it->second.get_nick(), target))
 		{
 			prefix = ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip();
-			this->send_msg(it->second, prefix + " PRIVMSG " + it->second.get_nick() + " :" + msg + "\r\n", EPOLLIN | EPOLLOUT);
+			this->send_msg(it->second, prefix + " PRIVMSG " + it->second.get_nick() + " :" + msg + "\r\n" + "\n", EPOLLIN | EPOLLOUT);
 			return;
 		}
 	}
@@ -152,7 +152,7 @@ void Server::handle_ping(Client &client, const std::vector<std::string> &params)
 		return;
 	}
 	token = params[0];
-	this->send_msg(client, ":" + this->_name + " PONG " + this->_name + " :" + token + "\r\n", EPOLLIN | EPOLLOUT);
+	this->send_msg(client, ":" + this->_name + " PONG " + this->_name + " :" + token + "\r\n" + "\n", EPOLLIN | EPOLLOUT);
 }
 
 void Server::handle_quit(Client &client, const std::vector<std::string> &params)
@@ -177,9 +177,9 @@ void Server::handle_quit(Client &client, const std::vector<std::string> &params)
 	{
 		if (it->first == client_fd)
 			continue;
-		this->send_msg(it->second, msg, EPOLLIN | EPOLLOUT);
+		this->send_msg(it->second, msg + "\n", EPOLLIN | EPOLLOUT);
 	}
-	this->send_msg(client, "ERROR :Closing connection for " + client_name + ": " + reason + "\r\n", EPOLLIN | EPOLLOUT);
+	this->send_msg(client, "ERROR :Closing connection for " + client_name + ": " + reason + "\r\n" + "\n", EPOLLIN | EPOLLOUT);
 	client.set_quit(true);
 }
 
@@ -276,5 +276,5 @@ void Server::handle_fast(Client &client)
 	this->send_msg(client, "Your home kingdom shall be: " + host + "\n", EPOLLIN | EPOLLOUT);
 	this->send_msg(client, "Thy user shall be sung as: " + user +  "\n", EPOLLIN | EPOLLOUT);
 	this->send_msg(client, "Go forth, make haste, child of Mercury\r\n", EPOLLIN | EPOLLOUT);
-	this->send_msg(client, registration_reply(client, this->_name, this->_date), EPOLLIN | EPOLLOUT);
+	this->send_msg(client, registration_reply(client, this->_name, this->_date) + "\n", EPOLLIN | EPOLLOUT);
 }
