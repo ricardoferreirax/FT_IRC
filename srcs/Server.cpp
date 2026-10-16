@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/15 18:26:06 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/16 13:10:04 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -298,13 +298,13 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 		this->handle_join(client, params);
 	else if (cmd == "PING")
 		this->handle_ping(client, params);
+	else if (cmd == "FAST")
+		this->handle_fast(client);
 	else if (cmd == "QUIT")
 	{
 		this->handle_quit(client, params);
 		return;
 	}
-	else if (cmd == "FAST")
-		this->handle_fast(client);
 	else
 	{
 		this->send_msg(client, ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n", EPOLLIN | EPOLLOUT);
