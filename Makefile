@@ -6,12 +6,12 @@
 #    By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/09/27 23:34:05 by rmedeiro          #+#    #+#              #
-#    Updated: 2026/10/16 13:21:46 by rmedeiro         ###   ########.fr        #
+#    Updated: 2026/10/16 13:57:14 by rmedeiro         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME = ircserv
-B_NAME = ircserv_b
+B_NAME = miku
 
 CXX = c++
 
@@ -31,7 +31,7 @@ SRCS = srcs/main.cpp \
 	   srcs/Channels.cpp \
 	   srcs/Utils.cpp
 
-B_SRCS = bonus/srcs/Bot.cpp
+B_SRCS = bonus/srcs/Bot.cpp \
 
 OBJS = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 DBG_OBJS = $(SRCS:%.cpp=$(DBG_DIR)/%.o)
@@ -39,7 +39,7 @@ DBG_OBJS = $(SRCS:%.cpp=$(DBG_DIR)/%.o)
 B_OBJS = $(SRCS:%.cpp=$(B_OBJ_DIR)/%.o) \
              $(B_SRCS:%.cpp=$(B_OBJ_DIR)/%.o)
 
-B_DEPS = $(BONUS_OBJS:.o=.d)
+B_DEPS = $(B_OBJS:.o=.d)
 
 DEPS = $(OBJS:.o=.d)
 DBG_DEPS = $(DBG_OBJS:.o=.d)
@@ -72,23 +72,26 @@ $(DBG_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(CXXAFLAGS) $(DEBUG_FLAGS) -c $< -o $@
 
-beyond: $(B_NAME)
+miku: $(B_NAME)
+
+test:
+	$(CXX) $(CXXFLAGS) $(CXXAFLAGS) -Ibonus/includes $(B_SRCS) -o test && ./test
 
 $(B_NAME): $(B_OBJS)
 	$(CXX) $(CXXFLAGS) $(CXXAFLAGS) $(B_OBJS) -o $(B_NAME)
 	@echo -e "$(GREEN)$(B_NAME) compiled!$(RESET)"
-
+	
 clean:
 	rm -rf $(OBJ_DIR) $(DBG_DIR) $(B_OBJ_DIR)
 	@echo -e "$(YELLOW)Object files removed!$(RESET)"
 
 fclean: clean
-	rm -f $(NAME) $(B_NAME)
+	rm -f $(NAME) $(B_NAME) test
 	@echo -e "$(RED)Execs removed!$(RESET)"
 
 re: fclean all
 	@echo -e "$(GREEN)Recompiled $(NAME)!$(RESET)"
 
--include $(DEPS) $(DBG_DEPS)
+-include $(DEPS) $(DBG_DEPS) $(B_DEPS)
 
 .PHONY: all beyond d clean fclean re

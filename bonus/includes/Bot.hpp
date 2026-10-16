@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/16 13:13:09 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/16 13:30:01 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,11 +30,15 @@ struct bot_request
 class Bot
 {
     private:
-        int                         _epoll_fd;
+        int 	_epoll_fd;
+
+		std::map<int, bot_request> _requests; // store bot requests (fd, bot_request) pairs
 
     public:
         Bot(int epoll_fd);
         ~Bot();
+
+		bool has_request(int fd) const;
 
 };
 
