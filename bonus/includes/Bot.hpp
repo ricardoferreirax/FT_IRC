@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/16 15:04:37 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/16 15:55:32 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,6 +50,7 @@ class Bot
 		
 		bool has_request(int fd) const;
 		bool start_request(int client_fd, const std::string &question);
+		bool handle_events(int fd);
 };
 
 #endif
