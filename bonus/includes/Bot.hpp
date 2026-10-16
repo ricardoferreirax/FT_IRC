@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/16 17:05:54 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/16 17:53:19 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,7 @@ typedef struct bot_request
     int fd;
     int client_fd;
     bool connection_pending;
+	bool response_complete;
     std::string send_buffer;
     std::string recv_buffer;
     size_t bytes_sent;
@@ -44,6 +45,8 @@ class Bot
 
 		std::string create_request(const std::string &question);
 		bool send_request(int fd);
+		bool handle_response(int bot_fd);
+		bool receive_response(int bot_fd);
 		
 	public:
         Bot(int epoll_fd, int port);
