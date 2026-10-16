@@ -6,13 +6,9 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 16:07:29 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/16 16:08:56 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/16 17:22:16 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
-#include "../includes/Bot.hpp"
-#include <iostream>
-#include <cstdlib>
 
 #include "../includes/Bot.hpp"
 #include <iostream>
@@ -35,14 +31,14 @@ int main(int ac, char **av)
         std::cerr << "Miku: epoll_create1() failed." << std::endl;
         return (EXIT_FAILURE);
     }
+
     Bot bot(epoll_fd, port);
 
     if (!bot.start_request(-1, "Who is Hatsune Miku?"))
     {
         std::cerr << "Miku: request failed." << std::endl;
-        close(epoll_fd);
         return (EXIT_FAILURE);
     }
-    std::cout << "Miku: request registered!" << std::endl;
+    std::cout << "Miku: request started!" << std::endl;
     return (EXIT_SUCCESS);
 }

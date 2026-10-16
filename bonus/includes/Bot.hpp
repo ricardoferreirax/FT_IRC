@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/16 15:55:32 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/16 17:05:54 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,6 +43,7 @@ class Bot
 		std::map<int, bot_request> _requests; // store bot requests (fd, bot_request) pairs
 
 		std::string create_request(const std::string &question);
+		bool send_request(int fd);
 		
 	public:
         Bot(int epoll_fd, int port);

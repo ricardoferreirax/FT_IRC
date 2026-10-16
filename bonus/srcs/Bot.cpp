@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/16 16:13:17 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/16 17:28:00 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,9 +32,9 @@ Bot::~Bot()
     }
 }
 
-bool Bot::has_request(int fd) const
+bool Bot::has_request(int bot_fd) const
 {
-    if (this->_requests.find(fd) == this->_requests.end())
+    if (this->_requests.find(bot_fd) == this->_requests.end())
         return (false);
     return (true);
 }
@@ -74,85 +74,106 @@ std::string Bot::create_request(const std::string &question)
 bool Bot::start_request(int client_fd, const std::string &question)
 {
     sockaddr_in addr;
-    bot_request req;
-    int fd;
+    bot_request request;
+    int bot_fd;
     int res;
 
-    fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fd < 0)
+    bot_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (bot_fd < 0)
     {
         std::cerr << "Miku: socket() failed." << std::endl;
         return (false);
     }
-    if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
+    if (fcntl(bot_fd, F_SETFL, O_NONBLOCK) < 0)
     {
         std::cerr << "Miku: fcntl() failed." << std::endl;
-        close(fd);
+        close(bot_fd);
         return (false);
     }
     addr.sin_family = AF_INET;
     addr.sin_port = htons(this->_port);
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    res = connect(fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
+    res = connect(bot_fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
     if (res < 0 && errno != EINPROGRESS)
     {
         std::cerr << "Miku: connect() failed." << std::endl;
-        close(fd);
+        close(bot_fd);
         return (false);
     }
-    req.fd = fd;
-    req.client_fd = client_fd;
-    req.connection_pending = false;
+    request.fd = bot_fd;
+    request.client_fd = client_fd;
+    request.connection_pending = false;
     if (res < 0)
-        req.connection_pending = true;
-    req.send_buffer = this->create_request(question);
-    req.recv_buffer = "";
-    req.bytes_sent = 0;
-    this->_requests[fd] = req;
-    if (!this->handle_events(fd))
+        request.connection_pending = true;
+    request.send_buffer = this->create_request(question);
+    request.recv_buffer = "";
+    request.bytes_sent = 0;
+    this->_requests[bot_fd] = request;
+    if (!this->handle_events(bot_fd))
     {
-        this->_requests.erase(fd);
-        epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
-        close(fd);
+        this->_requests.erase(bot_fd);
+        epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, bot_fd, NULL);
+        close(bot_fd);
         return (false);
     }
     return (true);
 }
 
-bool Bot::handle_events(int fd)
+bool Bot::handle_events(int bot_fd)
 {
     epoll_event event;
     int ready;
+    bot_request &req = this->_requests[bot_fd];
 
-    event.events = EPOLLOUT; // monitor for write events -> ready to send data
-    event.data.fd = fd; // store event with bot fd
-    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, fd, &event) < 0)
-    {
-        std::cerr << "Miku: epoll_ctl() failed." << std::endl;
+    event.events = EPOLLOUT; // monitor socket for writing -> ready to send request
+    event.data.fd = bot_fd; // store fd in event data
+    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, bot_fd, &event) < 0)
         return (false);
+    while (req.bytes_sent < req.send_buffer.size()) // waiting until entire request is sent
+    {
+        ready = epoll_wait(this->_epoll_fd, &event, 1, 3000);
+        // Wait failed or timed out
+        if (ready < 0) // if epoll_wait() failed
+        {
+            if (errno == EINTR) // if was interrupt by a signal -> retry
+                continue;
+            return (false);
+        }
+        if (ready == 0) // timed out -> no events occurred within 3 secs
+            return (false);
+        // Socket error or connection closed
+        if (event.events & (EPOLLERR | EPOLLHUP)) // if error or hangup event occurred
+            return (false);
+        if (event.events & EPOLLOUT) // if socket is ready for writing
+        {
+            if (!this->send_request(bot_fd))
+                return (false);
+        }
     }
-    ready = epoll_wait(this->_epoll_fd, &event, 1, 3000); // wait with a timeout of 3 secs
-    if (ready < 0)
-    {
-        std::cerr << "Miku: epoll_wait() failed." << std::endl;
-        return (false);
-    }
-    if (ready == 0)
-    {
-        std::cerr << "Miku: timeout." << std::endl;
-        return (false);
-    }
-    if (!this->has_request(event.data.fd)) // check if event is for a valid request
-        return (false);
-    if (event.events & (EPOLLERR | EPOLLHUP)) // if error or hangup event occurred
-    {
-        std::cerr << "Miku: connection failed." << std::endl;
-        return (false);
-    }
-    if (event.events & EPOLLOUT)
-    {
-        std::cout << "Miku: socket ready for writing." << std::endl;
+    return (true);
+}
+
+bool Bot::send_request(int bot_fd)
+{
+    bot_request &req = this->_requests[bot_fd];
+    const char *msg;
+    size_t remaining;
+    ssize_t sent;
+
+    msg = req.send_buffer.c_str() + req.bytes_sent; // part of request that hasn't sent yet -> points to next byte to send
+    remaining = req.send_buffer.size() - req.bytes_sent; // how many bytes are still waiting to be sent
+    if (remaining == 0) // if all bytes have been sent
         return (true);
+    sent = send(bot_fd, msg, remaining, MSG_NOSIGNAL); // send data TO the bot through the bot socket -> try send remaining bytes to ollama
+    if (sent < 0)
+    {
+        if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) // socket is busy or send was interrupted
+            return (true); // request is still valid and can be retried later
+        std::cerr << "Miku: send() failed." << std::endl;
+        return (false); // an actual error occurred
     }
-    return (false);
+    if (sent == 0) // no data was sent -> connection closed
+        return (false);
+    req.bytes_sent += sent; // update the nb of bytes sent so far
+    return (true);
 }
