@@ -6,7 +6,7 @@
 #    By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/09/27 23:34:05 by rmedeiro          #+#    #+#              #
-#    Updated: 2026/10/16 13:57:14 by rmedeiro         ###   ########.fr        #
+#    Updated: 2026/10/16 15:09:43 by rmedeiro         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -75,7 +75,7 @@ $(DBG_DIR)/%.o: %.cpp
 miku: $(B_NAME)
 
 test:
-	$(CXX) $(CXXFLAGS) $(CXXAFLAGS) -Ibonus/includes $(B_SRCS) -o test && ./test
+	$(CXX) $(CXXFLAGS) $(CXXAFLAGS) -Ibonus/includes $(B_SRCS) -o test
 
 $(B_NAME): $(B_OBJS)
 	$(CXX) $(CXXFLAGS) $(CXXAFLAGS) $(B_OBJS) -o $(B_NAME)
