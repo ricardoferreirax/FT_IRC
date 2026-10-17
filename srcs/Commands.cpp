@@ -6,12 +6,58 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 15:21:00 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 15:27:10 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
 #include "../includes/Utils.hpp"
+
+void Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
+{
+	int client_fd;
+
+	client_fd = client.get_client_fd();
+	if ((cmd == "PRIVMSG" || cmd == "JOIN" || cmd == "MIKU") && !client.get_registered())
+	{
+		this->send_msg(client, ":" + this->_name + " 451 * :You have not registered\r\n", EPOLLIN | EPOLLOUT);
+		return;
+	}
+	if (cmd == "PASS")
+		this->handle_pass(client, params);
+	else if (cmd == "NICK")
+		this->handle_nick(client, params);
+	else if (cmd == "USER")
+		this->handle_user(client, params);
+	else if (cmd == "PRIVMSG")
+		this->handle_privmsg(client, params);
+	else if (cmd == "JOIN")
+		this->handle_join(client, params);
+	else if (cmd == "PING")
+		this->handle_ping(client, params);
+	else if (cmd == "FAST")
+		this->handle_fast(client);
+	else if (cmd == "MIKU")
+    	this->handle_miku(client, params);
+	else if (cmd == "QUIT")
+	{
+		this->handle_quit(client, params);
+		return;
+	}
+	else
+	{
+		this->send_msg(client, ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n", EPOLLIN | EPOLLOUT);
+		return;
+	}
+	if (!client.get_registered() && client.can_register())
+	{
+		client.set_registered(true);
+		std::cout << "\n=====================================================" << std::endl;
+		std::cout << "          CLIENT " << client_fd << " REGISTERED!" << std::endl;
+		std::cout << "=====================================================" << std::endl;
+		this->send_msg(client, registration_reply(client, this->_name, this->_date) + "\n", EPOLLIN | EPOLLOUT);
+	}
+}
 
 void Server::handle_pass(Client &client, const std::vector<std::string> &params)
 {

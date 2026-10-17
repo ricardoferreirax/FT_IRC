@@ -6,11 +6,12 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 14:58:50 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 16:18:32 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Bot.hpp"
+#include "../../includes/Server.hpp"
 #include <iostream>
 #include <cstdlib>
 #include <cerrno>
@@ -44,7 +45,7 @@ bool Bot::has_request(int bot_fd) const
 
 void Bot::close_requests()
 {
-    std::map<int, request>::iterator it;
+    std::map<int, t_request>::iterator it;
 
     for (it = this->_requests.begin(); it != this->_requests.end(); ++it)
     {
@@ -90,7 +91,7 @@ std::string Bot::create_request(const std::string &question)
 bool Bot::start_request(int client_fd, const std::string &question)
 {
     sockaddr_in addr;
-    request req;
+    t_request req;
     epoll_event event;
     int bot_fd;
     int res;
@@ -144,7 +145,7 @@ bool Bot::start_request(int client_fd, const std::string &question)
 // send pending request data to Ollama
 bool Bot::send_request(int bot_fd)
 {
-    request &req = this->_requests[bot_fd];
+    t_request &req = this->_requests[bot_fd];
     const char *msg;
     size_t remaining;
     ssize_t sent;
@@ -170,7 +171,7 @@ bool Bot::send_request(int bot_fd)
 // receive response data from Ollama
 bool Bot::receive_response(int bot_fd)
 {
-    request &req = this->_requests[bot_fd];
+    t_request &req = this->_requests[bot_fd];
     char buffer[4096];
     ssize_t received;
 
@@ -195,7 +196,7 @@ bool Bot::receive_response(int bot_fd)
 bool Bot::handle_event(int bot_fd, uint32_t events)
 {
     epoll_event event;
-    request &req = this->_requests[bot_fd];
+    t_request &req = this->_requests[bot_fd];
     bool success;
 
 	success = true;
@@ -233,4 +234,21 @@ bool Bot::handle_event(int bot_fd, uint32_t events)
         this->_requests.erase(bot_fd);
     }
     return (success);
+}
+
+bool Bot::get_response(t_response &response)
+{
+    if (this->_responses.empty()) // no responses available
+        return (false);
+    response = this->_responses[0]; // get first response
+    this->_responses.erase(this->_responses.begin()); // remove it from vector
+    return (true); // response retrieved
+}
+
+void Bot::send_responses(Server &server)
+{
+    t_response response;
+
+    while (this->get_response(response))
+        server.send_response(response.client_fd, response.msg);
 }

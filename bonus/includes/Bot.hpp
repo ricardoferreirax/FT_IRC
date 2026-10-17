@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 14:55:57 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 16:16:29 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 
 #include <string>
 #include <map>
+#include <vector>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <cstdio>
@@ -25,7 +26,7 @@
 #include <cerrno>
 #include <cstring>
 
-typedef struct request
+typedef struct s_request
 {
     int fd;
     int client_fd;
@@ -34,13 +35,22 @@ typedef struct request
     std::string send_buffer;
     std::string recv_buffer;
     size_t bytes_sent;
-} request;
+} t_request;
+
+typedef struct s_response
+{
+    int client_fd;
+    std::string msg;
+} t_response;
+
+class Server;
 
 class Bot
 {
     private:
         int _epoll_fd;
-        std::map<int, request> _requests;
+        std::map<int, t_request> _requests;
+		std::vector<t_response> _responses;
 
         std::string create_request(const std::string &question);
         bool send_request(int bot_fd);
@@ -57,6 +67,8 @@ class Bot
         bool has_request(int bot_fd) const;
         bool start_request(int client_fd, const std::string &question);
         bool handle_event(int bot_fd, uint32_t events);
+		void send_responses(Server &server);
+		bool get_response(t_response &response);
 };
 
 #endif

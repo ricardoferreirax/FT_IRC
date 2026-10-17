@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 15:00:52 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 16:13:59 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -143,6 +143,7 @@ void Server::monitor_epoll_events()
 			if (this->_bot.has_request(current_fd))
 			{
 			    this->_bot.handle_event(current_fd, events[i].events);
+			    this->_bot.send_responses(*this);
 			    continue;
 			}
 			if (events[i].events & EPOLLIN)
@@ -286,50 +287,14 @@ void Server::process_msg(Client &client, std::string &client_buffer)
 	}
 }
 
-void Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
+void Server::send_response(int client_fd, const std::string &msg)
 {
-	int client_fd;
+    std::map<int, Client>::iterator it;
 
-	client_fd = client.get_client_fd();
-	if ((cmd == "PRIVMSG" || cmd == "JOIN") && !client.get_registered())
-	{
-		this->send_msg(client, ":" + this->_name + " 451 * :You have not registered\r\n", EPOLLIN | EPOLLOUT);
-		return;
-	}
-	if (cmd == "PASS")
-		this->handle_pass(client, params);
-	else if (cmd == "NICK")
-		this->handle_nick(client, params);
-	else if (cmd == "USER")
-		this->handle_user(client, params);
-	else if (cmd == "PRIVMSG")
-		this->handle_privmsg(client, params);
-	else if (cmd == "JOIN")
-		this->handle_join(client, params);
-	else if (cmd == "PING")
-		this->handle_ping(client, params);
-	else if (cmd == "FAST")
-		this->handle_fast(client);
-	else if (cmd == "MIKU")
-    	this->handle_miku(client, params);
-	else if (cmd == "QUIT")
-	{
-		this->handle_quit(client, params);
-		return;
-	}
-	else
-	{
-		this->send_msg(client, ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n", EPOLLIN | EPOLLOUT);
-		return;
-	}
-	if (!client.get_registered() && client.can_register())
-	{
-		client.set_registered(true);
-		std::cout << "\n=====================================================" << std::endl;
-		std::cout << "          CLIENT " << client_fd << " REGISTERED!" << std::endl;
-		std::cout << "=====================================================" << std::endl;
-		this->send_msg(client, registration_reply(client, this->_name, this->_date) + "\n", EPOLLIN | EPOLLOUT);
-	}
+    it = this->_clients.find(client_fd);
+    if (it == this->_clients.end())
+        return;
+    this->send_msg(it->second, ":Miku NOTICE " + it->second.get_nick() + " :" + msg + "\r\n", EPOLLIN | EPOLLOUT);
 }
 
 std::string Server::getName(void) const

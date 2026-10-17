@@ -6,13 +6,15 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 15:03:44 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 16:23:01 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
+#include "../bonus/includes/Bot.hpp"
+#include "Client.hpp"
 #include <csignal>
 #include <map>
 #include <vector>
@@ -20,8 +22,6 @@
 #include <sys/epoll.h>
 #include <ctime>
 
-#include "Client.hpp"
-#include "../bonus/includes/Bot.hpp"
 
 extern volatile sig_atomic_t running;
 
@@ -30,13 +30,13 @@ class Channel;
 class Server
 {
 	private:
-		std::string		_name;
-		std::string		_pass;
-		std::string		_date;
-		int				_port;
-		int				_listen_fd;
-		int				_epoll_fd;
-		Bot 			_bot;
+		std::string	_name;
+		std::string	_pass;
+		std::string	_date;
+		int			_port;
+		int			_listen_fd;
+		int			_epoll_fd;
+		Bot 		_bot;
 
 		std::map<int, Client>	_clients;
 		std::map<std::string, Channel>	_channels;
@@ -56,16 +56,16 @@ class Server
 		void	handle_fast(Client &client);
 		void 	handle_miku(Client &client, const std::vector<std::string> &params);
 		void	handle_quit(Client &client, const std::vector<std::string> &params);
-
-
+	
 	public:
 		Server(const std::string &port, const std::string &pass);
 		~Server();
-
+		
 		void	start_socket();
 		void	monitor_epoll_events();
-
-		std::string getName(void) const;
+		
+		void 	send_response(int client_fd, const std::string &msg);
+		std::string	getName(void) const;
 };
 
 void	handle_signal(int signal);
