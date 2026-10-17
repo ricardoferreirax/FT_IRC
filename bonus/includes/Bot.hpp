@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 16:41:51 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 22:22:31 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,8 +53,7 @@ class Bot
 		std::vector<t_response> _responses;
 
         std::string create_request(const std::string &question);
-        bool send_request(int bot_fd);
-        bool receive_response(int bot_fd);
+        bool handle_request_data(int bot_fd, int event);
 
     public:
         Bot();
@@ -65,7 +64,7 @@ class Bot
 		void close_requests(int bot_fd);
         bool has_request(int bot_fd) const;
         bool start_request(int client_fd, const std::string &question);
-        bool handle_event(int bot_fd, uint32_t events);
+        bool handle_event(int bot_fd, int events);
 		void send_responses(Server &server);
 		bool get_response(t_response &response);
 };

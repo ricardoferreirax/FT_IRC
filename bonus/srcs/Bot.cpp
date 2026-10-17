@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 16:42:51 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 22:22:06 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -91,51 +91,42 @@ std::string Bot::create_request(const std::string &question)
 
 bool Bot::start_request(int client_fd, const std::string &question)
 {
-    sockaddr_in addr;
+    sockaddr_in addr = {};
+    epoll_event event = {};
     t_request req;
-    epoll_event event;
     int bot_fd;
-    int res;
+	int res;
 
     if (this->_epoll_fd < 0)
         return (false);
     bot_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (bot_fd < 0)
-    {
-        std::cerr << "Miku: socket() failed." << std::endl;
         return (false);
-    }
     if (fcntl(bot_fd, F_SETFL, O_NONBLOCK) < 0)
     {
-        std::cerr << "Miku: fcntl() failed." << std::endl;
         close(bot_fd);
         return (false);
     }
     addr.sin_family = AF_INET;
     addr.sin_port = htons(11434);
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    res = connect(bot_fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
+    res = connect(bot_fd, (sockaddr *)&addr, sizeof(addr));
     if (res < 0 && errno != EINPROGRESS)
     {
-        std::cerr << "Miku: connect() failed." << std::endl;
         close(bot_fd);
         return (false);
     }
     req.fd = bot_fd;
-	req.client_fd = client_fd;
-	req.connection_pending = true;
-	if (res == 0)
-		req.connection_pending = false;
-	req.response_complete = false;
-	req.send_buffer = this->create_request(question);
-	req.recv_buffer = "";
-	req.bytes_sent = 0;
-	this->_requests[bot_fd] = req;
+    req.client_fd = client_fd;
+    req.connection_pending = (res < 0);
+    req.response_complete = false;
+    req.send_buffer = this->create_request(question);
+    req.recv_buffer = "";
+    req.bytes_sent = 0;
     event.events = EPOLLOUT;
     event.data.fd = bot_fd;
     if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, bot_fd, &event) < 0)
     {
-        std::cerr << "Miku: epoll_ctl() failed." << std::endl;
         close(bot_fd);
         return (false);
     }
@@ -143,71 +134,61 @@ bool Bot::start_request(int client_fd, const std::string &question)
     return (true);
 }
 
-// send pending request data to Ollama
-bool Bot::send_request(int bot_fd)
-{
-    t_request &req = this->_requests[bot_fd];
-    const char *msg;
-    size_t remaining;
-    ssize_t sent;
-
-    msg = req.send_buffer.c_str() + req.bytes_sent;
-    remaining = req.send_buffer.size() - req.bytes_sent;
-    if (remaining == 0)
-        return (true);
-    sent = send(bot_fd, msg, remaining, MSG_NOSIGNAL);
-    if (sent < 0)
-    {
-        if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
-            return (true);
-        std::cerr << "Miku: send() failed." << std::endl;
-        return (false);
-    }
-    if (sent == 0)
-        return (false);
-    req.bytes_sent += sent;
-    return (true);
-}
-
-// receive response data from Ollama
-bool Bot::receive_response(int bot_fd)
+// EPOLLIN -> receive response FROM Ollama | EPOLLOUT -> send request TO Ollama
+bool Bot::handle_request_data(int bot_fd, int event)
 {
     t_request &req = this->_requests[bot_fd];
     char buffer[4096];
-    ssize_t received;
+    const char *msg;
+    size_t remaining;
+    ssize_t bytes;
 
-    received = recv(bot_fd, buffer, sizeof(buffer), 0);
-    if (received < 0)
+    if (event == EPOLLIN) // receive response
     {
-        if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
-            return (true);
-        std::cerr << "Miku: recv() failed." << std::endl;
+        bytes = recv(bot_fd, buffer, sizeof(buffer), 0); // receive data FROM ollama through bot socket
+        if (bytes > 0)
+            req.recv_buffer.append(buffer, bytes); // append bytes to buffer
+        else if (bytes == 0) // connection closed by ollama
+            req.response_complete = true; // mark response as complete
+    }
+    else if (event == EPOLLOUT)
+    {
+        msg = req.send_buffer.c_str() + req.bytes_sent; // msg points to next byte to send
+        remaining = req.send_buffer.size() - req.bytes_sent; // remaining bytes to send
+        if (remaining == 0) // all bytes sent
+            return (true); // true -> update to EPOLLIN for receiving response
+        bytes = send(bot_fd, msg, remaining, MSG_NOSIGNAL); // send data TO ollama through bot socket
+        if (bytes > 0)
+            req.bytes_sent += bytes; // update bytes sent
+        else if (bytes == 0) // connection closed by ollama
+            return (false);
+    }
+    else // unknown event
+        return (true);
+    if (bytes < 0) // send or recv failed
+    {
+        if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) // if send/recv would block or was interrupted
+            return (true); // try again
         return (false);
     }
-    if (received == 0)
-    {
-        req.response_complete = true;
-        return (true);
-    }
-    req.recv_buffer.append(buffer, received);
-    return (true);
+    return (true); // true -> update to EPOLLIN for receiving response
 }
 
-// Process a ready event from the IRC server epoll loop
-bool Bot::handle_event(int bot_fd, uint32_t events)
+// process ready event from server epoll loop
+bool Bot::handle_event(int bot_fd, int events)
 {
     t_request &req = this->_requests[bot_fd];
-	t_response response;
+    t_response response;
+    epoll_event event;
 
     if (events & EPOLLERR)
         return (this->close_requests(bot_fd), false);
     if (events & EPOLLOUT)
     {
-        if (!this->send_request(bot_fd))
+        if (!this->handle_request_data(bot_fd, EPOLLOUT))
             return (this->close_requests(bot_fd), false);
         if (req.bytes_sent == req.send_buffer.size())
         {
-            epoll_event event = {};
             event.events = EPOLLIN;
             event.data.fd = bot_fd;
             if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, bot_fd, &event) < 0)
@@ -216,7 +197,7 @@ bool Bot::handle_event(int bot_fd, uint32_t events)
     }
     if (events & (EPOLLIN | EPOLLHUP))
     {
-        if (!this->receive_response(bot_fd))
+        if (!this->handle_request_data(bot_fd, EPOLLIN))
             return (this->close_requests(bot_fd), false);
     }
     if (req.response_complete)
@@ -226,6 +207,7 @@ bool Bot::handle_event(int bot_fd, uint32_t events)
         this->_responses.push_back(response);
         this->close_requests(bot_fd);
     }
+
     return (true);
 }
 
