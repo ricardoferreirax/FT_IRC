@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/16 13:09:36 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 15:21:00 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -255,6 +255,36 @@ void Server::handle_join(Client &client, const std::vector<std::string> &params)
 		}
 		i++;
 	}
+}
+
+void Server::handle_miku(Client &client, const std::vector<std::string> &params)
+{
+    std::string question;
+
+    if (params.empty()) // no question provided
+    {
+        this->send_msg(client, "NOTICE " + client.get_nick() + " :[MIKU] Provide a question.\r\n", EPOLLIN | EPOLLOUT);
+        return;
+    }
+    for (size_t i = 0; i < params.size(); i++) // iterate through params
+    {
+        if (i > 0)
+            question += " ";
+        question += params[i];
+    }
+    if (!question.empty() && question[0] == ':')
+        question.erase(0, 1);
+    if (question.empty()) // no question after ':'
+    {
+        this->send_msg(client, "NOTICE " + client.get_nick() + " :[MIKU] Provide a question.\r\n", EPOLLIN | EPOLLOUT);
+        return;
+    }
+    this->send_msg(client, "NOTICE " + client.get_nick() + " :[MIKU] question: " + question + "\r\n", EPOLLIN | EPOLLOUT);
+    if (!this->_bot.start_request(client.get_client_fd(), question))
+    {
+        this->send_msg(client, "NOTICE " + client.get_nick() + " :[MIKU] Request failed.\r\n", EPOLLIN | EPOLLOUT);
+        return;
+    }
 }
 
 void Server::handle_fast(Client &client)

@@ -6,12 +6,13 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/16 13:10:04 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 15:00:52 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
 #include "../includes/Utils.hpp"
+#include "../bonus/includes/Bot.hpp"
 #include <iostream>
 #include <unistd.h>
 #include <cstring>
@@ -66,7 +67,10 @@ Server::~Server()
         close(it->first);
     }
     if (this->_epoll_fd != -1)
-        close(this->_epoll_fd);
+	{
+		this->_bot.close_requests();
+		close(this->_epoll_fd);
+	}
     if (this->_listen_fd != -1)
         close(this->_listen_fd);
     std::cout << "[SERVER] Closed!" << std::endl;
@@ -114,6 +118,7 @@ void Server::monitor_epoll_events()
 	this->_epoll_fd = epoll_create1(0);
 	if (this->_epoll_fd < 0)
 		throw std::runtime_error("IRC: epoll_create1() failed.");
+	this->_bot.set_epoll_fd(this->_epoll_fd); // set epoll fd in bot to monitor its sockets for events
 	event.events = EPOLLIN; // monitor listening socket for incoming connections
 	event.data.fd = this->_listen_fd; // store fd to identify which socket generated event
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0)
@@ -134,6 +139,11 @@ void Server::monitor_epoll_events()
 			{
 				this->accept_client();
 				continue;
+			}
+			if (this->_bot.has_request(current_fd))
+			{
+			    this->_bot.handle_event(current_fd, events[i].events);
+			    continue;
 			}
 			if (events[i].events & EPOLLIN)
 				this->handle_client_data(current_fd, EPOLLIN);
@@ -300,6 +310,8 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 		this->handle_ping(client, params);
 	else if (cmd == "FAST")
 		this->handle_fast(client);
+	else if (cmd == "MIKU")
+    	this->handle_miku(client, params);
 	else if (cmd == "QUIT")
 	{
 		this->handle_quit(client, params);

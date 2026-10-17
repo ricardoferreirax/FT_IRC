@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/16 13:09:00 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 15:03:44 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,7 @@
 #include <ctime>
 
 #include "Client.hpp"
+#include "../bonus/includes/Bot.hpp"
 
 extern volatile sig_atomic_t running;
 
@@ -35,6 +36,7 @@ class Server
 		int				_port;
 		int				_listen_fd;
 		int				_epoll_fd;
+		Bot 			_bot;
 
 		std::map<int, Client>	_clients;
 		std::map<std::string, Channel>	_channels;
@@ -50,10 +52,11 @@ class Server
 		void	handle_user(Client &client, const std::vector<std::string> &params);
 		void	handle_privmsg(Client &client, const std::vector<std::string> &params);
 		void	handle_ping(Client &client, const std::vector<std::string> &params);
-		void	handle_quit(Client &client, const std::vector<std::string> &params);
-
 		void 	handle_join(Client &client, const std::vector<std::string> &params);
 		void	handle_fast(Client &client);
+		void 	handle_miku(Client &client, const std::vector<std::string> &params);
+		void	handle_quit(Client &client, const std::vector<std::string> &params);
+
 
 	public:
 		Server(const std::string &port, const std::string &pass);

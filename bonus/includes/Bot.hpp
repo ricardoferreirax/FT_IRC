@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/16 17:53:19 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 14:55:57 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,7 @@
 #include <cerrno>
 #include <cstring>
 
-typedef struct bot_request
+typedef struct request
 {
     int fd;
     int client_fd;
@@ -34,27 +34,29 @@ typedef struct bot_request
     std::string send_buffer;
     std::string recv_buffer;
     size_t bytes_sent;
-} bot_request;
+} request;
 
 class Bot
 {
     private:
         int _epoll_fd;
-		int _port;
-		std::map<int, bot_request> _requests; // store bot requests (fd, bot_request) pairs
+        std::map<int, request> _requests;
 
-		std::string create_request(const std::string &question);
-		bool send_request(int fd);
-		bool handle_response(int bot_fd);
-		bool receive_response(int bot_fd);
-		
-	public:
-        Bot(int epoll_fd, int port);
+        std::string create_request(const std::string &question);
+        bool send_request(int bot_fd);
+        bool receive_response(int bot_fd);
+
+    public:
+        Bot();
+        Bot(int epoll_fd);
         ~Bot();
-		
-		bool has_request(int fd) const;
-		bool start_request(int client_fd, const std::string &question);
-		bool handle_events(int fd);
+
+        void set_epoll_fd(int epoll_fd);
+        void close_requests();
+
+        bool has_request(int bot_fd) const;
+        bool start_request(int client_fd, const std::string &question);
+        bool handle_event(int bot_fd, uint32_t events);
 };
 
 #endif

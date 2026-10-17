@@ -6,12 +6,11 @@
 #    By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/09/27 23:34:05 by rmedeiro          #+#    #+#              #
-#    Updated: 2026/10/16 16:10:56 by rmedeiro         ###   ########.fr        #
+#    Updated: 2026/10/17 14:24:21 by rmedeiro         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME = ircserv
-B_NAME = miku
 
 CXX = c++
 
@@ -22,25 +21,20 @@ DEBUG_FLAGS = -g
 
 OBJ_DIR = .objs
 DBG_DIR = .objs-debug
-B_OBJ_DIR = .objs-bonus
 
 SRCS = srcs/main.cpp \
        srcs/Server.cpp \
        srcs/Client.cpp \
        srcs/Commands.cpp \
        srcs/Channels.cpp \
-       srcs/Utils.cpp
-
-B_SRCS = bonus/srcs/main_bonus.cpp \
-         bonus/srcs/Bot.cpp
+       srcs/Utils.cpp \
+       bonus/srcs/Bot.cpp
 
 OBJS = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 DBG_OBJS = $(SRCS:%.cpp=$(DBG_DIR)/%.o)
-B_OBJS = $(B_SRCS:%.cpp=$(B_OBJ_DIR)/%.o)
 
 DEPS = $(OBJS:.o=.d)
 DBG_DEPS = $(DBG_OBJS:.o=.d)
-B_DEPS = $(B_OBJS:.o=.d)
 
 RESET = \033[0m
 GREEN = \033[0;32m
@@ -58,10 +52,6 @@ $(OBJ_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(CXXAFLAGS) -c $< -o $@
 
-$(B_OBJ_DIR)/%.o: %.cpp
-	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $(CXXAFLAGS) -Ibonus/includes -c $< -o $@
-
 d: $(DBG_OBJS)
 	$(CXX) $(CXXFLAGS) $(CXXAFLAGS) $(DEBUG_FLAGS) $(DBG_OBJS) -o $(NAME)
 	@echo -e "$(CYAN)$(NAME) compiled with debug flags!$(RESET)"
@@ -70,21 +60,17 @@ $(DBG_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(CXXAFLAGS) $(DEBUG_FLAGS) -c $< -o $@
 
-$(B_NAME): $(B_OBJS)
-	$(CXX) $(CXXFLAGS) $(CXXAFLAGS) $(B_OBJS) -o $(B_NAME)
-	@echo -e "$(GREEN)$(B_NAME) compiled!$(RESET)"
-
 clean:
-	rm -rf $(OBJ_DIR) $(DBG_DIR) $(B_OBJ_DIR)
+	rm -rf $(OBJ_DIR) $(DBG_DIR)
 	@echo -e "$(YELLOW)Object files removed!$(RESET)"
 
 fclean: clean
-	rm -f $(NAME) $(B_NAME) test
+	rm -f $(NAME)
 	@echo -e "$(RED)Executables removed!$(RESET)"
 
 re: fclean all
 	@echo -e "$(GREEN)Recompiled $(NAME)!$(RESET)"
 
--include $(DEPS) $(DBG_DEPS) $(B_DEPS)
+-include $(DEPS) $(DBG_DEPS)
 
 .PHONY: all d clean fclean re
