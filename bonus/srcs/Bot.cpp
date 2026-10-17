@@ -6,12 +6,13 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 22:22:06 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 22:52:13 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Bot.hpp"
 #include "../../includes/Server.hpp"
+#include "../../includes/Utils.hpp"
 #include <iostream>
 #include <cstdlib>
 #include <cerrno>
@@ -57,19 +58,6 @@ void Bot::close_requests(int bot_fd)
     this->_requests.erase(bot_fd);
 }
 
-static std::string nb_to_str(size_t nb)
-{
-    std::string res;
-    if (nb == 0)
-        return ("0");
-    while (nb > 0)
-    {
-        res.insert(res.begin(), '0' + (nb % 10));
-        nb /= 10;
-    }
-    return (res);
-}
-
 std::string Bot::create_request(const std::string &question)
 {
     std::string content;
@@ -91,8 +79,8 @@ std::string Bot::create_request(const std::string &question)
 
 bool Bot::start_request(int client_fd, const std::string &question)
 {
-    sockaddr_in addr = {};
-    epoll_event event = {};
+    sockaddr_in addr;
+    epoll_event event;
     t_request req;
     int bot_fd;
 	int res;
@@ -218,6 +206,16 @@ bool Bot::get_response(t_response &response)
     response = this->_responses[0]; // get first response
     this->_responses.erase(this->_responses.begin()); // remove it from vector
     return (true); // response retrieved
+}
+
+void Server::send_response(int client_fd, const std::string &msg)
+{
+    std::map<int, Client>::iterator it;
+
+    it = this->_clients.find(client_fd); // find client with this fd
+    if (it == this->_clients.end()) // client not found -> ignore response
+        return;
+    this->send_msg(it->second, "NOTICE " + it->second.get_nick() + " :" + msg + "\r\n" + "\n", EPOLLIN | EPOLLOUT);
 }
 
 void Bot::send_responses(Server &server)

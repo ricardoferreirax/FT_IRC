@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 16:23:01 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 22:41:48 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,8 +45,9 @@ class Server
 		void	handle_client_data(int client_fd, int event);
 		void	send_msg(Client &client, const std::string &msg, int events);
 		void	process_msg(Client &client, std::string &client_buffer);
-		void	execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params);
+		void 	disconnect_client(int client_fd);
 		
+		void	execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params);
 		void	handle_pass(Client &client, const std::vector<std::string> &params);
 		void	handle_nick(Client &client, const std::vector<std::string> &params);
 		void	handle_user(Client &client, const std::vector<std::string> &params);

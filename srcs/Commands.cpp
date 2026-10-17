@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 15:27:10 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 22:37:14 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -271,7 +271,7 @@ void Server::handle_join(Client &client, const std::vector<std::string> &params)
 		{
 			Channel ch(chan_name, default_mode(), client);
 			this->_channels.insert(std::pair<std::string, Channel>(chan_name, ch));
-			this->send_msg(client, "You created Channel " + chan_name + "\r\n", EPOLLIN | EPOLLOUT);
+			this->send_msg(client, "You created Channel " + chan_name + "\r\n" + "\n", EPOLLIN | EPOLLOUT);
 		}
 		else
 		{
@@ -296,7 +296,7 @@ void Server::handle_join(Client &client, const std::vector<std::string> &params)
 			}
 			else
 			{
-				this->send_msg(client, "You joined " + chan_name + "\r\n", EPOLLIN | EPOLLOUT);
+				this->send_msg(client, "You joined " + chan_name + "\r\n" + "\n", EPOLLIN | EPOLLOUT);
 			}
 		}
 		i++;
@@ -325,7 +325,6 @@ void Server::handle_miku(Client &client, const std::vector<std::string> &params)
         this->send_msg(client, "NOTICE " + client.get_nick() + " :[MIKU] Provide a question.\r\n", EPOLLIN | EPOLLOUT);
         return;
     }
-    this->send_msg(client, "NOTICE " + client.get_nick() + " :[MIKU] question: " + question + "\r\n", EPOLLIN | EPOLLOUT);
     if (!this->_bot.start_request(client.get_client_fd(), question))
     {
         this->send_msg(client, "NOTICE " + client.get_nick() + " :[MIKU] Request failed.\r\n", EPOLLIN | EPOLLOUT);
@@ -335,22 +334,39 @@ void Server::handle_miku(Client &client, const std::vector<std::string> &params)
 
 void Server::handle_fast(Client &client)
 {
-	std::string nick;
-	std::string user;
-	std::string host;
-
-	nick = generateRandomString(9);
-	user = generateRandomString(9);
-	host = generateRandomString(9);
-	client.set_auth(true);
-	client.set_nick(nick);
-	client.set_user(user);
-	client.set_host_ip(host);
-	if (client.can_register())
-		client.set_registered(true);
-	this->send_msg(client, "You shall be named: " + nick + "\n", EPOLLIN | EPOLLOUT);
-	this->send_msg(client, "Your home kingdom shall be: " + host + "\n", EPOLLIN | EPOLLOUT);
-	this->send_msg(client, "Thy user shall be sung as: " + user +  "\n", EPOLLIN | EPOLLOUT);
-	this->send_msg(client, "Go forth, make haste, child of Mercury\r\n", EPOLLIN | EPOLLOUT);
-	this->send_msg(client, registration_reply(client, this->_name, this->_date) + "\n", EPOLLIN | EPOLLOUT);
+    if (!client.get_auth())
+    {
+        this->send_msg(client, ":ircserv 464 * :Password required before FAST\r\n", EPOLLIN | EPOLLOUT);
+        return;
+    }
+    client.set_nick("Nick");
+    client.set_user("User");
+    client.set_host_ip("default");
+    if (client.can_register())
+    {
+        client.set_registered(true);
+        this->send_msg(client, registration_reply(client, this->_name, this->_date), EPOLLIN | EPOLLOUT);
+    }
 }
+
+// void Server::handle_fast(Client &client)
+// {
+// 	std::string nick;
+// 	std::string user;
+// 	std::string host;
+
+// 	nick = generateRandomString(9);
+// 	user = generateRandomString(9);
+// 	host = generateRandomString(9);
+// 	client.set_auth(true);
+// 	client.set_nick(nick);
+// 	client.set_user(user);
+// 	client.set_host_ip(host);
+// 	if (client.can_register())
+// 		client.set_registered(true);
+// 	this->send_msg(client, "You shall be named: " + nick + "\n", EPOLLIN | EPOLLOUT);
+// 	this->send_msg(client, "Your home kingdom shall be: " + host + "\n", EPOLLIN | EPOLLOUT);
+// 	this->send_msg(client, "Thy user shall be sung as: " + user +  "\n", EPOLLIN | EPOLLOUT);
+// 	this->send_msg(client, "Go forth, make haste, child of Mercury\r\n", EPOLLIN | EPOLLOUT);
+// 	this->send_msg(client, registration_reply(client, this->_name, this->_date) + "\n", EPOLLIN | EPOLLOUT);
+// }

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/15 16:36:42 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 22:27:30 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -153,4 +153,17 @@ std::string generateRandomString(int length)
 		random_string += chars[index];
 	}
 	return (random_string);
+}
+
+std::string nb_to_str(size_t nb)
+{
+    std::string res;
+    if (nb == 0)
+        return ("0");
+    while (nb > 0)
+    {
+        res.insert(res.begin(), '0' + (nb % 10));
+        nb /= 10;
+    }
+    return (res);
 }
