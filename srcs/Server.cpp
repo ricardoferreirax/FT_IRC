@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 16:13:59 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 16:43:11 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,10 +67,7 @@ Server::~Server()
         close(it->first);
     }
     if (this->_epoll_fd != -1)
-	{
-		this->_bot.close_requests();
 		close(this->_epoll_fd);
-	}
     if (this->_listen_fd != -1)
         close(this->_listen_fd);
     std::cout << "[SERVER] Closed!" << std::endl;

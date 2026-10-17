@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 16:18:32 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 16:42:51 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,7 +28,7 @@ Bot::Bot(int epoll_fd)
 
 Bot::~Bot()
 {
-    this->close_requests();
+    this->close_requests(-1);
 }
 
 void Bot::set_epoll_fd(int epoll_fd)
@@ -43,17 +43,18 @@ bool Bot::has_request(int bot_fd) const
     return (true);
 }
 
-void Bot::close_requests()
+void Bot::close_requests(int bot_fd)
 {
-    std::map<int, t_request>::iterator it;
-
-    for (it = this->_requests.begin(); it != this->_requests.end(); ++it)
+    if (bot_fd == -1)
     {
-        if (this->_epoll_fd >= 0)
-            epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, it->first, NULL);
-        close(it->first);
+        while (!this->_requests.empty())
+            this->close_requests(this->_requests.begin()->first);
+        return;
     }
-    this->_requests.clear();
+    if (this->_epoll_fd >= 0)
+        epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, bot_fd, NULL);
+    close(bot_fd);
+    this->_requests.erase(bot_fd);
 }
 
 static std::string nb_to_str(size_t nb)
@@ -195,45 +196,37 @@ bool Bot::receive_response(int bot_fd)
 // Process a ready event from the IRC server epoll loop
 bool Bot::handle_event(int bot_fd, uint32_t events)
 {
-    epoll_event event;
     t_request &req = this->_requests[bot_fd];
-    bool success;
+	t_response response;
 
-	success = true;
     if (events & EPOLLERR)
-        success = false;
-    if (success && (events & EPOLLOUT))
+        return (this->close_requests(bot_fd), false);
+    if (events & EPOLLOUT)
     {
         if (!this->send_request(bot_fd))
-            success = false;
-        if (success && req.bytes_sent == req.send_buffer.size())
+            return (this->close_requests(bot_fd), false);
+        if (req.bytes_sent == req.send_buffer.size())
         {
+            epoll_event event = {};
             event.events = EPOLLIN;
             event.data.fd = bot_fd;
-            if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD,
-                bot_fd, &event) < 0)
-                success = false;
-            else
-                std::cout << "Miku: HTTP request sent!" << std::endl;
+            if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, bot_fd, &event) < 0)
+                return (this->close_requests(bot_fd), false);
         }
     }
-    if (success && (events & (EPOLLIN | EPOLLHUP)))
+    if (events & (EPOLLIN | EPOLLHUP))
     {
         if (!this->receive_response(bot_fd))
-            success = false;
+            return (this->close_requests(bot_fd), false);
     }
-    if (success && req.response_complete)
+    if (req.response_complete)
     {
-        std::cout << "Miku: response received!" << std::endl;
-        std::cout << req.recv_buffer << std::endl;
+        response.client_fd = req.client_fd;
+        response.msg = req.recv_buffer;
+        this->_responses.push_back(response);
+        this->close_requests(bot_fd);
     }
-    if (!success || req.response_complete)
-    {
-        epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, bot_fd, NULL);
-        close(bot_fd);
-        this->_requests.erase(bot_fd);
-    }
-    return (success);
+    return (true);
 }
 
 bool Bot::get_response(t_response &response)

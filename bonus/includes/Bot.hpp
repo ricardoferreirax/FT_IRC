@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 16:16:29 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/17 16:41:51 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,8 +62,7 @@ class Bot
         ~Bot();
 
         void set_epoll_fd(int epoll_fd);
-        void close_requests();
-
+		void close_requests(int bot_fd);
         bool has_request(int bot_fd) const;
         bool start_request(int client_fd, const std::string &question);
         bool handle_event(int bot_fd, uint32_t events);
