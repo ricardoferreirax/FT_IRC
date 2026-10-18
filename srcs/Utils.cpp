@@ -170,7 +170,7 @@ std::string generateRandomString(int length)
 {
 	int	index;
 
-	const std::string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	const std::string chars = "abcdefghijklmnopqrstuvwxyz0123456789";
 	std::string random_string = "";
 	for (int i = 0; i < length; ++i)
 	{

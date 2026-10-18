@@ -26,13 +26,8 @@ SRCS = srcs/main.cpp \
 	   srcs/Server.cpp \
 	   srcs/Client.cpp \
 	   srcs/Commands.cpp \
-<<<<<<< HEAD
-	   srcs/Utils.cpp \
-	   srcs/Channels.cpp
-=======
 	   srcs/Channels.cpp \
 	   srcs/Utils.cpp
->>>>>>> main
 
 OBJS = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 DBG_OBJS = $(SRCS:%.cpp=$(DBG_DIR)/%.o)

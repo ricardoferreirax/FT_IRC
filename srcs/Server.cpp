@@ -15,6 +15,9 @@
 #include "../includes/Utils.hpp"
 #include <iostream>
 #include <unistd.h>
+       #include <sys/socket.h>
+       #include <netinet/in.h>
+       #include <arpa/inet.h>
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>
@@ -288,13 +291,17 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 		this->handle_join(client, params);
 	else if (cmd == "PING")
 		this->handle_ping(client, params);
+	else if (cmd == "INVITE")
+		this->handle_invite(client, params);
+	else if(cmd == "MODE")
+		this->handle_mode(client, params);
+	else if (cmd == "FAST")
+		this->handle_fast(client);
 	else if (cmd == "QUIT")
 	{
 		this->handle_quit(client, params);
 		return;
 	}
-	else if (cmd == "FAST")
-		this->handle_fast(client);
 	else
 	{
 		send_buffer += ":" + this->_name + " 421 * "

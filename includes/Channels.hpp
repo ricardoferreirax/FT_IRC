@@ -49,6 +49,11 @@ class Channel
 		bool joinChannel(Client guest);
 		int joinChannel(Client guest, std::string key);
 		bool inviteUser(Client guest);
+		std::string	getName(void) const;
+		std::set<int> getChannops(void) const;
+		std::map<int, Client> getClients(void) const;
+		std::set<int> getInvites(void) const;
+		t_cmode getMode(void) const;
 };
 
 #endif // !CHANNELS_HPP

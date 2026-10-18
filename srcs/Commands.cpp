@@ -304,11 +304,55 @@ void Server::handle_join(Client &client, const std::vector<std::string> &params)
 	}
 }
 
+void	Server::handle_mode(Client &client, const std::vector<std::string> &params)
+{
+
+}
+
+void	Server::handle_invite(Client &client, const std::vector<std::string> &params)
+{
+	std::map<std::string, Channel>::iterator chanit = this->_channels.find(params[0]);
+	std::map<int, Client>::iterator clienit = this->_clients.begin();
+	std::string &to_send_inviter = client.get_send_buffer();
+	if(chanit == this->_channels.end())
+	{
+		to_send_inviter += "NOTICE: No such channel\r\n";
+		this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
+		return;
+	}
+	while(clienit != this->_clients.end())
+	{
+		if(clienit->second.get_nick() == params[1])
+			break;
+		clienit++;
+	}
+	if(clienit == this->_clients.end())
+	{
+		to_send_inviter += "NOTICE: No such person\r\n";
+		this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
+		return;
+	}
+	if(chanit->second.getMode().invite_only == true)
+	{
+		if(chanit->second.getChannops().find(client.get_client_fd()) == chanit->second.getChannops().end())
+		{
+			to_send_inviter += "NOTICE: You lack permisson to issue invites\r\n";
+			this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
+			return;
+		}
+	}
+	std::string &to_send_invitee = clienit->second.get_send_buffer();
+	to_send_inviter += "You invited " + clienit->second.get_nick() + " to channel " + chanit->second.getName()+ "\r\n";
+	to_send_invitee += "You got invited by " + client.get_nick() + " to join channel " + chanit->second.getName() + "\r\n";
+	this->update_epoll(clienit->second.get_client_fd(), EPOLLIN | EPOLLOUT);
+	this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
+}
+
 void Server::handle_fast(Client &client)
 {
 	client.set_auth(true);
-	client.set_nick(generateRandomString(9));
-	client.set_user(generateRandomString(9));
+	client.set_nick(generateRandomString(3));
+	client.set_user(generateRandomString(3));
 	client.set_registered(true);
 	client.set_host_ip(generateRandomString(9));
 	std::string &to_send = client.get_send_buffer();
@@ -317,84 +361,5 @@ void Server::handle_fast(Client &client)
 	to_send += "Thy user shall be sung as: " + client.get_user() +  "\n";
 	to_send += "Go forth, make haste, child of Mercury\r\n";
 	this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
-}
-
-
-void Server::handle_join(Client &client, const std::string &params)
-{
-	size_t	i;
-
-	std::string &to_send = client.get_send_buffer();
-	if (params.empty())
-	{
-		to_send += ":" + this->_name + " XXX *: Need more params\r\n";
-		update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
-		return ;
-	}
-	std::vector<std::string> arr2 = ft_split(params, ' ');
-	if (arr2.size() > 2)
-	{
-		to_send += ":" + this->_name + " XXX *: Too many params\r\n";
-		update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
-		return ;
-	}
-	std::vector<std::string> c_names = ft_split(arr2[0], ',');
-	std::vector<std::string> keys;
-	if (arr2.size() > 1)
-		keys = ft_split(arr2[1], ',');
-	i = -1;
-	while (++i < c_names.size())
-	{
-		std::string chan_name = c_names[i];
-		if(chan_name[0] != '#' && chan_name[0] != '&')
-		{
-			to_send += "You fucked up homie, channel can only start with # or &\r\n";
-			this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
-			continue;
-		}
-		std::string key;
-		if (i < keys.size())
-			key = keys[i];
-		else
-			key = "";
-		std::map<std::string,
-			Channel>::iterator it = this->_channels.find(chan_name);
-		if (it == this->_channels.end())
-		{
-			Channel ch(chan_name, default_mode(), client);
-			this->_channels.insert(std::pair<std::string, Channel>(chan_name,
-					ch));
-			to_send += "You created Channel " + chan_name + "\r\n";
-			this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
-		}
-		else
-		{
-			int ret = it->second.joinChannel(client, key);
-			if (ret)
-			{
-				switch (ret)
-				{
-					case 1:
-						to_send += "NOTICE: User is already in Channel\r\n";
-						break;
-					case 2:
-						to_send += ":" + this->getName() + " XXX *: #" + chan_name + " This place is full, get yo ass outta here\r\n";
-						break;
-					case 3:
-						to_send += ":" + this->getName() + " 473 *: #" + chan_name + " You weren't invited to the boys club. Access denied\r\n";
-						break;
-					case 4:
-						to_send = ":" + this->getName() + " XXX *: #" + chan_name + " What's the pass? This is boys only club\r\n";
-						break;
-					this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
-				}
-			}
-			else
-			{
-				to_send += "You joined #" + chan_name + " \r\n";
-				this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
-			}
-		}
-	}
 }
 

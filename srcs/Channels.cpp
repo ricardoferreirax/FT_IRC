@@ -44,3 +44,38 @@ int Channel::joinChannel(Client guest, std::string key)
 	this->_clients.insert(std::make_pair(guest.get_client_fd(), guest));
 	return 0;
 }
+
+
+bool Channel::inviteUser(Client guest)
+{
+	this->_invites.insert(guest.get_client_fd());
+	return true;
+}
+
+std::string	Channel::getName(void) const
+{
+	return (this->_name);
+}
+
+std::set<int> Channel::getChannops(void) const
+{
+	return (this->_chanops);
+}
+
+
+std::map<int, Client> Channel::getClients(void) const
+{
+	return (this->_clients);
+}
+
+std::set<int> Channel::getInvites(void) const
+{
+	return (this->_invites);
+}
+
+
+t_cmode Channel::getMode(void) const
+{
+	return (this->_mode);
+}
+

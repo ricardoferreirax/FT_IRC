@@ -51,6 +51,8 @@ class Server
 		void	handle_quit(Client &client, const std::vector<std::string> &params);
 
 		void 	handle_join(Client &client, const std::vector<std::string> &params);
+		void	handle_invite(Client &client, const std::vector<std::string> &params);
+		void	handle_mode(Client &client, const std::vector<std::string> &params);
 		void	handle_fast(Client &client);
 
 	public:
