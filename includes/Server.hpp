@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 22:41:48 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/18 17:42:16 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,7 +54,7 @@ class Server
 		void	handle_privmsg(Client &client, const std::vector<std::string> &params);
 		void	handle_ping(Client &client, const std::vector<std::string> &params);
 		void 	handle_join(Client &client, const std::vector<std::string> &params);
-		void	handle_fast(Client &client);
+		void    handle_fast(Client &client, const std::vector<std::string> &params);
 		void 	handle_miku(Client &client, const std::vector<std::string> &params);
 		void	handle_quit(Client &client, const std::vector<std::string> &params);
 	

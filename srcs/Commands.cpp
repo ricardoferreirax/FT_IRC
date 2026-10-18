@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 22:37:14 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/18 18:06:55 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,47 +15,38 @@
 
 void Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
 {
-	int client_fd;
+    typedef void (Server::*Cmd)(Client &, const std::vector<std::string> &); // type cmd points to a member function of Server
+    std::map<std::string, Cmd> cmds; // map each cmd to its corresponding member function
 
-	client_fd = client.get_client_fd();
-	if ((cmd == "PRIVMSG" || cmd == "JOIN" || cmd == "MIKU") && !client.get_registered())
+    cmds["PASS"] = &Server::handle_pass;
+    cmds["NICK"] = &Server::handle_nick;
+    cmds["USER"] = &Server::handle_user;
+    cmds["PRIVMSG"] = &Server::handle_privmsg;
+    cmds["JOIN"] = &Server::handle_join;
+    cmds["PING"] = &Server::handle_ping;
+    cmds["QUIT"] = &Server::handle_quit;
+    cmds["MIKU"] = &Server::handle_miku;
+    cmds["FAST"] = &Server::handle_fast;
+    if (cmds.find(cmd) == cmds.end()) // check if cmd is in the map
+    {
+        this->send_msg(client, ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n", EPOLLIN | EPOLLOUT);
+        return;
+    }
+    if ((cmd == "PRIVMSG" || cmd == "JOIN" || cmd == "MIKU") && !client.get_registered())
+    {
+        this->send_msg(client, ":" + this->_name + " 451 * :You have not registered\r\n", EPOLLIN | EPOLLOUT);
+        return;
+    }
+    (this->*cmds[cmd])(client, params); // execute corresponding function for cmd
+    if (cmd == "QUIT")
+        return;	
+    if (!client.get_registered() && client.can_register()) // if client is not registered and has set pass, nick, and user
 	{
-		this->send_msg(client, ":" + this->_name + " 451 * :You have not registered\r\n", EPOLLIN | EPOLLOUT);
-		return;
-	}
-	if (cmd == "PASS")
-		this->handle_pass(client, params);
-	else if (cmd == "NICK")
-		this->handle_nick(client, params);
-	else if (cmd == "USER")
-		this->handle_user(client, params);
-	else if (cmd == "PRIVMSG")
-		this->handle_privmsg(client, params);
-	else if (cmd == "JOIN")
-		this->handle_join(client, params);
-	else if (cmd == "PING")
-		this->handle_ping(client, params);
-	else if (cmd == "FAST")
-		this->handle_fast(client);
-	else if (cmd == "MIKU")
-    	this->handle_miku(client, params);
-	else if (cmd == "QUIT")
-	{
-		this->handle_quit(client, params);
-		return;
-	}
-	else
-	{
-		this->send_msg(client, ":" + this->_name + " 421 * " + cmd + " :Unknown command\r\n", EPOLLIN | EPOLLOUT);
-		return;
-	}
-	if (!client.get_registered() && client.can_register())
-	{
-		client.set_registered(true);
+		client.set_registered(true); // mark client as registered
 		std::cout << "\n=====================================================" << std::endl;
-		std::cout << "          CLIENT " << client_fd << " REGISTERED!" << std::endl;
+		std::cout << "          CLIENT " << client.get_client_fd() << " REGISTERED!" << std::endl;
 		std::cout << "=====================================================" << std::endl;
-		this->send_msg(client, registration_reply(client, this->_name, this->_date) + "\n", EPOLLIN | EPOLLOUT);
+		this->send_msg(client, registration_reply(client, this->_name, this->_date), EPOLLIN | EPOLLOUT);
 	}
 }
 
@@ -332,21 +323,18 @@ void Server::handle_miku(Client &client, const std::vector<std::string> &params)
     }
 }
 
-void Server::handle_fast(Client &client)
+void Server::handle_fast(Client &client, const std::vector<std::string> &params)
 {
-    if (!client.get_auth())
-    {
-        this->send_msg(client, ":ircserv 464 * :Password required before FAST\r\n", EPOLLIN | EPOLLOUT);
-        return;
-    }
-    client.set_nick("Nick");
-    client.set_user("User");
-    client.set_host_ip("default");
-    if (client.can_register())
-    {
-        client.set_registered(true);
-        this->send_msg(client, registration_reply(client, this->_name, this->_date), EPOLLIN | EPOLLOUT);
-    }
+	(void)params;
+
+	if (!client.get_auth())
+	{
+		this->send_msg(client, ":" + this->_name + " 464 * :Password required before FAST\r\n", EPOLLIN | EPOLLOUT);
+		return;
+	}
+	client.set_nick("Nick");
+	client.set_user("User");
+	client.set_host_ip("localhost");
 }
 
 // void Server::handle_fast(Client &client)
