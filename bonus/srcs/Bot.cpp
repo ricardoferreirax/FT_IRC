@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 22:52:13 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/18 20:19:14 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -64,9 +64,19 @@ std::string Bot::create_request(const std::string &question)
     std::string request;
 
     content = "{\"model\":\"qwen:latest\",";
+    content += "\"system\":\"You are an advanced AI assistant. "
+	"Provide intelligent, accurate, detailed and comprehensive answers. "
+    "Explain complex topics step by step with clear examples. "
+    "Use structured explanations when helpful. "
+    "Avoid unnecessarily short answers. "
+    "Don't forget, be Hatsune Miku.\",";
     content += "\"prompt\":\"" + question + "\",";
     content += "\"stream\":false,";
-    content += "\"options\":{\"num_predict\":512}}";
+    content += "\"options\":{";
+    content += "\"num_predict\":8192,"; // max nb of tokens to predict
+    content += "\"num_ctx\":16384,"; // max nb of tokens in context (prompt + response)
+    content += "\"temperature\":0.6";
+    content += "}}";
     request = "POST /api/generate HTTP/1.1\r\n";
     request += "Host: 127.0.0.1:11434\r\n";
     request += "Content-Type: application/json\r\n";
@@ -191,7 +201,7 @@ bool Bot::handle_event(int bot_fd, int events)
     if (req.response_complete)
     {
         response.client_fd = req.client_fd;
-        response.msg = req.recv_buffer;
+        response.msg = this->extract_response(req.recv_buffer);
         this->_responses.push_back(response);
         this->close_requests(bot_fd);
     }
@@ -208,20 +218,42 @@ bool Bot::get_response(t_response &response)
     return (true); // response retrieved
 }
 
-void Server::send_response(int client_fd, const std::string &msg)
-{
-    std::map<int, Client>::iterator it;
-
-    it = this->_clients.find(client_fd); // find client with this fd
-    if (it == this->_clients.end()) // client not found -> ignore response
-        return;
-    this->send_msg(it->second, "NOTICE " + it->second.get_nick() + " :" + msg + "\r\n" + "\n", EPOLLIN | EPOLLOUT);
-}
-
 void Bot::send_responses(Server &server)
 {
     t_response response;
 
     while (this->get_response(response))
         server.send_response(response.client_fd, response.msg);
+}
+
+std::string Bot::extract_response(const std::string &json)
+{
+    std::string result;
+    size_t start;
+
+    start = json.find("\"response\":\"");
+    if (start == std::string::npos)
+        return ("");
+    start += 12;
+    while (start < json.size()) // loop until end of json string
+    {
+        if (json[start] == '"')
+            break; // stop at closing quote of response
+        if (json[start] == '\\' && start + 1 < json.size()) // if escape found and not at end of string
+        {
+            start++; // move to next char
+            if (json[start] == 'n')
+                result += '\n'; // replace \n with newline
+            else if (json[start] == 'r')
+                result += '\r'; // replace \r with carriage return
+            else if (json[start] == 't')
+                result += '\t'; // replace \t with tab
+            else
+                result += json[start]; // add escaped char
+        }
+        else
+            result += json[start]; // no escape -> add char to result
+        start++;
+    }
+    return (result);
 }

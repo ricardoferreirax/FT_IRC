@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/18 18:47:24 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/18 20:02:38 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -295,6 +295,17 @@ void Server::send_error(Client &client, int error, const std::string &param)
     if (errors.find(error) == errors.end())
         return; // error code is not in map -> ignore it
     this->send_msg(client, ":" + this->_name + " " + errors[error] + "\r\n", EPOLLIN | EPOLLOUT);
+}
+
+// Miku bot
+void Server::send_response(int client_fd, const std::string &msg)
+{
+    std::map<int, Client>::iterator it;
+
+    it = this->_clients.find(client_fd); // find client with this fd
+    if (it == this->_clients.end()) // client not found -> ignore response
+        return;
+    this->send_msg(it->second, "Miku :" + msg + "\r\n" + "\n", EPOLLIN | EPOLLOUT);
 }
 
 std::string Server::getName(void) const

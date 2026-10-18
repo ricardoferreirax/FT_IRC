@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 22:22:31 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/18 19:59:21 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,6 +67,7 @@ class Bot
         bool handle_event(int bot_fd, int events);
 		void send_responses(Server &server);
 		bool get_response(t_response &response);
+		std::string extract_response(const std::string &json);
 };
 
 #endif
