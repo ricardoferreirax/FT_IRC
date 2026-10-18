@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/18 20:19:14 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/18 22:19:17 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -64,19 +64,22 @@ std::string Bot::create_request(const std::string &question)
     std::string request;
 
     content = "{\"model\":\"qwen:latest\",";
-    content += "\"system\":\"You are an advanced AI assistant. "
-	"Provide intelligent, accurate, detailed and comprehensive answers. "
-    "Explain complex topics step by step with clear examples. "
-    "Use structured explanations when helpful. "
-    "Avoid unnecessarily short answers. "
-    "Don't forget, be Hatsune Miku.\",";
+    content += "\"system\":\"You are Miku, a reliable AI assistant. "
+    "Prioritize factual accuracy over creativity. "
+    "Give clear and correct answers. "
+    "Only provide detailed explanations when requested. "
+    "For mathematics, calculate carefully. "
+    "For science and programming, use established knowledge. "
+    "If uncertain, say so.\",";
     content += "\"prompt\":\"" + question + "\",";
     content += "\"stream\":false,";
+    content += "\"keep_alive\":\"10m\",";
     content += "\"options\":{";
-    content += "\"num_predict\":8192,"; // max nb of tokens to predict
-    content += "\"num_ctx\":16384,"; // max nb of tokens in context (prompt + response)
-    content += "\"temperature\":0.6";
+    content += "\"num_predict\":1024,";
+    content += "\"num_ctx\":4096,";
+    content += "\"temperature\":0.2";
     content += "}}";
+
     request = "POST /api/generate HTTP/1.1\r\n";
     request += "Host: 127.0.0.1:11434\r\n";
     request += "Content-Type: application/json\r\n";
@@ -84,6 +87,7 @@ std::string Bot::create_request(const std::string &question)
     request += "Connection: close\r\n";
     request += "\r\n";
     request += content;
+
     return (request);
 }
 
