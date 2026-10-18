@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 22:54:51 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/18 18:47:24 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -270,6 +270,31 @@ void Server::send_msg(Client &client, const std::string &msg, int events)
 	event.data.fd = client_fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
+}
+
+void Server::send_error(Client &client, int error, const std::string &param)
+{
+    std::map<int, std::string> errors; // each error code has a corresponding error msg
+    std::string nick;
+
+    nick = client.get_nick();
+    if (nick.empty())
+        nick = "*";
+    errors[401] = "401 " + nick + " " + param + " :No such nick/channel";
+    errors[409] = "409 " + nick + " :No origin specified";
+    errors[411] = "411 " + nick + " :No recipient given (" + param + ")";
+    errors[412] = "412 " + nick + " :No text to send";
+    errors[421] = "421 " + nick + " " + param + " :Unknown command";
+    errors[431] = "431 " + nick + " :No nickname given";
+    errors[432] = "432 " + nick + " " + param + " :Erroneous nickname";
+    errors[433] = "433 " + nick + " " + param + " :Nickname is already in use";
+    errors[451] = "451 " + nick + " :You have not registered";
+    errors[461] = "461 " + nick + " " + param + " :Not enough parameters";
+    errors[462] = "462 " + nick + " :You may not reregister";
+    errors[464] = "464 " + nick + " :Password incorrect";
+    if (errors.find(error) == errors.end())
+        return; // error code is not in map -> ignore it
+    this->send_msg(client, ":" + this->_name + " " + errors[error] + "\r\n", EPOLLIN | EPOLLOUT);
 }
 
 std::string Server::getName(void) const

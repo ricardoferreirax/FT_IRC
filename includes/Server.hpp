@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/18 17:42:16 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/18 19:26:56 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,6 @@
 #include <string>
 #include <sys/epoll.h>
 #include <ctime>
-
 
 extern volatile sig_atomic_t running;
 
@@ -43,20 +42,21 @@ class Server
 
 		void	accept_client();
 		void	handle_client_data(int client_fd, int event);
-		void	send_msg(Client &client, const std::string &msg, int events);
 		void	process_msg(Client &client, std::string &client_buffer);
 		void 	disconnect_client(int client_fd);
+		void	send_msg(Client &client, const std::string &msg, int events);
+		void 	send_error(Client &client, int error, const std::string &cmd);
 		
 		void	execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params);
-		void	handle_pass(Client &client, const std::vector<std::string> &params);
-		void	handle_nick(Client &client, const std::vector<std::string> &params);
-		void	handle_user(Client &client, const std::vector<std::string> &params);
-		void	handle_privmsg(Client &client, const std::vector<std::string> &params);
-		void	handle_ping(Client &client, const std::vector<std::string> &params);
-		void 	handle_join(Client &client, const std::vector<std::string> &params);
-		void    handle_fast(Client &client, const std::vector<std::string> &params);
-		void 	handle_miku(Client &client, const std::vector<std::string> &params);
-		void	handle_quit(Client &client, const std::vector<std::string> &params);
+		int 	handle_pass(Client &client, const std::vector<std::string> &params);
+		int 	handle_nick(Client &client, const std::vector<std::string> &params);
+		int 	handle_user(Client &client, const std::vector<std::string> &params);
+		int 	handle_privmsg(Client &client, const std::vector<std::string> &params);
+		int 	handle_ping(Client &client, const std::vector<std::string> &params);
+		int 	handle_quit(Client &client, const std::vector<std::string> &params);
+		int 	handle_join(Client &client, const std::vector<std::string> &params);
+		int 	handle_miku(Client &client, const std::vector<std::string> &params);
+		int 	handle_fast(Client &client, const std::vector<std::string> &params);
 	
 	public:
 		Server(const std::string &port, const std::string &pass);
