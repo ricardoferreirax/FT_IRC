@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/19 22:29:07 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/19 22:43:33 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -75,6 +75,7 @@ Server::~Server()
 
 void Server::disconnect_client(int client_fd)
 {
+	this->_bot.clear_memory(client_fd);
     epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
     close(client_fd);
     this->_clients.erase(client_fd);

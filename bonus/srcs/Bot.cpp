@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/19 21:58:10 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/19 23:30:27 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include <cerrno>
+#include <iostream>
 
 Bot::Bot()
 {
@@ -53,21 +54,49 @@ void Bot::close_requests(int bot_fd)
     this->_requests.erase(bot_fd);
 }
 
-std::string Bot::create_request(const std::string &question)
+void Bot::clear_memory(int client_fd)
+{
+    std::map<int, t_request>::iterator it;
+	int bot_fd;
+
+    this->_memory.erase(client_fd); // clear memory for client
+    it = this->_requests.begin();
+    while (it != this->_requests.end()) // iterate all requests
+    {
+        if (it->second.client_fd == client_fd) // if request belongs to client
+        {
+            bot_fd = it->first; // get fd for that request
+            ++it; // move to next request before deleting
+            this->close_requests(bot_fd); // close request and remove from map
+        }
+        else
+            ++it; // move to next request
+    }
+}
+
+std::string Bot::create_request(int client_fd, const std::string &question)
 {
     std::string content;
     std::string request;
+    std::string prompt;
+
+    prompt = this->_memory[client_fd];
+    prompt += "User: " + question + " Assistant:";
 
     content = "{\"model\":\"qwen:latest\",";
-    content += "\"system\":\"You are Miku, a friendly and japanese singer. "
-    "For simple questions, give short and direct answers. "
-    "For complex questions, provide more detailed explanations. "
-    "Use clear and natural language. Sometimes speak and sing in japanese. "
-    "If you do not know something, say so instead of inventing information.\",";
-    content += "\"prompt\":\"" + question + "\",";
+    content += "\"system\":\"You are Miku, a japanese singer. "
+    "Your name is Miku. "
+    "The user is a different person from you. "
+    "Remember important information about the user. "
+    "Always answer the user's latest question. "
+    "Use previous messages only to understand the context. "
+    "Do not repeat previous answers unless the user asks you to. "
+    "For simple questions, give short answers. "
+    "If you do not know something, say so.\",";
+    content += "\"prompt\":\"" + prompt + "\",";
     content += "\"stream\":false,";
     content += "\"options\":{\"num_predict\":512,";
-    content += "\"num_ctx\":4096,\"temperature\":0.5}}";
+    content += "\"num_ctx\":4096,\"temperature\":0.3}}";
 
     request = "POST /api/generate HTTP/1.1\r\n";
     request += "Host: 127.0.0.1:11434\r\n";
@@ -109,7 +138,8 @@ bool Bot::start_request(int client_fd, const std::string &question)
     req.client_fd = client_fd;
     req.bytes_sent = 0;
     req.response_complete = false;
-    req.send_buffer = this->create_request(question); // create http request to send to ollama
+	req.question = question;
+    req.send_buffer = this->create_request(client_fd, question); // create http request to send to ollama
     req.recv_buffer = ""; // init response buffer to receive ollama response
     event.events = EPOLLOUT; // begin by monitoring socket for writing -> send request to ollama
     event.data.fd = bot_fd;
@@ -168,6 +198,7 @@ bool Bot::handle_request_data(int bot_fd, int event)
 bool Bot::handle_event(Server &server, int bot_fd, int events)
 {
     t_request &req = this->_requests[bot_fd];
+    std::string answer;
 
     if (events & EPOLLERR)
     {
@@ -186,7 +217,13 @@ bool Bot::handle_event(Server &server, int bot_fd, int events)
     }
     if (req.response_complete)
     {
-        server.send_response(req.client_fd, this->extract_response(req.recv_buffer)); // send completed response to client
+        answer = this->extract_response(req.recv_buffer);
+        if (answer != "Ollama returned an error." && answer != "No response from Ollama.")
+        {
+            this->_memory[req.client_fd] += "User: " + req.question + " ";
+			this->_memory[req.client_fd] += "Assistant: " + answer + " ";
+        }
+        server.send_response(req.client_fd, answer); // send completed response to client
         this->close_requests(bot_fd);
         return (true);
     }
