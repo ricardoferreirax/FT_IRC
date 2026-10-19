@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/18 22:19:17 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/19 20:47:07 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -64,19 +64,14 @@ std::string Bot::create_request(const std::string &question)
     std::string request;
 
     content = "{\"model\":\"qwen:latest\",";
-    content += "\"system\":\"You are Miku, a reliable AI assistant. "
-    "Prioritize factual accuracy over creativity. "
-    "Give clear and correct answers. "
-    "Only provide detailed explanations when requested. "
-    "For mathematics, calculate carefully. "
-    "For science and programming, use established knowledge. "
-    "If uncertain, say so.\",";
+    content += "\"system\":\"You are Miku, a DUMB AI ASSISTANT. "
+               "Only provide detailed explanations when requested. "
+               "If uncertain, say so.\",";
     content += "\"prompt\":\"" + question + "\",";
     content += "\"stream\":false,";
-    content += "\"keep_alive\":\"10m\",";
     content += "\"options\":{";
-    content += "\"num_predict\":1024,";
-    content += "\"num_ctx\":4096,";
+    content += "\"num_predict\":256,";
+    content += "\"num_ctx\":2048,";
     content += "\"temperature\":0.2";
     content += "}}";
 
@@ -97,7 +92,7 @@ bool Bot::start_request(int client_fd, const std::string &question)
     epoll_event event;
     t_request req;
     int bot_fd;
-	int res;
+    int res;
 
     if (this->_epoll_fd < 0)
         return (false);
@@ -112,31 +107,29 @@ bool Bot::start_request(int client_fd, const std::string &question)
     addr.sin_family = AF_INET;
     addr.sin_port = htons(11434);
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    res = connect(bot_fd, (sockaddr *)&addr, sizeof(addr));
+    res = connect(bot_fd, (sockaddr *)&addr, sizeof(addr)); // start non-blocking connection to ollama
     if (res < 0 && errno != EINPROGRESS)
     {
         close(bot_fd);
         return (false);
     }
-    req.fd = bot_fd;
     req.client_fd = client_fd;
-    req.connection_pending = (res < 0);
     req.response_complete = false;
     req.send_buffer = this->create_request(question);
     req.recv_buffer = "";
     req.bytes_sent = 0;
-    event.events = EPOLLOUT;
+    // Wait until the bot socket is ready for writing.
+    event.events = EPOLLOUT; // wait till socket is ready for writing
     event.data.fd = bot_fd;
     if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, bot_fd, &event) < 0)
     {
         close(bot_fd);
         return (false);
     }
-    this->_requests[bot_fd] = req;
+    this->_requests[bot_fd] = req; // store request in map using bot socket fd as key
     return (true);
 }
 
-// EPOLLIN -> receive response FROM Ollama | EPOLLOUT -> send request TO Ollama
 bool Bot::handle_request_data(int bot_fd, int event)
 {
     t_request &req = this->_requests[bot_fd];
@@ -150,28 +143,22 @@ bool Bot::handle_request_data(int bot_fd, int event)
         bytes = recv(bot_fd, buffer, sizeof(buffer), 0); // receive data FROM ollama through bot socket
         if (bytes > 0)
             req.recv_buffer.append(buffer, bytes); // append bytes to buffer
-        else if (bytes == 0) // connection closed by ollama
-            req.response_complete = true; // mark response as complete
+        else if (bytes == 0)
+            req.response_complete = true; // if ollama closed connection -> response is complete
+        else
+            return (false); // recv failed
     }
-    else if (event == EPOLLOUT)
+    else if (event == EPOLLOUT) // send request
     {
-        msg = req.send_buffer.c_str() + req.bytes_sent; // msg points to next byte to send
-        remaining = req.send_buffer.size() - req.bytes_sent; // remaining bytes to send
-        if (remaining == 0) // all bytes sent
-            return (true); // true -> update to EPOLLIN for receiving response
-        bytes = send(bot_fd, msg, remaining, MSG_NOSIGNAL); // send data TO ollama through bot socket
+        remaining = req.send_buffer.size() - req.bytes_sent; // calculate how many bytes still need to be sent
+        if (remaining == 0)
+            return (true); // if all bytes have been sent -> update to EPOLLIN for receiving response
+        msg = req.send_buffer.c_str() + req.bytes_sent;
+        bytes = send(bot_fd, msg, remaining, MSG_NOSIGNAL); // send remaingin request TO ollama through bot socket
         if (bytes > 0)
-            req.bytes_sent += bytes; // update bytes sent
-        else if (bytes == 0) // connection closed by ollama
-            return (false);
-    }
-    else // unknown event
-        return (true);
-    if (bytes < 0) // send or recv failed
-    {
-        if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) // if send/recv would block or was interrupted
-            return (true); // try again
-        return (false);
+            req.bytes_sent += bytes; // add bytes sent to total bytes sent
+        else
+            return (false); // send failed
     }
     return (true); // true -> update to EPOLLIN for receiving response
 }
@@ -184,32 +171,45 @@ bool Bot::handle_event(int bot_fd, int events)
     epoll_event event;
 
     if (events & EPOLLERR)
-        return (this->close_requests(bot_fd), false);
-    if (events & EPOLLOUT)
     {
-        if (!this->handle_request_data(bot_fd, EPOLLOUT))
-            return (this->close_requests(bot_fd), false);
-        if (req.bytes_sent == req.send_buffer.size())
+        this->close_requests(bot_fd); // if epoll has error -> close bot socket and rmv request
+        return (false);
+    }
+    if (events & EPOLLOUT) // if socket is ready for writing
+    {
+        if (!this->handle_request_data(bot_fd, EPOLLOUT)) // send http request to ollama
+        {
+            this->close_requests(bot_fd);
+            return (false);
+        }
+        if (req.bytes_sent == req.send_buffer.size()) // when entire request has sent -> wait for response
         {
             event.events = EPOLLIN;
             event.data.fd = bot_fd;
-            if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, bot_fd, &event) < 0)
-                return (this->close_requests(bot_fd), false);
+            if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, bot_fd, &event) < 0) // update epoll to monitor for incoming data
+            {
+                this->close_requests(bot_fd);
+                return (false);
+            }
         }
     }
-    if (events & (EPOLLIN | EPOLLHUP))
+    if (events & EPOLLIN) // if socket is ready for reading ollama response
     {
-        if (!this->handle_request_data(bot_fd, EPOLLIN))
-            return (this->close_requests(bot_fd), false);
+        if (!this->handle_request_data(bot_fd, EPOLLIN)) // receive ollama response
+        {
+            this->close_requests(bot_fd);
+            return (false);
+        }
     }
-    if (req.response_complete)
+    if (req.response_complete) // if ollama closed connection -> response is complete
     {
-        response.client_fd = req.client_fd;
-        response.msg = this->extract_response(req.recv_buffer);
-        this->_responses.push_back(response);
-        this->close_requests(bot_fd);
+        response.client_fd = req.client_fd; // store client fd that requested response
+        response.msg = this->extract_response(req.recv_buffer); // extract response from ollama json
+        this->_responses.push_back(response); // add response to vector to be sent to client later
     }
-
+    else if (!(events & EPOLLHUP))
+        return (true); // if socket is not closed -> keep it open to receive more data
+    this->close_requests(bot_fd); // close socket after response or an unexpected hangup
     return (true);
 }
 

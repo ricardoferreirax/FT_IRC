@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/18 19:59:21 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/19 20:44:57 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,9 +28,7 @@
 
 typedef struct s_request
 {
-    int fd;
     int client_fd;
-    bool connection_pending;
 	bool response_complete;
     std::string send_buffer;
     std::string recv_buffer;
