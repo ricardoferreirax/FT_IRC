@@ -298,15 +298,46 @@ void Server::handle_join(Client &client, const std::vector<std::string> &params)
 			else
 			{
 				to_send += "You joined " + chan_name + "\r\n";
+				if(it->second.getMode().topic_restricted)
+					to_send += "The channels' topic is :" + it->second.getMode().topic + "\r\n";
 				this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
 			}
 		}
 	}
 }
 
+typedef struct s_modecmd
+{
+	char op;
+	bool is_add;
+	bool needs_param;
+} t_modecmd;
+
+
+std::vector<t_modecmd> parse_mode(std::string mode)
+{
+	std::vector<t_modecmd> commands;
+	int i = 0;
+	while(mode[i])
+	{
+		int j = 0;
+		if(mode[i] == "+" || mode[i] == "-")
+		{
+			j = put_node(&comands, mode[i]);
+		}
+	}
+}
+
 void	Server::handle_mode(Client &client, const std::vector<std::string> &params)
 {
-
+	std::string &to_send = client.get_send_buffer();
+	if (params.empty())
+	{
+		to_send += "Need more args";
+		this->update_epoll(client.get_client_fd(), EPOLLIN | EPOLLOUT);
+		return;
+	}
+	
 }
 
 void	Server::handle_invite(Client &client, const std::vector<std::string> &params)
