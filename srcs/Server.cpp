@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/19 20:45:28 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/19 21:00:55 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -149,10 +149,7 @@ void Server::monitor_epoll_events()
                     this->accept_client(); // accept new client connection and add to epoll
             }
             else if (this->_bot.has_request(current_fd))
-            {
-                this->_bot.handle_event(current_fd, events[i].events); // process bot socket event
-                this->_bot.send_responses(*this); // send responses to respective clients
-            }
+                this->_bot.handle_event(*this, current_fd, events[i].events);
             else if (this->_clients.find(current_fd) != this->_clients.end())
             {
                 if (events[i].events & EPOLLIN) // client socket is ready for reading
@@ -307,14 +304,39 @@ void Server::send_error(Client &client, int error, const std::string &param)
     this->send_msg(client, ":" + this->_name + " " + errors[error] + "\r\n", EPOLLIN | EPOLLOUT);
 }
 
+
 void Server::send_response(int client_fd, const std::string &msg)
 {
     std::map<int, Client>::iterator it;
+    std::string prefix;
+    std::string line;
+    size_t start;
+    size_t end;
+    size_t max_length;
 
-    it = this->_clients.find(client_fd); // find client that requested response
+    it = this->_clients.find(client_fd);
     if (it == this->_clients.end())
-        return; // if client has disconnected -> ignore response
-    this->send_msg(it->second, ":Miku!bot@ircserv PRIVMSG " + it->second.get_nick() + " :" + msg + "\r\n", EPOLLIN | EPOLLOUT);
+        return;
+    prefix = ":Miku!bot@ircserv PRIVMSG " + it->second.get_nick() + " :";
+    if (prefix.size() + 2 >= 512)
+        return;
+    max_length = 512 - prefix.size() - 2;
+    start = 0;
+    while (start < msg.size())
+    {
+        end = msg.find('\n', start);
+        if (end == std::string::npos)
+            end = msg.size();
+        while (start < end)
+        {
+            line = msg.substr(start, max_length);
+            if (line.size() > end - start)
+                line.resize(end - start);
+            this->send_msg(it->second, prefix + line + "\r\n", EPOLLIN | EPOLLOUT);
+            start += line.size();
+        }
+        start = end + 1;
+    }
 }
 
 std::string Server::getName(void) const
