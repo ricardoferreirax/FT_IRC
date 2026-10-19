@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:14:15 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/11 19:10:33 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/15 13:53:03 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,24 +24,21 @@ void	handle_signal(int signal)
 
 int main(int ac, char **av)
 {
-	int					port;
-	struct sigaction	action;
+	struct sigaction action;
 
 	if (ac != 3)
 	{
 		std::cerr << "./ircserv <port> <password>" << std::endl;
 		return (EXIT_FAILURE);
 	}
-	if (!validate_args(av, port))
-		return (EXIT_FAILURE);
 	try
 	{
-		action.sa_handler = handle_signal; // set signal handler function for sigint
+		action.sa_handler = handle_signal; // set handler function for sigint
 		sigemptyset(&action.sa_mask); // initialize mask to empty so no signals are blocked during execution of handler
 		action.sa_flags = 0;
-		if (sigaction(SIGINT, &action, NULL) < 0) // set action for sigint (ctrl-c) to specified handler
+		if (sigaction(SIGINT, &action, NULL) < 0) // set action for sigint to specified handler
 			throw std::runtime_error("IRC: sigaction() failed.");
-		Server server(port, av[2]);
+		Server server(av[1], av[2]);
 		server.start_socket();
 		server.monitor_epoll_events();
 	}

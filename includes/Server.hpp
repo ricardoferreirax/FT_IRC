@@ -6,20 +6,21 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/15 13:22:55 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/18 19:26:56 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
+#include "../bonus/includes/Bot.hpp"
+#include "Client.hpp"
 #include <csignal>
 #include <map>
 #include <vector>
 #include <string>
 #include <sys/epoll.h>
-
-#include "Client.hpp"
+#include <ctime>
 
 extern volatile sig_atomic_t running;
 
@@ -29,11 +30,13 @@ class Server
 {
 	protected:
 	private:
-		std::string				_name;
-		std::string				_pass;
-		int						_port;
-		int						_listen_fd;
-		int						_epoll_fd;
+		std::string	_name;
+		std::string	_pass;
+		std::string	_date;
+		int			_port;
+		int			_listen_fd;
+		int			_epoll_fd;
+		Bot 		_bot;
 
 		std::map<int, Client>	_clients;
 		std::map<std::string, Channel>	_channels;
@@ -41,29 +44,30 @@ class Server
 		void	accept_client();
 		void	handle_client_data(int client_fd, int event);
 		void	process_msg(Client &client, std::string &client_buffer);
-		void	execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params);
+		void 	disconnect_client(int client_fd);
+		void	send_msg(Client &client, const std::string &msg, int events);
+		void 	send_error(Client &client, int error, const std::string &cmd);
 		
-		void	handle_pass(Client &client, const std::vector<std::string> &params);
-		void	handle_nick(Client &client, const std::vector<std::string> &params);
-		void	handle_user(Client &client, const std::vector<std::string> &params);
-		void	handle_privmsg(Client &client, const std::vector<std::string> &params);
-		void	handle_ping(Client &client, const std::vector<std::string> &params);
-		void	handle_quit(Client &client, const std::vector<std::string> &params);
-
-		void 	handle_join(Client &client, const std::vector<std::string> &params);
-		void	handle_invite(Client &client, const std::vector<std::string> &params);
-		void	handle_mode(Client &client, const std::vector<std::string> &params);
-		void	handle_fast(Client &client);
-
+		void	execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params);
+		int 	handle_pass(Client &client, const std::vector<std::string> &params);
+		int 	handle_nick(Client &client, const std::vector<std::string> &params);
+		int 	handle_user(Client &client, const std::vector<std::string> &params);
+		int 	handle_privmsg(Client &client, const std::vector<std::string> &params);
+		int 	handle_ping(Client &client, const std::vector<std::string> &params);
+		int 	handle_quit(Client &client, const std::vector<std::string> &params);
+		int 	handle_join(Client &client, const std::vector<std::string> &params);
+		int 	handle_miku(Client &client, const std::vector<std::string> &params);
+		int 	handle_fast(Client &client, const std::vector<std::string> &params);
+	
 	public:
-		Server(int port, const std::string &pass);
-		Server(const Server &copy);
+		Server(const std::string &port, const std::string &pass);
 		~Server();
-
-		std::string getName(void) const;
-		void	update_epoll(int client_fd, int events);
+		
 		void	start_socket();
 		void	monitor_epoll_events();
+		
+		void 	send_response(int client_fd, const std::string &msg);
+		std::string	getName(void) const;
 };
 
 void	handle_signal(int signal);

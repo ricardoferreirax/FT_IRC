@@ -6,7 +6,7 @@
 #    By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/09/27 23:34:05 by rmedeiro          #+#    #+#              #
-#    Updated: 2026/10/14 17:53:19 by rmedeiro         ###   ########.fr        #
+#    Updated: 2026/10/17 14:24:21 by rmedeiro         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -23,11 +23,12 @@ OBJ_DIR = .objs
 DBG_DIR = .objs-debug
 
 SRCS = srcs/main.cpp \
-	   srcs/Server.cpp \
-	   srcs/Client.cpp \
-	   srcs/Commands.cpp \
-	   srcs/Channels.cpp \
-	   srcs/Utils.cpp
+       srcs/Server.cpp \
+       srcs/Client.cpp \
+       srcs/Commands.cpp \
+       srcs/Channels.cpp \
+       srcs/Utils.cpp \
+       bonus/srcs/Bot.cpp
 
 OBJS = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 DBG_OBJS = $(SRCS:%.cpp=$(DBG_DIR)/%.o)
@@ -65,8 +66,7 @@ clean:
 
 fclean: clean
 	rm -f $(NAME)
-	@echo -e "$(RED)$(NAME) removed!"
-	@echo -e "$(RED)$(NAME) removed!$(RESET)"
+	@echo -e "$(RED)Executables removed!$(RESET)"
 
 re: fclean all
 	@echo -e "$(GREEN)Recompiled $(NAME)!$(RESET)"
