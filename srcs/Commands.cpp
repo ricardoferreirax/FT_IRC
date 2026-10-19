@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/18 19:43:38 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/19 22:05:32 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,7 +26,6 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
     cmds["JOIN"] = &Server::handle_join;
     cmds["PING"] = &Server::handle_ping;
     cmds["QUIT"] = &Server::handle_quit;
-    cmds["MIKU"] = &Server::handle_miku;
     cmds["FAST"] = &Server::handle_fast;
     if (cmds.find(cmd) == cmds.end()) // check if cmd is in the map
     {
@@ -138,6 +137,7 @@ int Server::handle_user(Client &client, const std::vector<std::string> &params)
     return (0);
 }
 
+
 int Server::handle_privmsg(Client &client, const std::vector<std::string> &params)
 {
     std::map<int, Client>::iterator it;
@@ -151,18 +151,26 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
         return (412);
     target = params[0];
     msg = params[1];
+    if (same_nick(target, "Miku")) // send msgs addressed to miku directly to ollama
+    {
+        if (!this->_bot.start_request(client.get_client_fd(), msg)) // if bot is unavailable -> send error to client
+            this->send_msg(client, ":Miku!bot@ircserv PRIVMSG " + client.get_nick() + " :Miku is unavailable.\r\n", EPOLLIN | EPOLLOUT);
+        return (0);
+    }
     for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
     {
         if (same_nick(it->second.get_nick(), target)) // if target matches a client's nickname
         {
             prefix = ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip();
-            this->send_msg(it->second, prefix + " PRIVMSG " + it->second.get_nick() + " :" + msg + "\r\n" + "\r\n", EPOLLIN | EPOLLOUT);
+            this->send_msg(it->second, prefix + " PRIVMSG " + it->second.get_nick() + " :" + msg + "\r\n", EPOLLIN | EPOLLOUT);
             return (0);
         }
     }
+
     this->send_error(client, 401, target); // no such nick/channel error
     return (0);
 }
+
 
 // ping is used to check if connection between client and server is still active.
 int Server::handle_ping(Client &client, const std::vector<std::string> &params)
@@ -256,39 +264,6 @@ int Server::handle_join(Client &client, const std::vector<std::string> &params)
                 this->send_msg(client, "You joined " + chan_name + "\r\n" + "\r\n", EPOLLIN | EPOLLOUT);
         }
         i++;
-    }
-    return (0);
-}
-
-int Server::handle_miku(Client &client, const std::vector<std::string> &params)
-{
-    std::string question;
-    size_t i;
-
-    if (params.empty()) // no question provided
-    {
-        this->send_msg(client, "NOTICE " + client.get_nick() + " :[MIKU] Needs a question :3\r\n", EPOLLIN | EPOLLOUT);
-        return (0);
-    }
-    i = 0;
-    while (i < params.size())
-    {
-        if (i > 0)
-            question += " "; // add space between params
-        question += params[i]; // combine all params into a single question string
-        i++;
-    }
-    if (!question.empty() && question[0] == ':')
-        question.erase(0, 1); // rmv ':' if present
-    if (question.empty())
-    {
-        this->send_msg(client, "NOTICE " + client.get_nick() + " :[MIKU] Needs a question :3\r\n", EPOLLIN | EPOLLOUT);
-        return (0);
-    }
-    if (!this->_bot.start_request(client.get_client_fd(), question)) // miku failed to start request
-    {
-        this->send_msg(client, "NOTICE " + client.get_nick() + " :[MIKU] Request failed X(\r\n", EPOLLIN | EPOLLOUT);
-        return (0);
     }
     return (0);
 }

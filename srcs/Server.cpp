@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/19 21:00:55 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/19 22:29:07 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -103,7 +103,7 @@ void Server::start_socket()
 		throw std::runtime_error("IRC: setsockopt() failed.");
 	if (fcntl(this->_listen_fd, F_SETFL, O_NONBLOCK) < 0) // set listening socket non-blocking
 		throw std::runtime_error("IRC: fcntl() failed.");
-	if (bind(this->_listen_fd, reinterpret_cast<sockaddr *>(&server_addr), sizeof(server_addr)) < 0)
+	if (bind(this->_listen_fd, (sockaddr *)&server_addr, sizeof(server_addr)) < 0)
 		throw std::runtime_error("IRC: bind() failed.");
 	if (listen(this->_listen_fd, SOMAXCONN) < 0)
 		throw std::runtime_error("IRC: listen() failed.");
@@ -167,39 +167,40 @@ void Server::monitor_epoll_events()
     }
 }
 
-// accept pending connection from new client -> return a new socket fd for that client and store its address in client_addr
-// add client socket to epoll to monitor it for incoming data
+// accept() - return a new socket fd for that client and store its address in client_addr
 // sin_addr stores ipv4 address in network byte order, inet_ntoa() converts this address from binary to readable string
 void Server::accept_client()
 {
-	epoll_event	event;
-	sockaddr_in	client_addr;
-	socklen_t	addr_len;
-	int			client_fd;
+    epoll_event event;
+    sockaddr_in client_addr;
+    socklen_t addr_len;
+    int client_fd;
 
-	addr_len = sizeof(client_addr);
-	client_fd = accept(this->_listen_fd, reinterpret_cast<sockaddr *>(&client_addr), &addr_len);
-	if (client_fd < 0)
-		throw std::runtime_error("IRC: accept() failed.");
-	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0) // set socket non-blocking to not block event loop
-	{
-		close(client_fd);
-		throw std::runtime_error("IRC: fcntl() failed.");
-	}
-	event.events = EPOLLIN;
-	event.data.fd = client_fd;
-	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, client_fd, &event) < 0)
-	{
-		close(client_fd);
-		throw std::runtime_error("IRC: epoll_ctl() failed.");
-	}
-	this->_clients[client_fd] = Client(client_fd); // create and store client object using its socket fd
-	this->_clients[client_fd].set_host_ip(inet_ntoa(client_addr.sin_addr)); // convert client ipv4 address to string and store it
+    addr_len = sizeof(client_addr);
+    client_fd = accept(this->_listen_fd, (sockaddr *)(&client_addr), &addr_len);
+    if (client_fd < 0)
+        return;
+    if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0) // set socket non-blocking to not block event loop
+    {
+        close(client_fd);
+        return;
+    }
+    event.events = EPOLLIN;
+    event.data.fd = client_fd;
+    if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, client_fd, &event) < 0) // add socket to epoll to monitor incoming data
+    {
+        close(client_fd);
+        return;
+    }
+    this->_clients[client_fd] = Client(client_fd); // create and store client object using its socket fd
+    this->_clients[client_fd].set_host_ip(inet_ntoa(client_addr.sin_addr)); // convert client ipv4 addr to string and store it
 	std::cout << "\n=====================================================" << std::endl;
 	std::cout << "                CLIENT " << client_fd << " CONNECTED!" << std::endl;
 	std::cout << "=====================================================" << std::endl;
 }
 
+// recv() - receive data FROM client through client socket
+// send() - send pending data TO client through client socket
 void Server::handle_client_data(int client_fd, int event)
 {
     Client &client = this->_clients[client_fd];
@@ -208,32 +209,33 @@ void Server::handle_client_data(int client_fd, int event)
 
     if (event == EPOLLIN)
     {
-		std::string &recv_buffer = client.get_recv_buffer();
-        bytes = recv(client_fd, buffer, sizeof(buffer), 0); // receive data FROM client through client socket
-        if (bytes <= 0)
+        std::string &recv_buffer = client.get_recv_buffer();
+        bytes = recv(client_fd, buffer, sizeof(buffer), 0);
+        if (bytes == 0)
         {
-            if (bytes == 0) // connection closed by client
-                this->disconnect_client(client_fd);
-            return; // if recv failed ignore this event
+            this->disconnect_client(client_fd);
+            return;
         }
+        if (bytes < 0)
+            return; // recv failed or would block -> ignore this event
         recv_buffer.append(buffer, bytes); // append bytes -> recv() may not receive all data at once
-        this->process_msg(client, recv_buffer); // process complete msgs currently in buffer
+        this->process_msg(client, recv_buffer);
     }
     else if (event == EPOLLOUT)
     {
         std::string &send_buffer = client.get_send_buffer();
         if (send_buffer.empty()) // no pending data to send to client
             return;
-        bytes = send(client_fd, send_buffer.c_str(), send_buffer.size(), MSG_NOSIGNAL); // send data TO client through client socket
+        bytes = send(client_fd, send_buffer.c_str(), send_buffer.size(), MSG_NOSIGNAL);
         if (bytes <= 0)
-            return; // send failed -> ignore this event
+            return; // send failed or would block -> keep pending data
         send_buffer.erase(0, bytes); // rmv only bytes successfully sent
         if (send_buffer.empty()) // if all pending data was sent
         {
             if (client.get_quit())
                 this->disconnect_client(client_fd); // if QUIT was received -> disconnect client
             else
-                this->send_msg(client, "", EPOLLIN); // update epoll -> monitor only for incoming data now
+                this->send_msg(client, "", EPOLLIN); // update epoll -> monitor only incoming data
         }
     }
 }
@@ -304,39 +306,14 @@ void Server::send_error(Client &client, int error, const std::string &param)
     this->send_msg(client, ":" + this->_name + " " + errors[error] + "\r\n", EPOLLIN | EPOLLOUT);
 }
 
-
 void Server::send_response(int client_fd, const std::string &msg)
 {
     std::map<int, Client>::iterator it;
-    std::string prefix;
-    std::string line;
-    size_t start;
-    size_t end;
-    size_t max_length;
 
     it = this->_clients.find(client_fd);
     if (it == this->_clients.end())
         return;
-    prefix = ":Miku!bot@ircserv PRIVMSG " + it->second.get_nick() + " :";
-    if (prefix.size() + 2 >= 512)
-        return;
-    max_length = 512 - prefix.size() - 2;
-    start = 0;
-    while (start < msg.size())
-    {
-        end = msg.find('\n', start);
-        if (end == std::string::npos)
-            end = msg.size();
-        while (start < end)
-        {
-            line = msg.substr(start, max_length);
-            if (line.size() > end - start)
-                line.resize(end - start);
-            this->send_msg(it->second, prefix + line + "\r\n", EPOLLIN | EPOLLOUT);
-            start += line.size();
-        }
-        start = end + 1;
-    }
+    this->send_msg(it->second, ":Miku!Hatsune@127.0.0.1 PRIVMSG " + it->second.get_nick() + " :" + msg + "\r\n", EPOLLIN | EPOLLOUT);
 }
 
 std::string Server::getName(void) const

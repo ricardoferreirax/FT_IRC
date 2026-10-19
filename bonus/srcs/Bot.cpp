@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/19 21:26:51 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/19 21:58:10 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -59,12 +59,15 @@ std::string Bot::create_request(const std::string &question)
     std::string request;
 
     content = "{\"model\":\"qwen:latest\",";
-    content += "\"system\":\"You are Miku, a helpful IRC assistant. "
-               "Keep answers short and clear.\",";
+    content += "\"system\":\"You are Miku, a friendly and japanese singer. "
+    "For simple questions, give short and direct answers. "
+    "For complex questions, provide more detailed explanations. "
+    "Use clear and natural language. Sometimes speak and sing in japanese. "
+    "If you do not know something, say so instead of inventing information.\",";
     content += "\"prompt\":\"" + question + "\",";
     content += "\"stream\":false,";
-    content += "\"options\":{\"num_predict\":256,";
-    content += "\"num_ctx\":2048,\"temperature\":0.2}}";
+    content += "\"options\":{\"num_predict\":512,";
+    content += "\"num_ctx\":4096,\"temperature\":0.5}}";
 
     request = "POST /api/generate HTTP/1.1\r\n";
     request += "Host: 127.0.0.1:11434\r\n";
@@ -171,23 +174,23 @@ bool Bot::handle_event(Server &server, int bot_fd, int events)
         this->close_requests(bot_fd); // close socket if epoll has an error
         return (false);
     }
-    if ((events & EPOLLOUT) && !this->handle_request_data(bot_fd, EPOLLOUT)) // if socket is ready for writing -> send request to ollama
+    if ((events & EPOLLOUT) && !this->handle_request_data(bot_fd, EPOLLOUT)) // send http request to ollama
     {
         this->close_requests(bot_fd);
         return (false);
     }
-    if ((events & EPOLLIN) && !this->handle_request_data(bot_fd, EPOLLIN)) // if socket is ready for reading -> receive response from ollama
+    if ((events & EPOLLIN) && !this->handle_request_data(bot_fd, EPOLLIN)) // receive http response from ollama
     {
         this->close_requests(bot_fd);
         return (false);
     }
-    if (req.response_complete) // if response from ollama is complete
+    if (req.response_complete)
     {
-        server.send_response(req.client_fd, this->extract_response(req.recv_buffer)); // send response to client
+        server.send_response(req.client_fd, this->extract_response(req.recv_buffer)); // send completed response to client
         this->close_requests(bot_fd);
         return (true);
     }
-    if (events & EPOLLHUP)
+    if ((events & EPOLLHUP) && !(events & EPOLLIN))
     {
         this->close_requests(bot_fd); // close socket if ollama disconnects unexpectedly
         return (false);
