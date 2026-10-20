@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/19 23:30:27 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/20 09:45:26 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,7 +67,7 @@ void Bot::clear_memory(int client_fd)
         {
             bot_fd = it->first; // get fd for that request
             ++it; // move to next request before deleting
-            this->close_requests(bot_fd); // close request and remove from map
+            this->close_requests(bot_fd); // close request and rmv from map
         }
         else
             ++it; // move to next request
@@ -78,33 +78,34 @@ std::string Bot::create_request(int client_fd, const std::string &question)
 {
     std::string content;
     std::string request;
-    std::string prompt;
-
-    prompt = this->_memory[client_fd];
-    prompt += "User: " + question + " Assistant:";
 
     content = "{\"model\":\"qwen:latest\",";
-    content += "\"system\":\"You are Miku, a japanese singer. "
-    "Your name is Miku. "
-    "The user is a different person from you. "
-    "Remember important information about the user. "
-    "Always answer the user's latest question. "
-    "Use previous messages only to understand the context. "
-    "Do not repeat previous answers unless the user asks you to. "
-    "For simple questions, give short answers. "
-    "If you do not know something, say so.\",";
-    content += "\"prompt\":\"" + prompt + "\",";
+    content += "\"messages\":[";
+    content += "{\"role\":\"system\",\"content\":";
+    content += "\"You are Miku, a friendly Japanese singer. ";
+    content += "Remember important information about the user. ";
+    content += "Always answer the latest user message. ";
+    content += "Use previous messages to understand the conversation. ";
+    content += "For simple questions, give short and direct answers. ";
+    content += "If you do not know something, say so.\"}";
+    if (!this->_memory[client_fd].empty())
+    {
+        content += ",";
+        content += this->_memory[client_fd]; // add previous conversation for that client
+    }
+    content += ",{\"role\":\"user\",\"content\":\"";
+    content += question; // add current user question
+    content += "\"}";
+    content += "],";
     content += "\"stream\":false,";
     content += "\"options\":{\"num_predict\":512,";
     content += "\"num_ctx\":4096,\"temperature\":0.3}}";
-
-    request = "POST /api/generate HTTP/1.1\r\n";
+    request = "POST /api/chat HTTP/1.1\r\n"; // create http request to send to ollama
     request += "Host: 127.0.0.1:11434\r\n";
     request += "Content-Type: application/json\r\n";
     request += "Content-Length: " + nb_to_str(content.size()) + "\r\n";
     request += "Connection: close\r\n\r\n";
     request += content;
-
     return (request);
 }
 
@@ -195,76 +196,48 @@ bool Bot::handle_request_data(int bot_fd, int event)
     return (true);
 }
 
+void Server::send_response(int client_fd, const std::string &msg)
+{
+    std::map<int, Client>::iterator it;
+
+    it = this->_clients.find(client_fd); // find client that sent question to miku
+    if (it == this->_clients.end()) // if client disconnected before miku answer -> ignore response
+        return;
+    this->send_msg(it->second, ":Miku!Hatsune@127.0.0.1 PRIVMSG " + it->second.get_nick() + " :" + msg + "\r\n", EPOLLIN | EPOLLOUT);
+}
+
 bool Bot::handle_event(Server &server, int bot_fd, int events)
 {
     t_request &req = this->_requests[bot_fd];
     std::string answer;
 
-    if (events & EPOLLERR)
-    {
-        this->close_requests(bot_fd); // close socket if epoll has an error
-        return (false);
-    }
-    if ((events & EPOLLOUT) && !this->handle_request_data(bot_fd, EPOLLOUT)) // send http request to ollama
+    if ((events & EPOLLERR) // if socket has error
+		|| ((events & EPOLLOUT) && !this->handle_request_data(bot_fd, EPOLLOUT)) // socket is ready for writing
+		|| ((events & EPOLLIN) && !this->handle_request_data(bot_fd, EPOLLIN))) // socket is ready for reading
     {
         this->close_requests(bot_fd);
         return (false);
     }
-    if ((events & EPOLLIN) && !this->handle_request_data(bot_fd, EPOLLIN)) // receive http response from ollama
+    if (req.response_complete) // if ollama closed connection after sending response -> response is complete
     {
-        this->close_requests(bot_fd);
-        return (false);
-    }
-    if (req.response_complete)
-    {
-        answer = this->extract_response(req.recv_buffer);
+        answer = extract_response(req.recv_buffer);
         if (answer != "Ollama returned an error." && answer != "No response from Ollama.")
         {
-            this->_memory[req.client_fd] += "User: " + req.question + " ";
-			this->_memory[req.client_fd] += "Assistant: " + answer + " ";
+            std::string &memory = this->_memory[req.client_fd]; // get memory for that client
+            if (!memory.empty())
+                memory += ","; // if there is previous conversation -> add comma to separate msgs
+            memory += "{\"role\":\"user\",\"content\":\"" + req.question + "\"}"; // add user question to memory
+            memory += ",{\"role\":\"assistant\",\"content\":\"" + answer + "\"}"; // add miku answer to memory
         }
-        server.send_response(req.client_fd, answer); // send completed response to client
-        this->close_requests(bot_fd);
+        server.send_response(req.client_fd, answer); // send miku answer to client
+        this->close_requests(bot_fd); // close request and rmv from map
         return (true);
     }
-    if ((events & EPOLLHUP) && !(events & EPOLLIN))
+    if ((events & EPOLLHUP) && !(events & EPOLLIN)) // check if ollama closed connection before sending response -> error
     {
-        this->close_requests(bot_fd); // close socket if ollama disconnects unexpectedly
+        this->close_requests(bot_fd);
         return (false);
     }
-    return (true);
+    return (true); // if response is not complete -> wait for more data
 }
 
-std::string Bot::extract_response(const std::string &json)
-{
-    std::string result;
-    size_t start;
-
-    if (json.find("HTTP/1.1 200") != 0)
-        return ("Ollama returned an error.");
-    start = json.find("\"response\":\"");
-    if (start == std::string::npos)
-        return ("No response from Ollama.");
-    start += 12;
-    while (start < json.size())
-    {
-        if (json[start] == '"') // end of response string
-            break;
-        if (json[start] == '\\' && start + 1 < json.size())
-        {
-            start++;
-            if (json[start] == 'n')
-                result += '\n';
-            else if (json[start] == 'r')
-                result += '\r';
-            else if (json[start] == 't')
-                result += '\t';
-            else
-                result += json[start];
-        }
-        else
-            result += json[start];
-        start++;
-    }
-    return (result);
-}

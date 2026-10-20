@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/19 22:43:33 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/20 09:40:51 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -84,7 +84,7 @@ void Server::disconnect_client(int client_fd)
 	std::cout << "=====================================================" << std::endl;
 }
 
-// create ipv4 tcp listening socket (and return its fd) used by irc server 
+// create ipv4 tcp listening socket used by irc server 
 // setsockopt() allow local address to be reused after server restart
 // bind() associates socket with local ipv4 and server port
 // listen() changes socket into a listening socket ready to accept connections
@@ -111,7 +111,6 @@ void Server::start_socket()
 	std::cout << "\n[SERVER] Listening on all interfaces (0.0.0.0:" << this->_port << ")" << std::endl;
 }
 
-// create an epoll instance to monitor multiple sockets.
 // give bot same epoll fd used by server, bot registers its sockets w/out creating other epoll
 // EPOLLIN on listening socket -> a new client connection is waiting -> accept it
 // EPOLLIN on client socket -> has incoming data ready to be received -> read data FROM client
@@ -144,22 +143,22 @@ void Server::monitor_epoll_events()
         for (int i = 0; i < ready_events; i++)
         {
             current_fd = events[i].data.fd; // get fd that triggered event
-            if (current_fd == this->_listen_fd) // if listening socket has an event
+            if (current_fd == this->_listen_fd)
             {
-                if (events[i].events & EPOLLIN) // and a new connection is waiting to be accepted
+                if (events[i].events & EPOLLIN) // a new connection is waiting to be accepted
                     this->accept_client(); // accept new client connection and add to epoll
             }
             else if (this->_bot.has_request(current_fd))
                 this->_bot.handle_event(*this, current_fd, events[i].events);
             else if (this->_clients.find(current_fd) != this->_clients.end())
             {
-                if (events[i].events & EPOLLIN) // client socket is ready for reading
-                    this->handle_client_data(current_fd, EPOLLIN); // read data FROM client
+                if (events[i].events & EPOLLIN)
+                    this->handle_client_data(current_fd, EPOLLIN);
                 if (this->_clients.find(current_fd) == this->_clients.end()) // if client was disconnected and rmvd
                     continue; // skip to next event
-                if (events[i].events & EPOLLOUT) // client socket is ready for writing
-                    this->handle_client_data(current_fd, EPOLLOUT); // send pending data TO client
-                if (this->_clients.find(current_fd) == this->_clients.end()) // if client was disconnected and rmvd
+                if (events[i].events & EPOLLOUT)
+                    this->handle_client_data(current_fd, EPOLLOUT);
+                if (this->_clients.find(current_fd) == this->_clients.end())
                     continue;
                 if (events[i].events & (EPOLLERR | EPOLLHUP)) // if has a socket error or connection hangup
                     this->disconnect_client(current_fd);
@@ -306,17 +305,6 @@ void Server::send_error(Client &client, int error, const std::string &param)
         return; // error code is not in map -> ignore it
     this->send_msg(client, ":" + this->_name + " " + errors[error] + "\r\n", EPOLLIN | EPOLLOUT);
 }
-
-void Server::send_response(int client_fd, const std::string &msg)
-{
-    std::map<int, Client>::iterator it;
-
-    it = this->_clients.find(client_fd);
-    if (it == this->_clients.end())
-        return;
-    this->send_msg(it->second, ":Miku!Hatsune@127.0.0.1 PRIVMSG " + it->second.get_nick() + " :" + msg + "\r\n", EPOLLIN | EPOLLOUT);
-}
-
 std::string Server::getName(void) const
 {
 	return (this->_name);

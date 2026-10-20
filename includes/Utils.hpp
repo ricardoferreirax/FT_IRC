@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/08 16:14:29 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/17 22:28:17 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/20 09:43:39 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,7 @@ std::vector<std::string> ft_split(const std::string &s, char delim);
 std::string registration_reply(const Client &client, const std::string &server_name, const std::string &date);
 std::string generateRandomString(int length);
 std::string nb_to_str(size_t nb);
+std::string extract_response(const std::string &json);
 
 t_cmode	default_mode(void);
 

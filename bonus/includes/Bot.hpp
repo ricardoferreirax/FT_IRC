@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/19 22:45:00 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/20 09:44:50 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,7 +38,6 @@ class Bot
 		std::map<int, std::string> _memory;
 
 		std::string create_request(int client_fd, const std::string &question);
-        std::string extract_response(const std::string &json);
 		bool handle_request_data(int bot_fd, int event);
 
     public:

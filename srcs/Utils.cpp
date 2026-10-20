@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/18 19:47:57 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/20 09:47:19 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -164,4 +164,36 @@ std::string nb_to_str(size_t nb)
         nb /= 10;
     }
     return (res);
+}
+
+std::string extract_response(const std::string &json)
+{
+    std::string result;
+    size_t start;
+
+    if (json.find("HTTP/1.1 200") != 0) // check if returned a http response
+        return ("Ollama returned an error.");
+    start = json.find("\"content\":\""); // find start of generated answer
+    if (start == std::string::npos) // if no answer was generated -> return error
+        return ("No response from Ollama.");
+    start += 11;
+    while (start < json.size() && json[start] != '"') // read answer till closing quote
+    {
+        if (json[start] == '\\' && start + 1 < json.size()) // check if is an escape char
+        {
+            ++start;
+            if (json[start] == 'n')
+                result += '\n'; // new line
+            else if (json[start] == 'r')
+                result += '\r'; // carriage return
+            else if (json[start] == 't')
+                result += '\t'; // tab
+            else
+                result += json[start]; // handle escaped quotes and blackslash
+        }
+        else
+            result += json[start]; // add normal char to answer
+        ++start; // move to next char
+    }
+    return (result); // return miku answer :3
 }
