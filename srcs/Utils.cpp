@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/21 10:11:33 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/21 18:01:29 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,32 +25,32 @@ t_cmode	default_mode(void)
 	return (def);
 }
 
-int validate_port(const std::string &port)
+int	validate_port(const std::string &port)
 {
-	int value;
-	
-    if (port.empty() || port.size() > 5)
-        throw std::runtime_error("IRC: invalid port!");
-    for (size_t i = 0; i < port.size(); i++)
-    {
-        if (port[i] < '0' || port[i] > '9')
-            throw std::runtime_error("IRC: port must contain only numbers!");
-    }
-    value = std::atoi(port.c_str());
-    if (value < 1024 || value > 65535)
-        throw std::runtime_error("IRC: port must be between 1024 and 65535!");
-    return (value);
+	int	value;
+
+	if (port.empty() || port.size() > 5)
+		throw std::runtime_error("IRC: invalid port!");
+	for (size_t i = 0; i < port.size(); i++)
+	{
+		if (port[i] < '0' || port[i] > '9')
+			throw std::runtime_error("IRC: port must contain only numbers!");
+	}
+	value = std::atoi(port.c_str());
+	if (value < 1024 || value > 65535)
+		throw std::runtime_error("IRC: port must be between 1024 and 65535!");
+	return (value);
 }
 
-static bool is_nick_special(char c)
+static bool	is_nick_special(char c)
 {
-	if (c == '[' || c == ']' || c == '\\' || c == '`' || c == '_' || c == '^' 
+	if (c == '[' || c == ']' || c == '\\' || c == '`' || c == '_' || c == '^'
 		|| c == '{' || c == '|' || c == '}' || c == '-')
 		return (true);
 	return (false);
 }
 
-bool is_valid_nick(const std::string &nick)
+bool	is_valid_nick(const std::string &nick)
 {
 	if (nick.empty() || nick.size() > 9)
 		return (false);
@@ -58,13 +58,13 @@ bool is_valid_nick(const std::string &nick)
 		return (false);
 	for (size_t i = 1; i < nick.size(); i++)
 	{
-		if (!std::isalnum(nick[i]) && !is_nick_special(nick[i])) // nick can have alnum and special chars
+		if (!std::isalnum(nick[i]) && !is_nick_special(nick[i]))
 			return (false);
 	}
 	return (true);
 }
 
-bool same_nick(const std::string &nick1, const std::string &nick2)
+bool	same_nick(const std::string &nick1, const std::string &nick2)
 {
 	if (nick1.size() != nick2.size()) // nicks with different sizes are not equal
 		return (false);
@@ -77,37 +77,38 @@ bool same_nick(const std::string &nick1, const std::string &nick2)
 }
 
 // space separates: cmd from params and params from each other
-void parse_msg(const std::string &msg, std::string &cmd, std::vector<std::string> &params)
+void	parse_msg(const std::string &msg, std::string &cmd, std::vector<std::string> &params)
 {
-	std::string remaining;
-	std::string trailing;
-	size_t space;
+	size_t	space;
 
+	std::string	remaining;
+	std::string trailing;
+	
 	params.clear(); // clear previous params
 	space = msg.find(' ');
 	cmd = msg.substr(0, space);
 	if (space == std::string::npos) // no space -> no params
-		return;
+		return ;
 	remaining = msg.substr(space + 1); // everything after cmd is params
 	while (!remaining.empty())
 	{
 		while (!remaining.empty() && remaining[0] == ' ')
 			remaining.erase(0, 1); // rmv spaces before next param
 		if (remaining.empty())
-			break;
+			break ;
 		if (remaining[0] == ':' || params.size() == 14)
 		{
-			trailing = remaining; // after ':' is single param -> store it in trailing
+			trailing = remaining; // after ':' is single param 
 			if (trailing[0] == ':') 
 				trailing.erase(0, 1);
 			params.push_back(trailing); // add this single param
-			break;
+			break ;
 		}
 		space = remaining.find(' ');
 		if (space == std::string::npos) // no space -> last param
 		{
 			params.push_back(remaining); // add last param
-			break;
+			break ;
 		}
 		params.push_back(remaining.substr(0, space)); // with space -> add param
 		remaining.erase(0, space + 1); // rmv it so loop can parse next one
@@ -129,16 +130,16 @@ std::string registration_reply(const Client &client, const std::string &_name, c
 	return (reply);
 }
 
-bool is_valid_user_mode(const std::string &mode)
+bool	is_valid_user_mode(const std::string &mode)
 {
-    if (mode.empty())
-        return (false);
-    for (size_t i = 0; i < mode.size(); i++)
-    {
-        if (mode[i] < '0' || mode[i] > '9')
-            return (false);
-    }
-    return (true);
+	if (mode.empty())
+		return (false);
+	for (size_t i = 0; i < mode.size(); i++)
+	{
+		if (mode[i] < '0' || mode[i] > '9')
+			return (false);
+	}
+	return (true);
 }
 
 std::vector<std::string> ft_split(const std::string &s, char delim)
@@ -161,7 +162,7 @@ std::string generateRandomString(int length)
 	const std::string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 	std::string random_string = "";
 	int	index;
-
+	
 	for (int i = 0; i < length; ++i)
 	{
 		index = rand() % chars.size();
@@ -172,70 +173,70 @@ std::string generateRandomString(int length)
 
 std::string nb_to_str(size_t nb)
 {
-    std::string res;
-    if (nb == 0)
-        return ("0");
-    while (nb > 0)
-    {
-        res.insert(res.begin(), '0' + (nb % 10));
-        nb /= 10;
-    }
-    return (res);
+	std::string res;
+	if (nb == 0)
+		return ("0");
+	while (nb > 0)
+	{
+		res.insert(res.begin(), '0' + (nb % 10));
+		nb /= 10;
+	}
+	return (res);
 }
 
 std::string extract_response(const std::string &json)
 {
-    std::string result;
-    size_t start;
+	size_t	start;
 
-    if (json.find("HTTP/1.1 200") != 0)
+	std::string result;
+	if (json.find("HTTP/1.1 200") != 0)
 	{
-	    std::cerr << "Ollama HTTP error:\n" << json << std::endl;
-	    return ("Ollama returned an error.");
+		std::cerr << "Ollama HTTP error:\n" << json << std::endl;
+		return ("Ollama returned an error.");
 	}
-    start = json.find("\"content\":\""); // find start of generated answer
-    if (start == std::string::npos) // if no answer was generated -> return error
-        return ("No response from Ollama.");
-    start += 11;
-    while (start < json.size() && json[start] != '"') // read answer till closing quote
-    {
-        if (json[start] == '\\' && start + 1 < json.size()) // check if is an escape char
-        {
-            ++start;
-            if (json[start] == 'n')
-                result += '\n'; // new line
-            else if (json[start] == 'r')
-                result += '\r'; // carriage return
-            else if (json[start] == 't')
-                result += '\t'; // tab
-            else
-                result += json[start]; // handle escaped quotes and blackslash
-        }
-        else
-            result += json[start]; // add normal char to answer
-        ++start; // move to next char
-    }
-    return (result); // return miku answer :3
+	start = json.find("\"content\":\""); // find start of generated answer
+	if (start == std::string::npos) // if no answer was generated
+		return ("No response from Ollama.");
+	start += 11;
+	while (start < json.size() && json[start] != '"') // read answer till closing quote
+	{
+		if (json[start] == '\\' && start + 1 < json.size()) // check if is an escape char
+		{
+			++start;
+			if (json[start] == 'n')
+				result += '\n'; // nl
+			else if (json[start] == 'r')
+				result += '\r'; // carriage return
+			else if (json[start] == 't')
+				result += '\t'; // tab
+			else
+				result += json[start]; // handle escaped quotes and blackslash
+		}
+		else
+			result += json[start]; // add normal char to answer
+		++start; // move to next char
+	}
+	return (result); // return miku answer :3
 }
 
 std::string escape_json(const std::string &text)
 {
-    std::string result;
-
-    for (size_t i = 0; i < text.size(); i++)
-    {
-        if (text[i] == '\\')
-            result += "\\\\"; // escape backslash
-        else if (text[i] == '"')
-            result += "\\\""; // escape quotation mark
-        else if (text[i] == '\n')
-            result += "\\n"; // escape new line
-        else if (text[i] == '\r')
-            result += "\\r"; // escape carriage return
-        else if (text[i] == '\t')
-            result += "\\t"; // escape tab
-        else
-            result += text[i]; // add normal character
-    }
-    return (result);
+	std::string result;
+	
+	for (size_t i = 0; i < text.size(); i++)
+	{
+		if (text[i] == '\\')
+			result += "\\\\"; // escape backslash
+		else if (text[i] == '"')
+			result += "\\\""; // escape quote
+		else if (text[i] == '\n')
+			result += "\\n"; // escape nl
+		else if (text[i] == '\r')
+			result += "\\r"; // escape carriage return
+		else if (text[i] == '\t')
+			result += "\\t"; // escape tab
+		else
+			result += text[i]; // add normal character
+	}
+	return (result);
 }
