@@ -6,20 +6,21 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:14:15 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/15 13:53:03 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/21 06:38:15 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
 #include "../includes/Utils.hpp"
 #include <cstdlib>
+#include <signal.h>
 
-volatile sig_atomic_t	running = 1;
+volatile sig_atomic_t	alive = 1;
 
 void	handle_signal(int signal)
 {
 	(void)signal;
-	running = 0;
+	alive = 0;
 }
 
 int main(int ac, char **av)

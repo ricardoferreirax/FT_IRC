@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/20 20:18:45 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/21 06:34:03 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,7 +48,7 @@ class Bot
         bool has_request(int bot_fd) const;
         void close_requests(int bot_fd);
         bool start_request(int client_fd, const std::string &question);
-        bool handle_event(Server &server, int bot_fd, int events);
+        bool handle_bot_event(Server &server, int bot_fd, int events);
 		void clear_memory(int client_fd);
 		void fail_request(Server &server, int bot_fd);
 };

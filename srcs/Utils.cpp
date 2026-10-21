@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/20 20:37:05 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/21 06:10:06 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -172,10 +172,10 @@ std::string extract_response(const std::string &json)
     size_t start;
 
     if (json.find("HTTP/1.1 200") != 0)
-{
-    std::cerr << "Ollama HTTP error:\n" << json << std::endl;
-    return ("Ollama returned an error.");
-}
+	{
+	    std::cerr << "Ollama HTTP error:\n" << json << std::endl;
+	    return ("Ollama returned an error.");
+	}
     start = json.find("\"content\":\""); // find start of generated answer
     if (start == std::string::npos) // if no answer was generated -> return error
         return ("No response from Ollama.");

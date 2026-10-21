@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/21 06:00:22 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/21 07:05:47 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -96,7 +96,6 @@ std::string Bot::create_request(int client_fd, const std::string &question)
     content += "\"messages\":[";
 	content += "{\"role\":\"system\",\"content\":";
 	content += "\"You are Miku, a japanese singer. ";
-    content += "Remember important information about the user. ";
     content += "Always answer the latest user message. ";
     content += "Use previous messages to understand the conversation. ";
     content += "If you do not know something, say Miku Miku Beam.\"}";
@@ -202,7 +201,7 @@ bool Bot::handle_request_data(int bot_fd, int event)
             return (false);
         if (bytes == 0)
         {
-            req.response_complete = true; // if ollama closed connection after sending response -> response is complete
+            req.response_complete = true; // if ollama closed connection -> http response has ended
             return (true);
         }
         req.recv_buffer.append(buffer, bytes); // add received bytes to response buffer
@@ -220,35 +219,42 @@ void Server::send_response(int client_fd, const std::string &msg)
     this->send_msg(it->second, ":Miku!Hatsune@127.0.0.1 PRIVMSG " + it->second.get_nick() + " :" + msg + "\r\n", EPOLLIN | EPOLLOUT);
 }
 
-bool Bot::handle_event(Server &server, int bot_fd, int events)
+bool Bot::handle_bot_event(Server &server, int bot_fd, int events)
 {
-    t_request &req = this->_requests[bot_fd];
-    std::string answer;
-
-    if ((events & EPOLLERR) // if socket has error
-		|| ((events & EPOLLOUT) && !this->handle_request_data(bot_fd, EPOLLOUT)) // socket is ready for writing
-		|| ((events & EPOLLIN) && !this->handle_request_data(bot_fd, EPOLLIN))) // socket is ready for reading
-        return (false);
-    if (req.response_complete) // if ollama closed connection after sending response -> response is complete
+    try
     {
-        answer = extract_response(req.recv_buffer);
-        if (answer != "Ollama returned an error." && answer != "No response from Ollama.")
-        {
-            std::string &memory = this->_memory[req.client_fd]; // get memory for that client
-            if (!memory.empty())
-                memory += ","; // if there is previous conversation -> add comma to separate msgs
-			memory += "{\"role\":\"user\",\"content\":\"" + escape_json(req.question) + "\"}"; // add user question to memory
-			memory += ",{\"role\":\"assistant\",\"content\":\"" + escape_json(answer) + "\"}"; // add miku answer to memory
-        }
+        t_request &req = this->_requests[bot_fd];
+		std::string &memory = this->_memory[req.client_fd]; // get memory for that client
+        std::string answer;
+
+        if ((events & EPOLLERR) // if socket has error
+            || ((events & EPOLLOUT) && !this->handle_request_data(bot_fd, EPOLLOUT)) // socket is ready for writing
+            || ((events & (EPOLLIN | EPOLLHUP)) && !this->handle_request_data(bot_fd, EPOLLIN))) // read ollama response or remaining data
+            throw std::runtime_error("Ollama socket error.");
+        if (!req.response_complete)
+            return (true); // if response is not complete -> wait for more data
+        answer = extract_response(req.recv_buffer); // validate HTTP response and extract answer
+        if (answer == "Ollama returned an error." || answer == "No response from Ollama.")
+            throw std::runtime_error("Invalid Ollama response.");
+        if (!memory.empty())
+            memory += ","; // if there is previous conversation -> add comma to separate msgs
+        memory += "{\"role\":\"user\",\"content\":\"" + escape_json(req.question) + "\"}"; // add user question to memory
+        memory += ",{\"role\":\"assistant\",\"content\":\"" + escape_json(answer) + "\"}"; // add miku answer to memory
         server.send_response(req.client_fd, answer); // send miku answer to client
         this->close_requests(bot_fd); // close request and rmv from map
         return (true);
     }
-    if ((events & EPOLLHUP) && !(events & EPOLLIN)) // check if ollama closed connection before sending response -> error
+    catch (const std::exception &e) // catch ollama errors without stopping server
     {
-        this->close_requests(bot_fd);
+        std::cerr << "Miku: " << e.what() << std::endl;
+        try
+        {
+            this->fail_request(server, bot_fd); // close failed request and notify client
+        }
+        catch (const std::exception &error)
+        {
+            std::cerr << "Miku cleanup: " << error.what() << std::endl;
+        }
         return (false);
     }
-    return (true); // if response is not complete -> wait for more data
 }
-

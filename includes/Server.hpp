@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/19 22:06:02 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/21 06:35:21 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,7 @@
 #include <sys/epoll.h>
 #include <ctime>
 
-extern volatile sig_atomic_t running;
+extern volatile sig_atomic_t alive;
 
 class Channel;
 
@@ -41,6 +41,7 @@ class Server
 		std::map<std::string, Channel>	_channels;
 
 		void	accept_client();
+		void 	handle_socket_event(int fd, int events);
 		void	handle_client_data(int client_fd, int event);
 		void	process_msg(Client &client, std::string &client_buffer);
 		void 	disconnect_client(int client_fd);

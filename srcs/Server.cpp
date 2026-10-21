@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/20 20:19:59 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/21 06:43:07 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -112,68 +112,62 @@ void Server::start_socket()
 }
 
 // give bot same epoll fd used by server, bot registers its sockets w/out creating other epoll
-// EPOLLIN on listening socket -> a new client connection is waiting -> accept it
-// EPOLLIN on client socket -> has incoming data ready to be received -> read data FROM client
-// EPOLLOUT on client socket -> is ready to send pending data -> write data TO client
 // epoll_wait wait till at least one registered socket have events -> return nb of ready events
 void Server::monitor_epoll_events()
 {
     epoll_event event;
-    epoll_event events[10];
-    int ready_events;
+    epoll_event events[64];
+    int ready;
     int current_fd;
 
     this->_epoll_fd = epoll_create1(0);
     if (this->_epoll_fd < 0)
         throw std::runtime_error("IRC: epoll_create1() failed.");
-    this->_bot.set_epoll_fd(this->_epoll_fd);
-    event.events = EPOLLIN; // monitor listening socket for incoming client connections
-    event.data.fd = this->_listen_fd; // store fd to identify it when an event occurs
+    this->_bot.set_epoll_fd(this->_epoll_fd); // share epoll with ollama bot
+    event.events = EPOLLIN;
+    event.data.fd = this->_listen_fd;
     if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0)
         throw std::runtime_error("IRC: epoll_ctl() failed.");
-    while (running)
+    while (alive)
     {
-        ready_events = epoll_wait(this->_epoll_fd, events, 10, -1);
-        if (ready_events < 0)
+        ready = epoll_wait(this->_epoll_fd, events, 64, -1);
+        if (ready < 0)
         {
-            if (!running)
+            if (!alive)
                 break;
             throw std::runtime_error("IRC: epoll_wait() failed.");
         }
-        for (int i = 0; i < ready_events; i++)
+        for (int i = 0; i < ready; i++)
         {
-            current_fd = events[i].data.fd; // get fd that triggered event
-            if (current_fd == this->_listen_fd)
-            {
-                if (events[i].events & EPOLLIN) // a new connection is waiting to be accepted
-                    this->accept_client(); // accept new client connection and add to epoll
-            }
-            else if (this->_bot.has_request(current_fd))
-			{
-			    try
-			    {
-			        if (!this->_bot.handle_event(*this, current_fd, events[i].events))
-			            this->_bot.fail_request(*this, current_fd);
-			    }
-			    catch (const std::exception &e) // catch ollama errors
-			    {
-			        std::cerr << "Miku: " << e.what() << std::endl;
-			        this->_bot.fail_request(*this, current_fd); // close failed request and notify client
-			    }
-			}
-            else if (this->_clients.find(current_fd) != this->_clients.end())
-            {
-                if (events[i].events & EPOLLIN)
-                    this->handle_client_data(current_fd, EPOLLIN);
-                if (this->_clients.find(current_fd) == this->_clients.end()) // if client was disconnected and rmvd
-                    continue; // skip to next event
-                if (events[i].events & EPOLLOUT)
-                    this->handle_client_data(current_fd, EPOLLOUT);
-                if (this->_clients.find(current_fd) == this->_clients.end())
-                    continue;
-                if (events[i].events & (EPOLLERR | EPOLLHUP)) // if has a socket error or connection hangup
-                    this->disconnect_client(current_fd);
-            }
+            current_fd = events[i].data.fd;
+            this->handle_socket_event(current_fd, events[i].events); // handle all socket events
+        }
+    }
+}
+
+// EPOLLIN on listening socket -> a new client connection is waiting -> accept it
+// EPOLLIN on client socket -> has incoming data ready to be received -> read data FROM client
+// EPOLLOUT on client socket -> is ready to send pending data -> write data TO client
+void Server::handle_socket_event(int fd, int events)
+{
+    if (fd == this->_listen_fd) // listening socket
+    {
+        if (events & EPOLLIN)
+            this->accept_client(); // accept new client connection and add to epoll
+    }
+    else if (this->_bot.has_request(fd))
+        this->_bot.handle_bot_event(*this, fd, events); // handle ollama bot event
+    else if (this->_clients.find(fd) != this->_clients.end())
+    {
+        if (events & (EPOLLERR | EPOLLHUP))
+            this->disconnect_client(fd); // disconnect client if socket has error
+        else
+        {
+            if (events & EPOLLIN)
+                this->handle_client_data(fd, EPOLLIN); // receive data FROM client
+
+            if ((events & EPOLLOUT) && this->_clients.find(fd) != this->_clients.end())
+                this->handle_client_data(fd, EPOLLOUT); // send pending data TO client
         }
     }
 }
