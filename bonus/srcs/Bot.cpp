@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/20 09:45:26 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/21 06:00:22 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,6 +54,19 @@ void Bot::close_requests(int bot_fd)
     this->_requests.erase(bot_fd);
 }
 
+void Bot::fail_request(Server &server, int bot_fd)
+{
+    std::map<int, t_request>::iterator it;
+    int client_fd;
+
+    it = this->_requests.find(bot_fd);
+    if (it == this->_requests.end())
+        return;
+    client_fd = it->second.client_fd; // get client that sent request
+    this->close_requests(bot_fd); // close ollama socket and rmv request from epoll
+    server.send_response(client_fd, "Miku is unavailable."); // notify client
+}
+
 void Bot::clear_memory(int client_fd)
 {
     std::map<int, t_request>::iterator it;
@@ -81,25 +94,26 @@ std::string Bot::create_request(int client_fd, const std::string &question)
 
     content = "{\"model\":\"qwen:latest\",";
     content += "\"messages\":[";
-    content += "{\"role\":\"system\",\"content\":";
-    content += "\"You are Miku, a friendly Japanese singer. ";
+	content += "{\"role\":\"system\",\"content\":";
+	content += "\"You are Miku, a japanese singer. ";
     content += "Remember important information about the user. ";
     content += "Always answer the latest user message. ";
     content += "Use previous messages to understand the conversation. ";
-    content += "For simple questions, give short and direct answers. ";
-    content += "If you do not know something, say so.\"}";
+    content += "If you do not know something, say Miku Miku Beam.\"}";
     if (!this->_memory[client_fd].empty())
     {
         content += ",";
         content += this->_memory[client_fd]; // add previous conversation for that client
     }
     content += ",{\"role\":\"user\",\"content\":\"";
-    content += question; // add current user question
+    content += escape_json(question); // add current user question
     content += "\"}";
     content += "],";
     content += "\"stream\":false,";
-    content += "\"options\":{\"num_predict\":512,";
-    content += "\"num_ctx\":4096,\"temperature\":0.3}}";
+	content += "\"think\":false,"; // disable reasoning for faster responses
+	content += "\"keep_alive\":\"10m\","; // keep model loaded between requests
+	content += "\"options\":{\"num_predict\":512,"; // limit response length
+	content += "\"num_ctx\":4096,\"temperature\":0.3}}";
     request = "POST /api/chat HTTP/1.1\r\n"; // create http request to send to ollama
     request += "Host: 127.0.0.1:11434\r\n";
     request += "Content-Type: application/json\r\n";
@@ -214,10 +228,7 @@ bool Bot::handle_event(Server &server, int bot_fd, int events)
     if ((events & EPOLLERR) // if socket has error
 		|| ((events & EPOLLOUT) && !this->handle_request_data(bot_fd, EPOLLOUT)) // socket is ready for writing
 		|| ((events & EPOLLIN) && !this->handle_request_data(bot_fd, EPOLLIN))) // socket is ready for reading
-    {
-        this->close_requests(bot_fd);
         return (false);
-    }
     if (req.response_complete) // if ollama closed connection after sending response -> response is complete
     {
         answer = extract_response(req.recv_buffer);
@@ -226,8 +237,8 @@ bool Bot::handle_event(Server &server, int bot_fd, int events)
             std::string &memory = this->_memory[req.client_fd]; // get memory for that client
             if (!memory.empty())
                 memory += ","; // if there is previous conversation -> add comma to separate msgs
-            memory += "{\"role\":\"user\",\"content\":\"" + req.question + "\"}"; // add user question to memory
-            memory += ",{\"role\":\"assistant\",\"content\":\"" + answer + "\"}"; // add miku answer to memory
+			memory += "{\"role\":\"user\",\"content\":\"" + escape_json(req.question) + "\"}"; // add user question to memory
+			memory += ",{\"role\":\"assistant\",\"content\":\"" + escape_json(answer) + "\"}"; // add miku answer to memory
         }
         server.send_response(req.client_fd, answer); // send miku answer to client
         this->close_requests(bot_fd); // close request and rmv from map

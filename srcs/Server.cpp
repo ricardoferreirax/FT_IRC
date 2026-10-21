@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/20 09:40:51 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/20 20:19:59 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -149,7 +149,18 @@ void Server::monitor_epoll_events()
                     this->accept_client(); // accept new client connection and add to epoll
             }
             else if (this->_bot.has_request(current_fd))
-                this->_bot.handle_event(*this, current_fd, events[i].events);
+			{
+			    try
+			    {
+			        if (!this->_bot.handle_event(*this, current_fd, events[i].events))
+			            this->_bot.fail_request(*this, current_fd);
+			    }
+			    catch (const std::exception &e) // catch ollama errors
+			    {
+			        std::cerr << "Miku: " << e.what() << std::endl;
+			        this->_bot.fail_request(*this, current_fd); // close failed request and notify client
+			    }
+			}
             else if (this->_clients.find(current_fd) != this->_clients.end())
             {
                 if (events[i].events & EPOLLIN)

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/20 09:47:19 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/20 20:37:05 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -171,8 +171,11 @@ std::string extract_response(const std::string &json)
     std::string result;
     size_t start;
 
-    if (json.find("HTTP/1.1 200") != 0) // check if returned a http response
-        return ("Ollama returned an error.");
+    if (json.find("HTTP/1.1 200") != 0)
+{
+    std::cerr << "Ollama HTTP error:\n" << json << std::endl;
+    return ("Ollama returned an error.");
+}
     start = json.find("\"content\":\""); // find start of generated answer
     if (start == std::string::npos) // if no answer was generated -> return error
         return ("No response from Ollama.");
@@ -196,4 +199,26 @@ std::string extract_response(const std::string &json)
         ++start; // move to next char
     }
     return (result); // return miku answer :3
+}
+
+std::string escape_json(const std::string &text)
+{
+    std::string result;
+
+    for (size_t i = 0; i < text.size(); i++)
+    {
+        if (text[i] == '\\')
+            result += "\\\\"; // escape backslash
+        else if (text[i] == '"')
+            result += "\\\""; // escape quotation mark
+        else if (text[i] == '\n')
+            result += "\\n"; // escape new line
+        else if (text[i] == '\r')
+            result += "\\r"; // escape carriage return
+        else if (text[i] == '\t')
+            result += "\\t"; // escape tab
+        else
+            result += text[i]; // add normal character
+    }
+    return (result);
 }

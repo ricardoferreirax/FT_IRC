@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/08 16:14:29 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/20 09:43:39 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/20 20:36:51 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,6 +32,7 @@ std::string registration_reply(const Client &client, const std::string &server_n
 std::string generateRandomString(int length);
 std::string nb_to_str(size_t nb);
 std::string extract_response(const std::string &json);
+std::string escape_json(const std::string &text);
 
 t_cmode	default_mode(void);
 

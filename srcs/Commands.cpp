@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/19 22:05:32 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/20 20:13:23 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -137,7 +137,6 @@ int Server::handle_user(Client &client, const std::vector<std::string> &params)
     return (0);
 }
 
-
 int Server::handle_privmsg(Client &client, const std::vector<std::string> &params)
 {
     std::map<int, Client>::iterator it;
@@ -153,24 +152,30 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
     msg = params[1];
     if (same_nick(target, "Miku")) // send msgs addressed to miku directly to ollama
     {
-        if (!this->_bot.start_request(client.get_client_fd(), msg)) // if bot is unavailable -> send error to client
+        try
+        {
+            if (!this->_bot.start_request(client.get_client_fd(), msg)) // if bot is unavailable -> send error to client
+                this->send_msg(client, ":Miku!bot@ircserv PRIVMSG " + client.get_nick() + " :Miku is unavailable.\r\n", EPOLLIN | EPOLLOUT);
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "Miku: " << e.what() << std::endl;
             this->send_msg(client, ":Miku!bot@ircserv PRIVMSG " + client.get_nick() + " :Miku is unavailable.\r\n", EPOLLIN | EPOLLOUT);
+        }
         return (0);
     }
     for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
     {
-        if (same_nick(it->second.get_nick(), target)) // if target matches a client's nickname
+        if (same_nick(it->second.get_nick(), target)) // if target matches a client nick
         {
             prefix = ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip();
             this->send_msg(it->second, prefix + " PRIVMSG " + it->second.get_nick() + " :" + msg + "\r\n", EPOLLIN | EPOLLOUT);
             return (0);
         }
     }
-
     this->send_error(client, 401, target); // no such nick/channel error
     return (0);
 }
-
 
 // ping is used to check if connection between client and server is still active.
 int Server::handle_ping(Client &client, const std::vector<std::string> &params)
