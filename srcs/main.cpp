@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:14:15 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/21 06:38:15 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/21 18:04:08 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,9 +23,9 @@ void	handle_signal(int signal)
 	alive = 0;
 }
 
-int main(int ac, char **av)
+int	main(int ac, char **av)
 {
-	struct sigaction action;
+	struct sigaction	action;
 
 	if (ac != 3)
 	{
@@ -35,7 +35,7 @@ int main(int ac, char **av)
 	try
 	{
 		action.sa_handler = handle_signal; // set handler function for sigint
-		sigemptyset(&action.sa_mask); // initialize mask to empty so no signals are blocked during execution of handler
+		sigemptyset(&action.sa_mask); // empty mask so no signals are blocked during execution
 		action.sa_flags = 0;
 		if (sigaction(SIGINT, &action, NULL) < 0) // set action for sigint to specified handler
 			throw std::runtime_error("IRC: sigaction() failed.");
