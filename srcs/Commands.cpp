@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/21 14:08:39 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/21 15:27:04 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -154,7 +154,7 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
     {
         try
         {
-            if (!this->_bot.start_request(client.get_client_fd(), msg)) // if bot is unavailable -> send error to client
+            if (!this->_bot.start_request(client.get_client_fd(), client.get_nick(), msg)) // if bot is unavailable -> send error to client
                 this->send_msg(client, ":Miku!bot@ircserv PRIVMSG " + client.get_nick() + " :Miku is unavailable.\r\n", EPOLLIN | EPOLLOUT);
         }
         catch (const std::exception &e)

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/21 14:17:56 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/21 15:33:31 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,42 +72,46 @@ void Bot::cleanup(clear_type type, int fd, Server *server)
     }
 }
 
-std::string Bot::create_request(int client_fd, const std::string &question)
+
+std::string Bot::create_request(int client_fd, const std::string &nick, const std::string &question)
 {
     std::string content;
     std::string request;
 
     content = "{\"model\":\"qwen:latest\",";
     content += "\"messages\":[";
-	content += "{\"role\":\"system\",\"content\":";
-	content += "\"You are Miku, a japanese singer. ";
+    content += "{\"role\":\"system\",\"content\":";
+    content += "\"You are Miku, a japanese singer. ";
     content += "Always answer the latest user message. ";
     content += "Use previous messages to understand the conversation. ";
+    content += "The user's current IRC nickname is " + escape_json(nick) + ". "; // identify client by nick
+    content += "Address the user by their nickname when appropriate. ";
     content += "If you do not know something, say Miku Miku Beam.\"}";
     if (!this->_memory[client_fd].empty())
     {
         content += ",";
-        content += this->_memory[client_fd]; // add previous conversation for that client
+        content += this->_memory[client_fd]; // add previous conversation of client
     }
     content += ",{\"role\":\"user\",\"content\":\"";
     content += escape_json(question); // add current user question
     content += "\"}";
     content += "],";
     content += "\"stream\":false,";
-	content += "\"think\":false,"; // disable reasoning for faster responses
-	content += "\"keep_alive\":\"10m\","; // keep model loaded between requests
-	content += "\"options\":{\"num_predict\":512,"; // limit response length
-	content += "\"num_ctx\":4096,\"temperature\":0.3}}";
+    content += "\"think\":false,";
+    content += "\"keep_alive\":\"10m\",";
+    content += "\"options\":{\"num_predict\":512,"; // limit response length
+    content += "\"num_ctx\":4096,\"temperature\":0.3}}";
     request = "POST /api/chat HTTP/1.1\r\n"; // create http request to send to ollama
     request += "Host: 127.0.0.1:11434\r\n";
     request += "Content-Type: application/json\r\n";
-    request += "Content-Length: " + nb_to_str(content.size()) + "\r\n";
+    request += "Content-Length: " + nb_to_str(content.size()) + "\r\n"; // ollama knows when request ends
     request += "Connection: close\r\n\r\n";
     request += content;
     return (request);
 }
 
-bool Bot::start_request(int client_fd, const std::string &question)
+// create socket to connect to ollama
+bool Bot::start_request(int client_fd, const std::string &nick, const std::string &question)
 {
     sockaddr_in addr;
     epoll_event event;
@@ -117,18 +121,18 @@ bool Bot::start_request(int client_fd, const std::string &question)
 
     if (this->_epoll_fd < 0)
         return (false);
-    bot_fd = socket(AF_INET, SOCK_STREAM, 0); // create a new socket to connect to ollama
+    bot_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (bot_fd < 0)
         return (false);
-    if (fcntl(bot_fd, F_SETFL, O_NONBLOCK) < 0) // set socket non blocking to not block event loop
+    if (fcntl(bot_fd, F_SETFL, O_NONBLOCK) < 0)
     {
         close(bot_fd);
         return (false);
     }
     addr.sin_family = AF_INET;
     addr.sin_port = htons(11434); // ollama default port
-    addr.sin_addr.s_addr = inet_addr("127.0.0.1"); // connect to ollama on localhost
-    res = connect(bot_fd, (sockaddr *)&addr, sizeof(addr)); // 
+    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    res = connect(bot_fd, (sockaddr *)&addr, sizeof(addr)); // start connection to ollama
     if (res < 0 && errno != EINPROGRESS)
     {
         close(bot_fd);
@@ -137,22 +141,23 @@ bool Bot::start_request(int client_fd, const std::string &question)
     req.client_fd = client_fd;
     req.bytes_sent = 0;
     req.response_complete = false;
-	req.question = question;
-    req.send_buffer = this->create_request(client_fd, question); // create http request to send to ollama
-    req.recv_buffer = ""; // init response buffer to receive ollama response
-    event.events = EPOLLOUT; // begin by monitoring socket for writing -> send request to ollama
+    req.question = question;
+    req.send_buffer = this->create_request(client_fd, nick, question); // create http request with client nick
+    req.recv_buffer = ""; // initialize response buffer
+    event.events = EPOLLOUT; // start monitoring socket for writing
     event.data.fd = bot_fd;
     if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, bot_fd, &event) < 0)
     {
         close(bot_fd);
         return (false);
     }
-    this->_requests[bot_fd] = req; // store request data in map
+    this->_requests[bot_fd] = req; // store request in map
     return (true);
 }
 
 // send() - send remaining request data TO ollama through bot socket.
 // recv() - receive response data FROM ollama through bot socket.
+// req.send_buffer.c_str() + req.bytes_sent -> pointer to first byte of remaining data to send
 bool Bot::handle_request_data(int bot_fd, int event)
 {
     t_request &req = this->_requests[bot_fd];
@@ -218,7 +223,7 @@ bool Bot::handle_bot_event(Server &server, int bot_fd, int events)
     		throw std::runtime_error("Ollama socket error :/");
         if (!req.response_complete)
             return (true); // if response is not complete -> wait for more data
-        answer = extract_response(req.recv_buffer); // validate http response and extract answer
+        answer = extract_response(req.recv_buffer);
         if (answer == "Ollama returned an error." || answer == "No response from Ollama.")
             throw std::runtime_error("Invalid Ollama response.");
         if (!memory.empty())
