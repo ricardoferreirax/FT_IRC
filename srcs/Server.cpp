@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/21 06:43:07 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/21 14:17:16 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,61 +27,62 @@
 // pass: password clients will need during irc registration
 Server::Server(const std::string &port, const std::string &pass)
 {
-	int value;
-	time_t now;
+    time_t now;
 
-	if (port.empty())
-		throw std::runtime_error("IRC: invalid port!");
-	value = 0;
-	for (size_t i = 0; i < port.size(); i++)
-	{
-		if (port[i] < '0' || port[i] > '9')
-			throw std::runtime_error("IRC: port must contain only numbers!");
-		if (value > 6553)
-			throw std::runtime_error("IRC: port must be between 1024 and 65535!");
-		value = value * 10 + (port[i] - '0');
-		if (value > 65535)
-			throw std::runtime_error("IRC: port must be between 1024 and 65535!");
-	}
-	if (value < 1024)
-		throw std::runtime_error("IRC: privileged port! Use a port above 1023!");
-	if (pass.empty())
-		throw std::runtime_error("IRC: a server password is required!");
-	this->_port = value;
-	this->_pass = pass;
-	this->_listen_fd = -1;
-	this->_epoll_fd = -1;
-	this->_name = "ircserv";
-	now = time(NULL);
-	this->_date = ctime(&now);
-	if (!this->_date.empty())
-		this->_date.erase(this->_date.size() - 1);
+    this->_port = validate_port(port);
+    if (pass.empty())
+        throw std::runtime_error("IRC: a server password is required!");
+    this->_pass = pass;
+    this->_listen_fd = -1;
+    this->_epoll_fd = -1;
+    this->_name = "ircserv";
+    now = time(NULL);
+    this->_date = ctime(&now);
+    if (!this->_date.empty())
+        this->_date.erase(this->_date.size() - 1);
 }
 
 Server::~Server()
 {
-    std::map<int, Client>::iterator it;
-
-    for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
-    {
-        close(it->first);
-    }
-    if (this->_epoll_fd != -1)
-		close(this->_epoll_fd);
-    if (this->_listen_fd != -1)
-        close(this->_listen_fd);
-    std::cout << "[SERVER] Closed!" << std::endl;
+    this->close_connections(SERVER_SHUTDOWN, -1); // close all client connections
 }
 
-void Server::disconnect_client(int client_fd)
+void Server::close_connections(close_type type, int fd)
 {
-	this->_bot.clear_memory(client_fd);
-    epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
-    close(client_fd);
-    this->_clients.erase(client_fd);
-    std::cout << "\n=====================================================" << std::endl;
-	std::cout << "          CLIENT " << client_fd << " DISCONNECTED!" << std::endl;
-	std::cout << "=====================================================" << std::endl;
+    std::map<int, Client>::iterator it;
+
+    if (type == CLIENT_DISCONNECT)
+    {
+        this->_bot.cleanup(CLIENT_DISCONNECTED, fd, NULL); // clear client memory and requests
+        it = this->_clients.find(fd); // find client in map
+        if (it == this->_clients.end()) // client not found
+            return;
+        if (this->_epoll_fd != -1)
+            epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+        close(fd);
+        this->_clients.erase(it); // rmv client from map
+   	 	std::cout << "\n=====================================================" << std::endl;
+		std::cout << "          CLIENT " << fd << " DISCONNECTED!" << std::endl;
+    	std::cout << "\n=====================================================" << std::endl;
+    }
+    else if (type == SERVER_SHUTDOWN)
+    {
+        this->_bot.cleanup(BOT_SHUTDOWN, -1, NULL); // clear all bot requests and memory
+        for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
+            close(it->first); // close all client sockets
+        this->_clients.clear(); // rmv all clients
+        if (this->_listen_fd != -1)
+        {
+            close(this->_listen_fd);
+            this->_listen_fd = -1;
+        }
+        if (this->_epoll_fd != -1)
+        {
+            close(this->_epoll_fd);
+            this->_epoll_fd = -1;
+        }
+        std::cout << "[SERVER] Closed!" << std::endl;
+    }
 }
 
 // create ipv4 tcp listening socket used by irc server 
@@ -160,7 +161,7 @@ void Server::handle_socket_event(int fd, int events)
     else if (this->_clients.find(fd) != this->_clients.end())
     {
         if (events & (EPOLLERR | EPOLLHUP))
-            this->disconnect_client(fd); // disconnect client if socket has error
+            this->close_connections(CLIENT_DISCONNECT, fd); // disconnect client if socket has error
         else
         {
             if (events & EPOLLIN)
@@ -218,7 +219,7 @@ void Server::handle_client_data(int client_fd, int event)
         bytes = recv(client_fd, buffer, sizeof(buffer), 0);
         if (bytes == 0)
         {
-            this->disconnect_client(client_fd);
+            this->close_connections(CLIENT_DISCONNECT, client_fd);
             return;
         }
         if (bytes < 0)
@@ -238,7 +239,7 @@ void Server::handle_client_data(int client_fd, int event)
         if (send_buffer.empty()) // if all pending data was sent
         {
             if (client.get_quit())
-                this->disconnect_client(client_fd); // if QUIT was received -> disconnect client
+                this->close_connections(CLIENT_DISCONNECT, client_fd); // if QUIT was received -> disconnect client
             else
                 this->send_msg(client, "", EPOLLIN); // update epoll -> monitor only incoming data
         }

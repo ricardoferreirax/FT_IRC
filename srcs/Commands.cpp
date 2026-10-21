@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/20 20:13:23 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/21 14:08:39 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -284,100 +284,3 @@ int Server::handle_fast(Client &client, const std::vector<std::string> &params)
     client.set_host_ip("localhost");
     return (0);
 }
-
-// void Server::handle_fast(Client &client)
-// {
-// 	std::string nick;
-// 	std::string user;
-// 	std::string host;
-
-// 	nick = generateRandomString(9);
-// 	user = generateRandomString(9);
-// 	host = generateRandomString(9);
-// 	client.set_auth(true);
-// 	client.set_nick(nick);
-// 	client.set_user(user);
-// 	client.set_host_ip(host);
-// 	if (client.can_register())
-// 		client.set_registered(true);
-// 	this->send_msg(client, "You shall be named: " + nick + "\n", EPOLLIN | EPOLLOUT);
-// 	this->send_msg(client, "Your home kingdom shall be: " + host + "\n", EPOLLIN | EPOLLOUT);
-// 	this->send_msg(client, "Thy user shall be sung as: " + user +  "\n", EPOLLIN | EPOLLOUT);
-// 	this->send_msg(client, "Go forth, make haste, child of Mercury\r\n", EPOLLIN | EPOLLOUT);
-// 	this->send_msg(client, registration_reply(client, this->_name, this->_date) + "\n", EPOLLIN | EPOLLOUT);
-// }
-
-
-// void Server::handle_join(Client &client, const std::vector<std::string> &params)
-// {
-// 	std::map<std::string, Channel>::iterator it;
-// 	std::vector<std::string> c_names;
-// 	std::vector<std::string> keys;
-// 	std::string chan_name;
-// 	std::string key;
-// 	size_t i;
-// 	int ret;
-
-// 	if (params.empty())
-// 	{
-// 		this->send_msg(client, ":" + this->_name + " XXX * :Need more params\r\n", EPOLLIN | EPOLLOUT);
-// 		return;
-// 	}
-// 	if (params.size() > 2)
-// 	{
-// 		this->send_msg(client, ":" + this->_name + " XXX * :Too many params\r\n", EPOLLIN | EPOLLOUT);
-// 		return;
-// 	}
-// 	c_names = ft_split(params[0], ',');
-// 	if (params.size() > 1)
-// 		keys = ft_split(params[1], ',');
-// 	i = 0;
-// 	while (i < c_names.size())
-// 	{
-// 		chan_name = c_names[i];
-// 		if (chan_name.empty() || (chan_name[0] != '#' && chan_name[0] != '&'))
-// 		{
-// 			this->send_msg(client, "You fucked up homie, channel can only start with # or &\r\n", EPOLLIN | EPOLLOUT);
-// 			i++;
-// 			continue;
-// 		}
-// 		if (i < keys.size())
-// 			key = keys[i];
-// 		else
-// 			key = "";
-// 		it = this->_channels.find(chan_name);
-// 		if (it == this->_channels.end())
-// 		{
-// 			Channel ch(chan_name, default_mode(), client);
-// 			this->_channels.insert(std::pair<std::string, Channel>(chan_name, ch));
-// 			this->send_msg(client, "You created Channel " + chan_name + "\r\n" + "\n", EPOLLIN | EPOLLOUT);
-// 		}
-// 		else
-// 		{
-// 			ret = it->second.joinChannel(client, key);
-// 			if (ret)
-// 			{
-// 				switch (ret)
-// 				{
-// 					case 1:
-// 						this->send_msg(client, "NOTICE: User is already in Channel\r\n", EPOLLIN | EPOLLOUT);
-// 						break;
-// 					case 2:
-// 						this->send_msg(client, ":" + this->getName() + " XXX * :" + chan_name + " This place is full, get yo ass outta here\r\n", EPOLLIN | EPOLLOUT);
-// 						break;
-// 					case 3:
-// 						this->send_msg(client, ":" + this->getName() + " 473 * :" + chan_name + " You weren't invited to the boys club. Access denied\r\n", EPOLLIN | EPOLLOUT);
-// 						break;
-// 					case 4:
-// 						this->send_msg(client, ":" + this->getName() + " XXX * :" + chan_name + " What's the pass? This is boys only club\r\n", EPOLLIN | EPOLLOUT);
-// 						break;
-// 				}
-// 			}
-// 			else
-// 			{
-// 				this->send_msg(client, "You joined " + chan_name + "\r\n" + "\n", EPOLLIN | EPOLLOUT);
-// 			}
-// 		}
-// 		i++;
-// 	}
-// }

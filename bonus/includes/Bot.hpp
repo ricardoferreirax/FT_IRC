@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/21 06:34:03 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/21 13:46:03 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,14 @@
 #include <netinet/in.h>
 
 class	Server;
+
+enum clear_type
+{
+    REQUEST_COMPLETED,
+    REQUEST_FAILED,
+    CLIENT_DISCONNECTED,
+    BOT_SHUTDOWN
+};
 
 struct t_request
 {
@@ -49,8 +57,7 @@ class Bot
         void close_requests(int bot_fd);
         bool start_request(int client_fd, const std::string &question);
         bool handle_bot_event(Server &server, int bot_fd, int events);
-		void clear_memory(int client_fd);
-		void fail_request(Server &server, int bot_fd);
+		void cleanup(clear_type type, int fd, Server *server);
 };
 
 #endif

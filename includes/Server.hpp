@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/21 06:35:21 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/21 14:12:22 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,12 @@ extern volatile sig_atomic_t alive;
 
 class Channel;
 
+enum close_type
+{
+    CLIENT_DISCONNECT,
+    SERVER_SHUTDOWN
+};
+
 class Server
 {
 	private:
@@ -44,6 +50,8 @@ class Server
 		void 	handle_socket_event(int fd, int events);
 		void	handle_client_data(int client_fd, int event);
 		void	process_msg(Client &client, std::string &client_buffer);
+		void 	close_connections(close_type type, int fd);
+		
 		void 	disconnect_client(int client_fd);
 		void	send_msg(Client &client, const std::string &msg, int events);
 		void 	send_error(Client &client, int error, const std::string &cmd);
@@ -64,8 +72,8 @@ class Server
 		
 		void	start_socket();
 		void	monitor_epoll_events();
-		
 		void 	send_response(int client_fd, const std::string &msg);
+		
 		std::string	getName(void) const;
 };
 

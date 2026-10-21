@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/21 07:05:47 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/21 14:17:56 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,7 +27,7 @@ Bot::Bot()
 
 Bot::~Bot()
 {
-    this->close_requests(-1);
+    this->cleanup(BOT_SHUTDOWN, -1, NULL); // clear all bot requests and memory
 }
 
 void Bot::set_epoll_fd(int epoll_fd)
@@ -40,50 +40,35 @@ bool Bot::has_request(int bot_fd) const
     return (this->_requests.find(bot_fd) != this->_requests.end());
 }
 
-void Bot::close_requests(int bot_fd)
-{
-    if (bot_fd == -1)
-    {
-        while (!this->_requests.empty())
-            this->close_requests(this->_requests.begin()->first);
-        return;
-    }
-    if (this->_epoll_fd >= 0)
-        epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, bot_fd, NULL);
-    close(bot_fd);
-    this->_requests.erase(bot_fd);
-}
-
-void Bot::fail_request(Server &server, int bot_fd)
+void Bot::cleanup(clear_type type, int fd, Server *server)
 {
     std::map<int, t_request>::iterator it;
+    int bot_fd;
     int client_fd;
 
-    it = this->_requests.find(bot_fd);
-    if (it == this->_requests.end())
-        return;
-    client_fd = it->second.client_fd; // get client that sent request
-    this->close_requests(bot_fd); // close ollama socket and rmv request from epoll
-    server.send_response(client_fd, "Miku is unavailable."); // notify client
-}
-
-void Bot::clear_memory(int client_fd)
-{
-    std::map<int, t_request>::iterator it;
-	int bot_fd;
-
-    this->_memory.erase(client_fd); // clear memory for client
+    if (type == CLIENT_DISCONNECTED)
+        this->_memory.erase(fd); // clear client memory
+    else if (type == BOT_SHUTDOWN)
+        this->_memory.clear(); // clear all memory
     it = this->_requests.begin();
-    while (it != this->_requests.end()) // iterate all requests
+    while (it != this->_requests.end())
     {
-        if (it->second.client_fd == client_fd) // if request belongs to client
+        bot_fd = it->first;
+        client_fd = it->second.client_fd;
+        if (type == BOT_SHUTDOWN
+            || ((type == REQUEST_COMPLETED || type == REQUEST_FAILED) && bot_fd == fd) // if request completed or failed
+            || (type == CLIENT_DISCONNECTED && client_fd == fd)) // if client disconnected
         {
-            bot_fd = it->first; // get fd for that request
-            ++it; // move to next request before deleting
-            this->close_requests(bot_fd); // close request and rmv from map
+            ++it;
+            if (this->_epoll_fd != -1)
+                epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, bot_fd, NULL);
+            close(bot_fd);
+            this->_requests.erase(bot_fd);
+            if (type == REQUEST_FAILED && server != NULL)
+                server->send_response(client_fd, "Miku is unavailable.");
         }
         else
-            ++it; // move to next request
+            ++it;
     }
 }
 
@@ -227,13 +212,13 @@ bool Bot::handle_bot_event(Server &server, int bot_fd, int events)
 		std::string &memory = this->_memory[req.client_fd]; // get memory for that client
         std::string answer;
 
-        if ((events & EPOLLERR) // if socket has error
-            || ((events & EPOLLOUT) && !this->handle_request_data(bot_fd, EPOLLOUT)) // socket is ready for writing
-            || ((events & (EPOLLIN | EPOLLHUP)) && !this->handle_request_data(bot_fd, EPOLLIN))) // read ollama response or remaining data
-            throw std::runtime_error("Ollama socket error.");
+        if ((events & EPOLLERR) // socket has an error
+    		|| ((events & EPOLLOUT) && !this->handle_request_data(bot_fd, EPOLLOUT)) // socket is ready to send data but sending failed
+    		|| ((events & (EPOLLIN | EPOLLHUP)) && !this->handle_request_data(bot_fd, EPOLLIN))) // socket has data to read or connection closed but reading failed
+    		throw std::runtime_error("Ollama socket error :/");
         if (!req.response_complete)
             return (true); // if response is not complete -> wait for more data
-        answer = extract_response(req.recv_buffer); // validate HTTP response and extract answer
+        answer = extract_response(req.recv_buffer); // validate http response and extract answer
         if (answer == "Ollama returned an error." || answer == "No response from Ollama.")
             throw std::runtime_error("Invalid Ollama response.");
         if (!memory.empty())
@@ -241,15 +226,15 @@ bool Bot::handle_bot_event(Server &server, int bot_fd, int events)
         memory += "{\"role\":\"user\",\"content\":\"" + escape_json(req.question) + "\"}"; // add user question to memory
         memory += ",{\"role\":\"assistant\",\"content\":\"" + escape_json(answer) + "\"}"; // add miku answer to memory
         server.send_response(req.client_fd, answer); // send miku answer to client
-        this->close_requests(bot_fd); // close request and rmv from map
+        this->cleanup(REQUEST_COMPLETED, bot_fd, &server); // close request and rmv from map
         return (true);
     }
-    catch (const std::exception &e) // catch ollama errors without stopping server
+    catch (const std::exception &e)
     {
         std::cerr << "Miku: " << e.what() << std::endl;
         try
         {
-            this->fail_request(server, bot_fd); // close failed request and notify client
+            this->cleanup(REQUEST_FAILED, bot_fd, &server); // close failed request and notify client
         }
         catch (const std::exception &error)
         {

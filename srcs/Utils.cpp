@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/21 06:10:06 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/21 10:11:33 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,23 @@ t_cmode	default_mode(void)
 	def.users.u_limit = 0;
 	def.key = "";
 	return (def);
+}
+
+int validate_port(const std::string &port)
+{
+	int value;
+	
+    if (port.empty() || port.size() > 5)
+        throw std::runtime_error("IRC: invalid port!");
+    for (size_t i = 0; i < port.size(); i++)
+    {
+        if (port[i] < '0' || port[i] > '9')
+            throw std::runtime_error("IRC: port must contain only numbers!");
+    }
+    value = std::atoi(port.c_str());
+    if (value < 1024 || value > 65535)
+        throw std::runtime_error("IRC: port must be between 1024 and 65535!");
+    return (value);
 }
 
 static bool is_nick_special(char c)
