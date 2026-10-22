@@ -6,14 +6,14 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/22 12:40:39 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/22 13:33:45 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
 #include "../includes/Utils.hpp"
 
-void Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
+void	Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
 {
 	typedef int (Server::*Cmd)(Client &, const std::vector<std::string> &); // type cmd points to a member function of server
 	std::map<std::string, Cmd> cmds; // cmd corresponds to a member function

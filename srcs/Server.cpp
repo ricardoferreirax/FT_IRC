@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/22 12:40:09 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/22 13:33:25 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,14 +46,13 @@ Server::~Server()
 	this->close_connections(SERVER_SHUTDOWN, -1);
 }
 
-void Server::close_connections(close_type type, int fd)
+void	Server::close_connections(close_type type, int fd)
 {
 	std::map<int, Client>::iterator it;
 	
 	if (type == CLIENT_DISCONNECT)
 	{
-		this->_bot.cleanup(CLIENT_DISCONNECTED, fd, NULL);
-			// clear client memory and requests
+		this->_bot.cleanup(CLIENT_DISCONNECTED, fd, NULL); // clear client memory and requests
 		it = this->_clients.find(fd);
 		if (it == this->_clients.end()) // client not found
 			return ;
@@ -67,8 +66,7 @@ void Server::close_connections(close_type type, int fd)
 	}
 	else if (type == SERVER_SHUTDOWN)
 	{
-		this->_bot.cleanup(BOT_SHUTDOWN, -1, NULL);
-			// clear all bot requests and memory
+		this->_bot.cleanup(BOT_SHUTDOWN, -1, NULL); // clear all requests and memory
 		for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 			close(it->first);   // close all client sockets
 		this->_clients.clear(); // rmv all clients
@@ -87,7 +85,7 @@ void Server::close_connections(close_type type, int fd)
 }
 
 // listen() changes socket into a listening socket ready to accept connections
-void Server::start_socket()
+void	Server::start_socket()
 {
 	sockaddr_in	server_addr;
 	int			socket_opt;
@@ -114,7 +112,7 @@ void Server::start_socket()
 
 // give bot same epoll fd used by server, bot registers its sockets w/out creating other epoll
 // epoll_wait wait till at least one registered socket have events -> return nb of ready events
-void Server::monitor_epoll_events()
+void	Server::monitor_epoll_events()
 {
 	epoll_event	event;
 	epoll_event	events[10];
@@ -149,7 +147,7 @@ void Server::monitor_epoll_events()
 // EPOLLIN on listening socket -> a new client connection is waiting -> accept it
 // EPOLLIN on client socket -> has incoming data ready to be received -> read data FROM client
 // EPOLLOUT on client socket -> is ready to send pending data -> write data TO client
-void Server::handle_socket_event(int fd, int events)
+void	Server::handle_socket_event(int fd, int events)
 {
 	if (fd == this->_listen_fd)
 	{
@@ -175,7 +173,7 @@ void Server::handle_socket_event(int fd, int events)
 // accept() return a new fd for that client and store its address in client_addr
 // sin_addr stores ipv4 address in network byte order, inet_ntoa() converts this address 
 // from binary to readable string
-void Server::accept_client()
+void	Server::accept_client()
 {
 	epoll_event event;
 	sockaddr_in	client_addr;
@@ -207,7 +205,7 @@ void Server::accept_client()
 
 // recv() - receive data FROM client through client socket
 // send() - send pending data TO client through client socket
-void Server::handle_client_data(int client_fd, int event)
+void	Server::handle_client_data(int client_fd, int event)
 {
 	epoll_event	ev;
 	Client 		&client = this->_clients[client_fd];
@@ -254,13 +252,13 @@ void Server::handle_client_data(int client_fd, int event)
 
 // irc msgs end with \r\n, which separates one complete msg from the next one
 // incomplete msgs remain in client_buffer till more data is received with recv()
-void Server::process_msg(Client &client, std::string &client_buffer)
+void	Server::process_msg(Client &client, std::string &client_buffer)
 {
-	size_t	pos;
-
 	std::vector<std::string> params;
-	std::string msg;
-	std::string cmd;
+	std::string 			 msg;
+	std::string 			 cmd;
+	size_t					 pos;
+
 	pos = client_buffer.find("\r\n");
 	while (pos != std::string::npos)
 	{
@@ -286,6 +284,7 @@ void	Server::send_msg(Client &client, const std::string &msg)
 	client.get_send_buffer() += msg; // append msg to send buffer
 	if (msg.size() < 2 || msg.substr(msg.size() - 2) != "\r\n") // if msg does not end with \r\n
 		client.get_send_buffer() += "\r\n"; // end msg with \r\n
+	client.get_send_buffer() += "\r\n"; 
 	event.events = EPOLLIN | EPOLLOUT; // monitor socket for reading and writing
 	event.data.fd = client_fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0)

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:28:03 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/22 10:13:09 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/22 13:28:32 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@
 #include <iostream>
 #include <string>
 
-class Client
+class	Client
 {
     private:
 		std::string _recv_buffer;

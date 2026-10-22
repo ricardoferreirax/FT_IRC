@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/22 12:39:07 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/22 13:26:21 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,17 +30,17 @@ Bot::~Bot()
 	this->cleanup(BOT_SHUTDOWN, -1, NULL); // clear all bot requests and memory
 }
 
-void Bot::set_epoll_fd(int epoll_fd)
+void	Bot::set_epoll_fd(int epoll_fd)
 {
 	this->_epoll_fd = epoll_fd;
 }
 
-bool Bot::has_request(int bot_fd) const
+bool	Bot::has_request(int bot_fd) const
 {
 	return (this->_requests.find(bot_fd) != this->_requests.end());
 }
 
-void Bot::cleanup(clear_type type, int fd, Server *server)
+void	Bot::cleanup(clear_type type, int fd, Server *server)
 {
 	int	bot_fd;
 	int	client_fd;
@@ -72,7 +72,7 @@ void Bot::cleanup(clear_type type, int fd, Server *server)
 	}
 }
 
-std::string Bot::create_request(int client_fd, const std::string &nick, const std::string &question)
+std::string	Bot::create_request(int client_fd, const std::string &nick, const std::string &question)
 {
 	std::string content;
 	std::string request;
@@ -108,8 +108,7 @@ std::string Bot::create_request(int client_fd, const std::string &nick, const st
 }
 
 // create socket to connect to ollama
-bool Bot::start_request(int client_fd, const std::string &nick,
-	const std::string &question)
+bool	Bot::start_request(int client_fd, const std::string &nick, const std::string &question)
 {
 	sockaddr_in	addr;
 	epoll_event	event;
@@ -156,7 +155,7 @@ bool Bot::start_request(int client_fd, const std::string &nick,
 // send() - send remaining request data TO ollama through bot socket.
 // recv() - receive response data FROM ollama through bot socket.
 // req.send_buffer.c_str() + req.bytes_sent ->pointer to first byte of remaining data to send 
-bool Bot::handle_request_data(int bot_fd, int event)
+bool	Bot::handle_request_data(int bot_fd, int event)
 {
 	epoll_event	epoll_event;
 	char		buffer[4096];
@@ -197,17 +196,17 @@ bool Bot::handle_request_data(int bot_fd, int event)
 	return (true);
 }
 
-void Server::send_response(int client_fd, const std::string &msg)
+void	Server::send_response(int client_fd, const std::string &msg)
 {
 	std::map<int, Client>::iterator it;
-	
+
 	it = this->_clients.find(client_fd); // find client that sent question
 	if (it == this->_clients.end()) // client disconnected before miku answer -> ignore response
 		return ;
-	this->send_msg(it->second, ":Miku!Hatsune@127.0.0.1 PRIVMSG " + it->second.get_nick() + " :" + msg);
+	this->send_msg(it->second, "\r\n:Miku!Hatsune@ircserv PRIVMSG " + it->second.get_nick() + " :\033[36m" + msg + "\033[0m");
 }
 
-bool Bot::handle_bot_event(Server &server, int bot_fd, int events)
+bool	Bot::handle_bot_event(Server &server, int bot_fd, int events)
 {
 	try
 	{

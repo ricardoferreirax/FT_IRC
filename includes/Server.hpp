@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/22 12:28:05 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/22 13:28:44 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,7 +32,7 @@ enum	close_type
 	SERVER_SHUTDOWN
 };
 
-class Server
+class	Server
 {
 	private:
 		std::string	_name;

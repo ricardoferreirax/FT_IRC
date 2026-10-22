@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/22 12:37:58 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/22 13:29:21 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@
 # include <string>
 # include <sys/epoll.h>
 
-class Server;
+class	Server;
 
 enum	clear_type
 {
@@ -28,7 +28,7 @@ enum	clear_type
 	BOT_SHUTDOWN
 };
 
-struct	t_request
+typedef struct	t_request
 {
 	std::string	send_buffer;
 	std::string	recv_buffer;
@@ -36,7 +36,7 @@ struct	t_request
 	size_t		bytes_sent;
 	bool		response_complete;
 	int			client_fd;
-};
+}	t_request;
 
 class	Bot
 {

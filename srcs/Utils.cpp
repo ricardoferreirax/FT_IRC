@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/22 10:03:38 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/22 12:55:15 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -127,7 +127,7 @@ std::string registration_reply(const Client &client, const std::string &_name, c
 	user = client.get_user();
 	host = client.get_host_ip();
 	reply += ":" + _name + " 001 " + nick + " :Welcome to the IRC Network " + nick + "!" + user + "@" + host + "\r\n";
-	reply += ":" + _name + " 003 " + nick + " :This server was created " + date + "\r\n" + "\r\n";
+	reply += ":" + _name + " 003 " + nick + " :This server was created " + date + "\r\n";
 	return (reply);
 }
 
