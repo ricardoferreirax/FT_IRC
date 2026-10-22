@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/21 18:01:29 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/22 10:03:38 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,15 +79,16 @@ bool	same_nick(const std::string &nick1, const std::string &nick2)
 // space separates: cmd from params and params from each other
 void	parse_msg(const std::string &msg, std::string &cmd, std::vector<std::string> &params)
 {
-	size_t	space;
-
-	std::string	remaining;
+	std::string remaining;
 	std::string trailing;
-	
+	size_t		space;
+
 	params.clear(); // clear previous params
 	space = msg.find(' ');
 	cmd = msg.substr(0, space);
-	if (space == std::string::npos) // no space -> no params
+	for (size_t i = 0; i < cmd.size(); i++)
+		cmd[i] = std::toupper(cmd[i]);
+	if (space == std::string::npos) // no space ->no params 
 		return ;
 	remaining = msg.substr(space + 1); // everything after cmd is params
 	while (!remaining.empty())
@@ -98,8 +99,8 @@ void	parse_msg(const std::string &msg, std::string &cmd, std::vector<std::string
 			break ;
 		if (remaining[0] == ':' || params.size() == 14)
 		{
-			trailing = remaining; // after ':' is single param 
-			if (trailing[0] == ':') 
+			trailing = remaining; // after ':' is single param
+			if (trailing[0] == ':')
 				trailing.erase(0, 1);
 			params.push_back(trailing); // add this single param
 			break ;
@@ -145,8 +146,8 @@ bool	is_valid_user_mode(const std::string &mode)
 std::vector<std::string> ft_split(const std::string &s, char delim)
 {
 	std::vector<std::string> result;
-	std::stringstream ss(s);
-	std::string item;
+	std::stringstream 		 ss(s);
+	std::string 			 item;
 	
 	while (getline(ss, item, delim))
 	{
@@ -160,8 +161,8 @@ std::vector<std::string> ft_split(const std::string &s, char delim)
 std::string generateRandomString(int length)
 {
 	const std::string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-	std::string random_string = "";
-	int	index;
+	std::string 	  random_string = "";
+	int				  index;
 	
 	for (int i = 0; i < length; ++i)
 	{
@@ -174,6 +175,7 @@ std::string generateRandomString(int length)
 std::string nb_to_str(size_t nb)
 {
 	std::string res;
+	
 	if (nb == 0)
 		return ("0");
 	while (nb > 0)
@@ -186,9 +188,9 @@ std::string nb_to_str(size_t nb)
 
 std::string extract_response(const std::string &json)
 {
-	size_t	start;
-
-	std::string result;
+	std::string res;
+	size_t		start;
+	
 	if (json.find("HTTP/1.1 200") != 0)
 	{
 		std::cerr << "Ollama HTTP error:\n" << json << std::endl;
@@ -204,39 +206,39 @@ std::string extract_response(const std::string &json)
 		{
 			++start;
 			if (json[start] == 'n')
-				result += '\n'; // nl
+				res += '\n'; // nl
 			else if (json[start] == 'r')
-				result += '\r'; // carriage return
+				res += '\r'; // carriage return
 			else if (json[start] == 't')
-				result += '\t'; // tab
+				res += '\t'; // tab
 			else
-				result += json[start]; // handle escaped quotes and blackslash
+				res += json[start]; // handle escaped quotes and blackslash
 		}
 		else
-			result += json[start]; // add normal char to answer
+			res += json[start]; // add normal char to answer
 		++start; // move to next char
 	}
-	return (result); // return miku answer :3
+	return (res); // return miku answer :3
 }
 
 std::string escape_json(const std::string &text)
 {
-	std::string result;
+	std::string res;
 	
 	for (size_t i = 0; i < text.size(); i++)
 	{
 		if (text[i] == '\\')
-			result += "\\\\"; // escape backslash
+			res += "\\\\"; // escape backslash
 		else if (text[i] == '"')
-			result += "\\\""; // escape quote
+			res += "\\\""; // escape quote
 		else if (text[i] == '\n')
-			result += "\\n"; // escape nl
+			res += "\\n"; // escape nl
 		else if (text[i] == '\r')
-			result += "\\r"; // escape carriage return
+			res += "\\r"; // escape carriage return
 		else if (text[i] == '\t')
-			result += "\\t"; // escape tab
+			res += "\\t"; // escape tab
 		else
-			result += text[i]; // add normal character
+			res += text[i]; // add normal character
 	}
-	return (result);
+	return (res);
 }

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/21 16:55:29 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/22 12:40:09 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,6 +49,7 @@ Server::~Server()
 void Server::close_connections(close_type type, int fd)
 {
 	std::map<int, Client>::iterator it;
+	
 	if (type == CLIENT_DISCONNECT)
 	{
 		this->_bot.cleanup(CLIENT_DISCONNECTED, fd, NULL);
@@ -88,8 +89,8 @@ void Server::close_connections(close_type type, int fd)
 // listen() changes socket into a listening socket ready to accept connections
 void Server::start_socket()
 {
-	int			socket_opt;
 	sockaddr_in	server_addr;
+	int			socket_opt;
 
 	this->_listen_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (this->_listen_fd < 0)
@@ -116,7 +117,7 @@ void Server::start_socket()
 void Server::monitor_epoll_events()
 {
 	epoll_event	event;
-	epoll_event	events[64];
+	epoll_event	events[10];
 	int			ready;
 	int			current_fd;
 
@@ -130,7 +131,7 @@ void Server::monitor_epoll_events()
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 	while (alive)
 	{
-		ready = epoll_wait(this->_epoll_fd, events, 64, -1);
+		ready = epoll_wait(this->_epoll_fd, events, 10, -1);
 		if (ready < 0)
 		{
 			if (!alive)
@@ -208,10 +209,11 @@ void Server::accept_client()
 // send() - send pending data TO client through client socket
 void Server::handle_client_data(int client_fd, int event)
 {
-	char	buffer[1024];
-	ssize_t	bytes;
-
-	Client &client = this->_clients[client_fd];
+	epoll_event	ev;
+	Client 		&client = this->_clients[client_fd];
+	ssize_t		bytes;
+	char		buffer[1024];
+	
 	if (event == EPOLLIN)
 	{
 		std::string &recv_buffer = client.get_recv_buffer();
@@ -240,7 +242,12 @@ void Server::handle_client_data(int client_fd, int event)
 			if (client.get_quit())
 				this->close_connections(CLIENT_DISCONNECT, client_fd); // QUIT was received -> disconnect client
 			else
-				this->send_msg(client, "", EPOLLIN); // update epoll ->monitor only incoming data
+			{
+				ev.events = EPOLLIN; // no pending data ->monitor socket for reading only
+				ev.data.fd = client_fd;
+				if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &ev) < 0)
+					this->close_connections(CLIENT_DISCONNECT, client_fd);
+			}
 		}
 	}
 }
@@ -270,26 +277,26 @@ void Server::process_msg(Client &client, std::string &client_buffer)
 	}
 }
 
-void Server::send_msg(Client &client, const std::string &msg, int events)
+void	Server::send_msg(Client &client, const std::string &msg)
 {
 	epoll_event	event;
 	int			client_fd;
 
 	client_fd = client.get_client_fd();
 	client.get_send_buffer() += msg; // append msg to send buffer
-	if (!client.get_send_buffer().empty())
-		event.events = EPOLLIN | EPOLLOUT; // if there is pending data ->monitor socket for reading and writing
-	else
-		event.events = events;
+	if (msg.size() < 2 || msg.substr(msg.size() - 2) != "\r\n") // if msg does not end with \r\n
+		client.get_send_buffer() += "\r\n"; // end msg with \r\n
+	event.events = EPOLLIN | EPOLLOUT; // monitor socket for reading and writing
 	event.data.fd = client_fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 }
 
-void Server::send_error(Client &client, int error, const std::string &param)
+void	Server::send_error(Client &client, int error, const std::string &param)
 {
 	std::map<int, std::string> errors; // each error code has a corresponding error msg
-	std::string nick;
+	std::string				   nick;
+
 	nick = client.get_nick();
 	if (nick.empty())
 		nick = "*";
@@ -307,8 +314,7 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	errors[464] = "464 " + nick + " :Password incorrect";
 	if (errors.find(error) == errors.end())
 		return ; // error code is not in map -> ignore it
-	this->send_msg(client, ":" + this->_name + " " + errors[error] + "\r\n",
-		EPOLLIN | EPOLLOUT);
+	this->send_msg(client, ":" + this->_name + " " + errors[error]);
 }
 
 std::string Server::getName(void) const

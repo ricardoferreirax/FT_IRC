@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/21 17:48:17 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/22 12:28:05 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,12 +38,13 @@ class Server
 		std::string	_name;
 		std::string	_pass;
 		std::string	_date;
-		int	_port;
-		int	_listen_fd;
-		int	_epoll_fd;
-		Bot	_bot;
-		std::map<int, Client>	_clients;
+		int			_port;
+		int			_listen_fd;
+		int			_epoll_fd;
+		Bot			_bot;
+		
 		std::map<std::string, Channel>	_channels;
+		std::map<int, Client>			_clients;
 
 		void	accept_client();
 		void	handle_socket_event(int fd, int events);
@@ -52,7 +53,7 @@ class Server
 		void	close_connections(close_type type, int fd);
 
 		void	disconnect_client(int client_fd);
-		void	send_msg(Client &client, const std::string &msg, int events);
+		void 	send_msg(Client &client, const std::string &msg);
 		void	send_error(Client &client, int error, const std::string &cmd);
 
 		void	execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params);
@@ -68,12 +69,13 @@ class Server
 	public:
 		Server(const std::string &port, const std::string &pass);
 		~Server();
-
+		
+		std::string	getName(void) const;
+		
 		void	start_socket();
 		void	monitor_epoll_events();
 		void	send_response(int client_fd, const std::string &msg);
 
-	std::string	getName(void) const;
 };
 
 void	handle_signal(int signal);
