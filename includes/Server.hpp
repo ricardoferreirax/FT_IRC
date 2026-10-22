@@ -25,6 +25,7 @@
 extern volatile sig_atomic_t running;
 
 class Channel;
+typedef struct s_modecmd t_modecmd;
 
 class Server
 {
@@ -58,6 +59,14 @@ class Server
 		int 	handle_join(Client &client, const std::vector<std::string> &params);
 		int 	handle_miku(Client &client, const std::vector<std::string> &params);
 		int 	handle_fast(Client &client, const std::vector<std::string> &params);
+		bool handle_imode(Client &client, std::string chan_name, t_modecmd flag);
+		bool handle_tmode(Client &client, std::string chan_name, t_modecmd flag);
+		bool handle_kmode(Client &client, std::string chan_name, t_modecmd flag);
+		bool handle_omode(Client &client, std::string chan_name, t_modecmd flag);
+		bool handle_lmode(Client &client, std::string chan_name, t_modecmd flag);
+		Channel *validate_channel_op(Client &client, const std::string &channel_name, bool needs_sudo);
+
+	int		handle_mode(Client &client, const std::vector<std::string> &params);
 	
 	public:
 		Server(const std::string &port, const std::string &pass);

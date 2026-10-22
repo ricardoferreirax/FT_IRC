@@ -79,3 +79,12 @@ t_cmode Channel::getMode(void) const
 	return (this->_mode);
 }
 
+
+void Channel::setMode(bool invite, bool topic_restricted, std::string topic, t_ulimit users, std::string key)
+{
+	this->_mode.invite_only = invite;
+	this->_mode.topic_restricted = topic_restricted;
+	this->_mode.topic = topic;
+	this->_mode.users = users;
+	this->_mode.key = key;
+}

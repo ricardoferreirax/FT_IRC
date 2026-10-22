@@ -34,6 +34,15 @@ typedef struct s_mode
 	std::string key;
 } t_cmode;
 
+typedef struct s_modecmd
+{
+	bool needs_param;
+	std::string param;
+	bool is_add;
+	char flag;
+} t_modecmd;
+
+
 class Channel
 {
 	private:
@@ -54,6 +63,7 @@ class Channel
 		std::map<int, Client> getClients(void) const;
 		std::set<int> getInvites(void) const;
 		t_cmode getMode(void) const;
+		void setMode(bool invite, bool topic_restricted, std::string topic, t_ulimit users, std::string key);
 };
 
 #endif // !CHANNELS_HPP

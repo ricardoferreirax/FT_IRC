@@ -63,13 +63,10 @@ std::string Bot::create_request(const std::string &question)
     std::string content;
     std::string request;
 
-    content = "{\"model\":\"qwen:latest\",";
-    content += "\"system\":\"You are Miku, a reliable AI assistant. "
-    "Prioritize factual accuracy over creativity. "
+    content = "{\"model\":\"qwen3:latest\",";
+    content += "\"system\":\"You are Miku, a dumb AI assistant. "
     "Give clear and correct answers. "
-    "Only provide detailed explanations when requested. "
-    "For mathematics, calculate carefully. "
-    "For science and programming, use established knowledge. "
+    "Answer with funny over factual"
     "If uncertain, say so.\",";
     content += "\"prompt\":\"" + question + "\",";
     content += "\"stream\":false,";
@@ -77,7 +74,7 @@ std::string Bot::create_request(const std::string &question)
     content += "\"options\":{";
     content += "\"num_predict\":1024,";
     content += "\"num_ctx\":4096,";
-    content += "\"temperature\":0.2";
+    content += "\"temperature\":1.0";
     content += "}}";
 
     request = "POST /api/generate HTTP/1.1\r\n";
@@ -259,5 +256,5 @@ std::string Bot::extract_response(const std::string &json)
             result += json[start]; // no escape -> add char to result
         start++;
     }
-    return (result);
+    return ("\033[36m" + result + "\033[0m");
 }

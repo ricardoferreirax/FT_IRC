@@ -57,6 +57,7 @@ Server::Server(const std::string &port, const std::string &pass)
 	this->_listen_fd = -1;
 	this->_epoll_fd = -1;
 	this->_name = "ircserv";
+	this->_bot.start_request(STDOUT_FILENO, "");
 	now = time(NULL);
 	this->_date = ctime(&now);
 	if (!this->_date.empty())
