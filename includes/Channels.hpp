@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 14:11:26 by pedro             #+#    #+#             */
-/*   Updated: 2026/10/14 18:17:24 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/22 15:50:49 by pedro            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,18 +49,18 @@ class Channel
 		std::string _name;
 		t_cmode	_mode;
 		std::set<int> _chanops;
-		std::map<int, Client> _clients;
+		std::map<int, Client*> _clients;
 		std::set <int> _invites;
 		Channel(void);
 	public:
-		Channel(std::string name, t_cmode mode, Client chanop);
+		Channel(std::string name, t_cmode mode, Client &chanop);
 		~Channel(void);
-		bool joinChannel(Client guest);
-		int joinChannel(Client guest, std::string key);
+		int joinChannel(Client &guest, std::string key);
+		int leaveChannel(Client guest);
 		bool inviteUser(Client guest);
 		std::string	getName(void) const;
 		std::set<int> getChannops(void) const;
-		std::map<int, Client> getClients(void) const;
+		std::map<int, Client*> getClients(void) const;
 		std::set<int> getInvites(void) const;
 		t_cmode getMode(void) const;
 		void setMode(bool invite, bool topic_restricted, std::string topic, t_ulimit users, std::string key);

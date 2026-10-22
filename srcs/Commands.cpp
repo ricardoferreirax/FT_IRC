@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/18 19:43:38 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/22 15:39:18 by pedro            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd,
 	cmds["MIKU"] = &Server::handle_miku;
 	cmds["FAST"] = &Server::handle_fast;
 	cmds["MODE"] = &Server::handle_mode;
+	cmds["PART"] = &Server::handle_part;
 	if (cmds.find(cmd) == cmds.end()) // check if cmd is in the map
 	{
 		this->send_error(client, 421, cmd); // unknown command error
@@ -60,6 +61,46 @@ void Server::execute_cmd(Client &client, const std::string &cmd,
 		this->send_msg(client, registration_reply(client, this->_name,
 				this->_date), EPOLLIN | EPOLLOUT);
 	}
+}
+
+int Server::handle_part(Client &client, const std::vector<std::string> &params)
+{
+	if(params.empty() || params.size() > 2)
+	{
+		this->send_error(client, 401, "TOO many args");
+		return -1;
+	}
+	std::vector<std::string> channels = ft_split(params[0], ',');
+	size_t i = 0;
+	while(i < channels.size())
+	{
+		if(this->_channels.find(channels[i]) == this->_channels.end())
+		{
+			this->send_error(client, 401, "No such channel " + channels[i] + ", no action was taken");
+			return -1;
+		}
+		i++;
+	}
+	i = 0;
+	std::vector<std::string> notify_chan;
+	while(i < channels.size())
+	{
+		std::map<std::string, Channel>::iterator chanit = this->_channels.find(channels[i]);
+		chanit->second.leaveChannel(client);
+		std::cout << client.get_client_fd() << " has left " << chanit->second.getName() << std::endl;
+		if(chanit->second.getClients().size() <= 0)
+			this->_channels.erase(chanit);
+		else
+		{
+			notify_chan.push_back(channels[i]);
+			notify_chan.push_back(client.get_nick() + " has left");
+			if(params.size() == 2)
+				notify_chan.push_back("Reason: " + params[1]);
+			this->handle_privmsg(client, notify_chan);
+		}
+		i++;
+	}
+	return 0;
 }
 
 int Server::handle_pass(Client &client, const std::vector<std::string> &params)
@@ -155,7 +196,7 @@ int Server::handle_user(Client &client, const std::vector<std::string> &params)
 int Server::handle_privmsg(Client &client,
 	const std::vector<std::string> &params)
 {
-	std::map<int, Client>::iterator it;
+	std::map<int, Client>::iterator clienit;
 	std::string target;
 	std::string msg;
 	std::string prefix;
@@ -165,18 +206,36 @@ int Server::handle_privmsg(Client &client,
 		return (412);
 	target = params[0];
 	msg = params[1];
-	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
+	clienit = this->_clients.begin();
+	while ( clienit != this->_clients.end())
 	{
-		if (same_nick(it->second.get_nick(), target))
+		if (same_nick(clienit->second.get_nick(), target))
 		// if target matches a client's nickname
 		{
 			prefix = ":" + client.get_nick() + "!" + client.get_user() + "@"
 				+ client.get_host_ip();
-			this->send_msg(it->second, prefix + " PRIVMSG "
-				+ it->second.get_nick() + " :" + msg + "\r\n" + "\r\n",
+			this->send_msg(clienit->second, prefix + " PRIVMSG "
+				+ clienit->second.get_nick() + " :" + msg + "\r\n" + "\r\n",
 				EPOLLIN | EPOLLOUT);
 			return (0);
 		}
+		clienit++;
+	}
+	std::map<std::string, Channel>::iterator chanit = this->_channels.find(target);
+	if(chanit != this->_channels.end())
+	{
+		std::map<int, Client*> chan_clients = chanit->second.getClients();
+		std::map<int, Client*>::iterator clienit = chan_clients.begin();
+		prefix = ":" + client.get_nick() + "!" + client.get_user() + "@"
+			+ client.get_host_ip();
+		while(clienit != chan_clients.end())
+		{
+			this->send_msg(*(clienit->second), prefix + " PRIVMSG "
+				+ clienit->second->get_nick() + " :" + msg + "\r\n" + "\r\n",
+				EPOLLIN | EPOLLOUT);
+			clienit++;
+		}
+		return 0;
 	}
 	this->send_error(client, 401, target); // no such nick/channel error
 	return (0);
@@ -244,159 +303,7 @@ int Server::handle_fast(Client &client, const std::vector<std::string> &params)
 	return (0);
 }
 
-t_modecmd	create_modecmd(bool needs_param, bool is_add, char flag, std::string param = "")
-{
-	t_modecmd	cmdmode;
 
-	cmdmode.flag = flag;
-	cmdmode.is_add = is_add;
-	cmdmode.needs_param = needs_param;
-	cmdmode.param = param;
-	return (cmdmode);
-}
-
-bool	tokenize_mode_flags(const std::string &params,
-		std::vector<t_modecmd> &flags, const std::vector<std::string> cmdargs, size_t arg_idx)
-{
-	size_t	i;
-	bool	is_add;
-	bool	needs_param;
-	std::string arg = "";
-
-	i = 0;
-	if (params.empty() || (params[0] != '+' && params[0] != '-'))
-		return (false);
-	while (i < params.size())
-	{
-		{
-			arg = "";
-			if (params[i] == '+')
-			{
-				if (i + 1 >= params.size() || params[i + 1] == '+' || params[i
-					+ 1] == '-')
-					return (false);
-				is_add = true;
-			}
-			else if (params[i] == '-')
-			{
-				if (i + 1 >= params.size() || params[i + 1] == '+' || params[i
-					+ 1] == '-')
-					return (false);
-				is_add = false;
-			}
-			else
-			{
-				if (!is_add && params[i] == 'l')
-					needs_param = false;
-				else if (params[i] == 'k' || params[i] == 'o'
-					|| params[i] == 'l')
-				{
-					needs_param = true;
-					if(arg_idx >= cmdargs.size())
-						return false;
-					else
-						arg = cmdargs[arg_idx];
-					arg_idx++;
-				}
-				else
-					needs_param = false;
-				flags.push_back(create_modecmd(needs_param, is_add, params[i], arg));
-			}
-		}
-		i++;
-	}
-	return (true);
-}
-
-Channel *Server::validate_channel_op(Client &client, const std::string &channel_name, bool needs_sudo)
-{
-	std::map<std::string, Channel>::iterator chanit = this->_channels.find(channel_name);
-	if(chanit == this->_channels.end())
-	{
-		this->send_error(client, 401, "No such channel");
-		return NULL;
-	}
-	if(needs_sudo && chanit->second.getChannops().find(client.get_client_fd()) == chanit->second.getChannops().end())
-	{
-		this->send_error(client, 401, "No perms, try using sudo");
-		return NULL;
-	}
-	return &(chanit->second);
-}
-
-bool Server::handle_imode(Client &client, std::string chan_name, t_modecmd flag)
-{
-	Channel *channel = validate_channel_op(client, chan_name, 1);
-	if(!channel)
-		return false;
-	channel->setMode(flag.is_add, channel->getMode().topic_restricted, channel->getMode().topic, channel->getMode().users, channel->getMode().key);
-	std::cout << "Channel " << chan_name << " now has " << flag.is_add << " i" << std::endl;
-	return true;
-}
-
-bool Server::handle_tmode(Client &client, std::string chan_name, t_modecmd flag)
-{
-	Channel *channel = validate_channel_op(client, chan_name, 0);
-	if(!channel)
-		return false;
-	channel->setMode(channel->getMode().invite_only, flag.is_add, channel->getMode().topic, channel->getMode().users, channel->getMode().key);
-	std::cout << "Channel " << chan_name << " now has " << flag.is_add << " t" << std::endl;
-	return true;
-}
-
-bool Server::handle_kmode(Client &client, std::string chan_name, t_modecmd flag)
-{
-	Channel *channel = validate_channel_op(client, chan_name, 1);
-	if(!channel)
-		return false;
-	if(flag.is_add)
-		channel->setMode(channel->getMode().invite_only, channel->getMode().topic_restricted, channel->getMode().topic, channel->getMode().users, flag.param);
-	else
-		channel->setMode(channel->getMode().invite_only, channel->getMode().topic_restricted, channel->getMode().topic, channel->getMode().users, "");
-	std::cout << "Channel " << chan_name << " now has " << flag.is_add << " k" << std::endl;
-	return true;
-}
-
-bool Server::handle_omode(Client &client, std::string chan_name, t_modecmd flag)
-{
-	Channel *channel = validate_channel_op(client, chan_name, 1);
-	if(!channel)
-		return false;
-	std::map<int, Client>::iterator clienit = this->_clients.begin();
-	while(clienit != this->_clients.end())
-	{
-		if(clienit->second.get_nick() == flag.param)
-			break;
-		clienit++;
-	}
-	if(clienit == this->_clients.end())
-	{
-		this->send_error(client, 401, "No such client");
-		return false;
-	}
-	if(flag.is_add)
-		channel->getChannops().insert(clienit->second.get_client_fd());
-	else
-		channel->getChannops().erase(clienit->second.get_client_fd());
-	std::cout << "Channel " << chan_name << " now has " << flag.is_add << " o" << std::endl;
-	return true;
-}
-
-
-bool Server::handle_lmode(Client &client, std::string chan_name, t_modecmd flag)
-{
-	Channel *channel = validate_channel_op(client, chan_name, 1);
-	if(!channel)
-		return false;
-	t_ulimit users;
-	if(flag.is_add)
-		users.u_limit = std::atoi(flag.param.c_str());
-	else
-		users.u_limit = 0;
-	channel->setMode(channel->getMode().invite_only, channel->getMode().topic_restricted, channel->getMode().topic, users, channel->getMode().key);
-	std::cout << "Channel " << chan_name << " now has " << flag.is_add << " l" << std::endl;
-	return true;
-}
 
 int Server::handle_mode(Client &client, const std::vector<std::string> &params)
 {
@@ -407,25 +314,15 @@ int Server::handle_mode(Client &client, const std::vector<std::string> &params)
 		this->send_error(client, 461, "FUck, im scawred");
 		return (-1);
 	}
-	std::vector<std::string>::const_iterator it = params.begin();
-	while(it != params.end())
-	{
-		std::cout << it->c_str() << std::endl;
-		it++;
-	}
-	std::cout << "get the children outta the room" << std::endl;
 	if (!tokenize_mode_flags(params[1], flags, params, 2))
 	{
 		this->send_error(client, 401, "You're doing the same shit");
 		return(-1);
 	}
-	std::cout << "FUCK" << std::endl;
 	size_t i = 0;
 	bool res = false;
 	while(i < flags.size())
 	{
-		// std::cout << flags[i].flag;
-		std::cout << "FUCK 2: the fuck is now another one" << std::endl;
 		switch (flags[i].flag) 
 		{
 			case 'i':

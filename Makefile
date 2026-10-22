@@ -6,7 +6,7 @@
 #    By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/09/27 23:34:05 by rmedeiro          #+#    #+#              #
-#    Updated: 2026/10/17 14:24:21 by rmedeiro         ###   ########.fr        #
+#    Updated: 2026/10/22 13:32:06 by pedro            ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -26,6 +26,7 @@ SRCS = srcs/main.cpp \
        srcs/Server.cpp \
        srcs/Client.cpp \
        srcs/Commands.cpp \
+	   srcs/Mode.cpp \
        srcs/Channels.cpp \
        srcs/Utils.cpp \
        bonus/srcs/Bot.cpp

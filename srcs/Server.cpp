@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/18 20:02:38 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/22 13:31:49 by pedro            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,9 +16,9 @@
 #include "../bonus/includes/Bot.hpp"
 #include <iostream>
 #include <unistd.h>
-       #include <sys/socket.h>
-       #include <netinet/in.h>
-       #include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>

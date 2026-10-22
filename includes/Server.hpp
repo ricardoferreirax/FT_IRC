@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/18 19:26:56 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/22 13:53:56 by pedro            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -59,6 +59,7 @@ class Server
 		int 	handle_join(Client &client, const std::vector<std::string> &params);
 		int 	handle_miku(Client &client, const std::vector<std::string> &params);
 		int 	handle_fast(Client &client, const std::vector<std::string> &params);
+		int handle_part(Client &client, const std::vector<std::string> &params);
 		bool handle_imode(Client &client, std::string chan_name, t_modecmd flag);
 		bool handle_tmode(Client &client, std::string chan_name, t_modecmd flag);
 		bool handle_kmode(Client &client, std::string chan_name, t_modecmd flag);
@@ -82,4 +83,6 @@ class Server
 void	handle_signal(int signal);
 void	setup_signals(void);
 
+bool	tokenize_mode_flags(const std::string &params,
+		std::vector<t_modecmd> &flags, const std::vector<std::string> cmdargs, size_t arg_idx);
 #endif
