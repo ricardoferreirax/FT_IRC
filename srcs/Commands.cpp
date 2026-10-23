@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/22 13:33:45 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/23 16:01:03 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,13 +34,16 @@ void	Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	}
 	if ((cmd == "PRIVMSG" || cmd == "JOIN" || cmd == "MIKU") && !client.get_registered())
 	{
-		this->send_error(client, 451, cmd); // not registered error
+		this->send_error(client, ERR_NOTREGISTERED, cmd);
 		return ;
 	}
 	error = (this->*cmds[cmd])(client, params);
 	if (error != 0)
 	{
-		this->send_error(client, error, cmd);
+		if ((error == ERR_NOSUCHNICK || error == ERR_ERRONEOUSNICKNAME || error == ERR_NICKNAMEINUSE) && !params.empty())
+			this->send_error(client, error, params[0]);
+		else		
+			this->send_error(client, error, cmd);
 		return ;
 	}
 	if (cmd == "QUIT")
@@ -58,16 +61,13 @@ void	Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 int Server::handle_pass(Client &client, const std::vector<std::string> &params)
 {
 	if (client.get_registered())
-		return (462);
+		return (ERR_ALREADYREGISTRED);
 	if (client.get_auth())
-	{
-		this->send_msg(client, ":" + this->_name + " NOTICE * :PASS already accepted");
-		return (0);
-	}
+		return (ERR_PASSALREADYACCEPTED);
 	if (params.size() != 1)
-		return (461);
+		return (ERR_NEEDMOREPARAMS);
 	if (params[0] != this->_pass)
-		return (464);
+		return (ERR_PASSWDMISMATCH);
 	client.set_auth(true);
 	this->send_msg(client, ":" + this->_name + " NOTICE * :PASS accepted");
 	return (0);
@@ -81,30 +81,18 @@ int Server::handle_nick(Client &client, const std::vector<std::string> &params)
 	
 	client_fd = client.get_client_fd();
 	if (!client.get_auth())
-	{
-		this->send_msg(client, ":" + this->_name + " NOTICE * :PASS must be accepted before NICK");
-		return (0);
-	}
+		return (ERR_PASSREQUIRED);
 	if (params.empty())
-		return (431); // no nick given error
+		return (ERR_NONICKNAMEGIVEN);
 	nick = params[0];
 	if (!is_valid_nick(nick))
-	{
-		this->send_error(client, 432, nick); // invalid nick error
+		return (ERR_ERRONEOUSNICKNAME);
+	if (client.get_nick() == nick)
 		return (0);
-	}
-	if (same_nick(client.get_nick(), nick))
-	{
-		this->send_msg(client, ":" + this->_name + " NOTICE " + client.get_nick() + " :You are already using this nickname");
-		return (0);
-	}
 	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
 		if (it->first != client_fd && same_nick(it->second.get_nick(), nick))
-		{
-			this->send_error(client, 433, nick); // nickname already in use error
-			return (0);
-		}
+			return (ERR_NICKNAMEINUSE);
 	}
 	client.set_nick(nick);
 	this->send_msg(client, ":" + this->_name + " NOTICE * :Set nickname to " + nick);
@@ -117,21 +105,15 @@ int Server::handle_user(Client &client, const std::vector<std::string> &params)
 	std::string mode;
 	
 	if (client.get_registered())
-		return (462); // error if client is already registered
+		return (ERR_ALREADYREGISTRED);
 	if (client.get_nick().empty())
-	{
-		this->send_msg(client, ":" + this->_name + " NOTICE * :NICK must be set before USER");
-		return (0);
-	}
+		return (ERR_NONICKNAMEGIVEN); // nick must be set before user error
 	if (params.size() < 4)
-		return (461); // not enough parameters error
+		return (ERR_NEEDMOREPARAMS);
 	username = params[0];
 	mode = params[1];
 	if (!is_valid_user_mode(mode))
-	{
-		this->send_msg(client, ":" + this->_name + " NOTICE " + client.get_nick() + " :Invalid USER mode: only numbers are allowed");
-		return (0);
-	}
+		return (ERR_INVALIDUSERMODE);
 	client.set_user(username);
 	this->send_msg(client, ":" + this->_name + " NOTICE * :Set username to " + username);
 	return (0);
@@ -145,9 +127,9 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 	std::string 					prefix;
 	
 	if (params.empty())
-		return (411); // no recipient given error
+		return (ERR_NORECIPIENT);
 	if (params.size() < 2 || params[1].empty()) // check if msg text is empty
-		return (412);
+		return (ERR_NOTEXTTOSEND);
 	target = params[0];
 	msg = params[1];
 	if (same_nick(target, "Miku"))
@@ -155,12 +137,12 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 		try
 		{
 			if (!this->_bot.start_request(client.get_client_fd(), client.get_nick(), msg)) // bot is unavailable-> send error to client
-				this->send_msg(client, ":Miku!Hatsune@ircserv PRIVMSG " + client.get_nick() + " :Miku is unavailable");
+				return (ERR_MIKUUNAVAILABLE);
 		}
 		catch (const std::exception &e)
 		{
 			std::cerr << "Miku: " << e.what() << std::endl;
-			this->send_msg(client, ":Miku!Hatsune@ircserv PRIVMSG " + client.get_nick() + " :Miku is unavailable");
+			return (ERR_MIKUUNAVAILABLE);
 		}
 		return (0);
 	}
@@ -173,8 +155,7 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 			return (0);
 		}
 	}
-	this->send_error(client, 401, target); // no such nick/channel error
-	return (0);
+	return (401); // no such nick/channel error
 }
 
 // ping is used to check if connection between client and server is still active.
@@ -183,7 +164,7 @@ int Server::handle_ping(Client &client, const std::vector<std::string> &params)
 	std::string	token;
 	
 	if (params.empty() || params[0].empty())
-		return (409); // no origin specified error
+		return (ERR_NOORIGIN);
 	token = params[0];
 	this->send_msg(client, ":" + this->_name + " PONG " + this->_name + " :" + token);
 	return (0);
@@ -218,18 +199,18 @@ int Server::handle_quit(Client &client, const std::vector<std::string> &params)
 	return (0);
 }
 
-int Server::handle_join(Client &client, const std::vector<std::string> &params)
+int	Server::handle_join(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, Channel>::iterator it;
 	std::vector<std::string> 				 c_names;
 	std::vector<std::string> 				 keys;
 	std::string 							 chan_name;
 	std::string 							 key;
-	size_t									 i;
-	int										 ret;
+	size_t 									 i;
+	int 									 ret;
 
 	if (params.empty() || params.size() > 2)
-		return (461);
+		return (ERR_NEEDMOREPARAMS);
 	c_names = ft_split(params[0], ',');
 	if (params.size() > 1)
 		keys = ft_split(params[1], ',');
@@ -239,7 +220,7 @@ int Server::handle_join(Client &client, const std::vector<std::string> &params)
 		chan_name = c_names[i];
 		if (chan_name.empty() || (chan_name[0] != '#' && chan_name[0] != '&'))
 		{
-			this->send_msg(client, "Invalid channel name: must start with # or &\r\n");
+			this->send_error(client, ERR_BADCHANMASK, chan_name);
 			i++;
 			continue ;
 		}
@@ -251,7 +232,6 @@ int Server::handle_join(Client &client, const std::vector<std::string> &params)
 		if (it == this->_channels.end())
 		{
 			Channel ch(chan_name, default_mode(), client);
-			
 			this->_channels.insert(std::pair<std::string, Channel>(chan_name, ch));
 			this->send_msg(client, "You created Channel " + chan_name);
 		}
@@ -259,13 +239,13 @@ int Server::handle_join(Client &client, const std::vector<std::string> &params)
 		{
 			ret = it->second.joinChannel(client, key);
 			if (ret == 1)
-				this->send_msg(client, "NOTICE: User is already in Channel");
+				this->send_error(client, ERR_USERONCHANNEL, chan_name);
 			else if (ret == 2)
-				this->send_msg(client, "Channel is full: " + chan_name + " ! Get yo ass outta here");
+				this->send_error(client, ERR_CHANNELISFULL, chan_name);
 			else if (ret == 3)
-				this->send_msg(client, ":" + this->_name + " 473 " + client.get_nick() + " " + chan_name + " :You weren't invited to the boys club. Access denied");
+				this->send_error(client, ERR_INVITEONLYCHAN, chan_name);
 			else if (ret == 4)
-				this->send_msg(client, "Channel requires a key: " + chan_name + " ! What's the pass? This is boys only club");
+				this->send_error(client, ERR_BADCHANNELKEY, chan_name);
 			else
 				this->send_msg(client, "You joined " + chan_name);
 		}
@@ -279,7 +259,7 @@ int Server::handle_fast(Client &client, const std::vector<std::string> &params)
 	(void)params;
 	
 	if (!client.get_auth())
-		return (451);
+		return (ERR_PASSREQUIRED);
 	client.set_nick("Nick");
 	client.set_user("User");
 	client.set_host_ip("localhost");

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/22 13:28:44 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/23 16:01:40 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,32 @@ enum	close_type
 {
 	CLIENT_DISCONNECT,
 	SERVER_SHUTDOWN
+};
+
+enum	e_irc_error
+{
+	ERR_NOSUCHNICK = 401,
+	ERR_NOORIGIN = 409,
+	ERR_NORECIPIENT = 411,
+	ERR_NOTEXTTOSEND = 412,
+	ERR_UNKNOWNCOMMAND = 421,
+	ERR_NONICKNAMEGIVEN = 431,
+	ERR_ERRONEOUSNICKNAME = 432,
+	ERR_NICKNAMEINUSE = 433,
+    ERR_USERONCHANNEL = 443,
+	ERR_NOTREGISTERED = 451,
+	ERR_NEEDMOREPARAMS = 461,
+	ERR_ALREADYREGISTRED = 462,
+	ERR_PASSWDMISMATCH = 464,
+	ERR_CHANNELISFULL = 471,
+    ERR_INVITEONLYCHAN = 473,
+    ERR_BADCHANNELKEY = 475,
+	ERR_BADCHANMASK = 476,
+	ERR_PASSALREADYACCEPTED = 601,
+	ERR_PASSREQUIRED = 602,
+	ERR_NICKREQUIRED = 603,
+	ERR_INVALIDUSERMODE = 604,
+	ERR_MIKUUNAVAILABLE = 605
 };
 
 class	Server

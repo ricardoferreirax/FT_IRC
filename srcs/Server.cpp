@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/22 13:33:25 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/23 16:01:59 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -291,7 +291,7 @@ void	Server::send_msg(Client &client, const std::string &msg)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 }
 
-void	Server::send_error(Client &client, int error, const std::string &param)
+void Server::send_error(Client &client, int error, const std::string &param)
 {
 	std::map<int, std::string> errors; // each error code has a corresponding error msg
 	std::string				   nick;
@@ -299,18 +299,28 @@ void	Server::send_error(Client &client, int error, const std::string &param)
 	nick = client.get_nick();
 	if (nick.empty())
 		nick = "*";
-	errors[401] = "401 " + nick + " " + param + " :No such nick/channel";
-	errors[409] = "409 " + nick + " :No origin specified";
-	errors[411] = "411 " + nick + " :No recipient given (" + param + ")";
-	errors[412] = "412 " + nick + " :No text to send";
-	errors[421] = "421 " + nick + " " + param + " :Unknown command";
-	errors[431] = "431 " + nick + " :No nickname given";
-	errors[432] = "432 " + nick + " " + param + " :Erroneous nickname";
-	errors[433] = "433 " + nick + " " + param + " :Nickname is already in use";
-	errors[451] = "451 " + nick + " :You have not registered";
-	errors[461] = "461 " + nick + " " + param + " :Not enough parameters";
-	errors[462] = "462 " + nick + " :You may not reregister";
-	errors[464] = "464 " + nick + " :Password incorrect";
+	errors[ERR_NOSUCHNICK] = "401 " + nick + " " + param + " :No such nick/channel";
+	errors[ERR_NOORIGIN] = "409 " + nick + " :No origin specified";
+	errors[ERR_NORECIPIENT] = "411 " + nick + " :No recipient given (" + param + ")";
+	errors[ERR_NOTEXTTOSEND] = "412 " + nick + " :No text to send";
+	errors[ERR_UNKNOWNCOMMAND] = "421 " + nick + " " + param + " :Unknown command";
+	errors[ERR_NONICKNAMEGIVEN] = "431 " + nick + " :No nickname given";
+	errors[ERR_ERRONEOUSNICKNAME] = "432 " + nick + " " + param + " :Erroneous nickname";
+	errors[ERR_NICKNAMEINUSE] = "433 " + nick + " " + param + " :Nickname is already in use";
+	errors[ERR_USERONCHANNEL] = "443 " + nick + " " + param + " :is already on channel";
+	errors[ERR_NOTREGISTERED] = "451 " + nick + " :You have not registered";
+	errors[ERR_NEEDMOREPARAMS] = "461 " + nick + " " + param + " :Not enough parameters";
+	errors[ERR_ALREADYREGISTRED] = "462 " + nick + " :You may not reregister";
+	errors[ERR_PASSWDMISMATCH] = "464 " + nick + " :Password incorrect";
+    errors[ERR_CHANNELISFULL] = "471 " + nick + " " + param + " :Cannot join channel (+l)";
+    errors[ERR_INVITEONLYCHAN] = "473 " + nick + " " + param + " :Cannot join channel (+i)";
+    errors[ERR_BADCHANNELKEY] = "475 " + nick + " " + param + " :Cannot join channel (+k)";
+	errors[ERR_BADCHANMASK] = "476 " + nick + " " + param + " :Bad Channel Mask";
+	errors[ERR_PASSALREADYACCEPTED] = "601 " + nick + " :PASS already accepted";
+	errors[ERR_PASSREQUIRED] = "602 " + nick + " :PASS must be accepted before NICK";
+	errors[ERR_NICKREQUIRED] = "603 " + nick + " :NICK must be set before USER";
+	errors[ERR_INVALIDUSERMODE] = "604 " + nick + " :Invalid USER mode: only numbers are allowed";
+	errors[ERR_MIKUUNAVAILABLE] = "605 " + nick + " :Miku is unavailable";
 	if (errors.find(error) == errors.end())
 		return ; // error code is not in map -> ignore it
 	this->send_msg(client, ":" + this->_name + " " + errors[error]);
