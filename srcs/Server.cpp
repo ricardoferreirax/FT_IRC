@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/23 16:01:59 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/23 16:19:48 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,6 +44,11 @@ Server::Server(const std::string &port, const std::string &pass)
 Server::~Server()
 {
 	this->close_connections(SERVER_SHUTDOWN, -1);
+}
+
+std::string Server::getName(void) const
+{
+	return (this->_name);
 }
 
 void	Server::close_connections(close_type type, int fd)
@@ -324,9 +329,4 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	if (errors.find(error) == errors.end())
 		return ; // error code is not in map -> ignore it
 	this->send_msg(client, ":" + this->_name + " " + errors[error]);
-}
-
-std::string Server::getName(void) const
-{
-	return (this->_name);
 }

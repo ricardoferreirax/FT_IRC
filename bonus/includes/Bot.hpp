@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/22 13:29:21 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/23 18:30:58 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,6 +56,7 @@ class	Bot
 		bool	has_request(int bot_fd) const;
 		void	close_requests(int bot_fd);
 		bool	start_request(int client_fd, const std::string &nick, const std::string &question);
+		void	process_bot_response(t_request &req, Server &server);
 		bool	handle_bot_event(Server &server, int bot_fd, int events);
 		void 	cleanup(clear_type type, int fd, Server *server);
 };

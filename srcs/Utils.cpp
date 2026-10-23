@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/22 12:55:15 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/23 18:20:08 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -186,59 +186,44 @@ std::string nb_to_str(size_t nb)
 	return (res);
 }
 
-std::string extract_response(const std::string &json)
-{
-	std::string res;
-	size_t		start;
-	
-	if (json.find("HTTP/1.1 200") != 0)
-	{
-		std::cerr << "Ollama HTTP error:\n" << json << std::endl;
-		return ("Ollama returned an error.");
-	}
-	start = json.find("\"content\":\""); // find start of generated answer
-	if (start == std::string::npos) // if no answer was generated
-		return ("No response from Ollama.");
-	start += 11;
-	while (start < json.size() && json[start] != '"') // read answer till closing quote
-	{
-		if (json[start] == '\\' && start + 1 < json.size()) // check if is an escape char
-		{
-			++start;
-			if (json[start] == 'n')
-				res += '\n'; // nl
-			else if (json[start] == 'r')
-				res += '\r'; // carriage return
-			else if (json[start] == 't')
-				res += '\t'; // tab
-			else
-				res += json[start]; // handle escaped quotes and blackslash
-		}
-		else
-			res += json[start]; // add normal char to answer
-		++start; // move to next char
-	}
-	return (res); // return miku answer :3
-}
-
-std::string escape_json(const std::string &text)
+std::string convert_json(const std::string &text, e_json type)
 {
 	std::string res;
 	
 	for (size_t i = 0; i < text.size(); i++)
 	{
-		if (text[i] == '\\')
-			res += "\\\\"; // escape backslash
-		else if (text[i] == '"')
-			res += "\\\""; // escape quote
-		else if (text[i] == '\n')
-			res += "\\n"; // escape nl
-		else if (text[i] == '\r')
-			res += "\\r"; // escape carriage return
-		else if (text[i] == '\t')
-			res += "\\t"; // escape tab
-		else
-			res += text[i]; // add normal character
+		if (type == JSON_ESCAPE) // convert normal text to json
+		{
+			if (text[i] == '\\')
+				res += "\\\\"; // escape backslash
+			else if (text[i] == '"')
+				res += "\\\""; // quotes
+			else if (text[i] == '\n')
+				res += "\\n"; // nl
+			else if (text[i] == '\r')
+				res += "\\r"; // carriage
+			else if (text[i] == '\t')
+				res += "\\t"; // tab
+			else
+				res += text[i]; // if normal char ->add it
+		}
+		else if (type == JSON_UNESCAPE) // convert json to normal text
+		{
+			if (text[i] == '\\' && i + 1 < text.size()) // if is an escape char and not last
+			{
+				++i; // skip backslash
+				if (text[i] == 'n')
+					res += '\n'; // nl
+				else if (text[i] == 'r')
+					res += '\r'; // carriage
+				else if (text[i] == 't')
+					res += '\t'; // tab
+				else
+					res += text[i]; // escaped quote or backslash
+			}
+			else
+				res += text[i]; // if normal char ->add it
+		}
 	}
 	return (res);
 }

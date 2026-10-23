@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/22 13:26:21 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/23 18:28:15 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -82,7 +82,7 @@ std::string	Bot::create_request(int client_fd, const std::string &nick, const st
 	content += "{\"role\":\"system\",\"content\":";
 	content += "\"You are Miku, a japanese singer. ";
 	content += "Always answer the latest user message. ";
-	content += "The user's current IRC nickname is " + escape_json(nick) + ". ";
+	content += "The user's current IRC nickname is " + convert_json(nick, JSON_ESCAPE) + ". ";
 	content += "Address the user by their nickname. ";
 	content += "If you do not know something, say Miku Miku Beam.\"}";
 	if (!this->_memory[client_fd].empty())
@@ -91,7 +91,7 @@ std::string	Bot::create_request(int client_fd, const std::string &nick, const st
 		content += this->_memory[client_fd]; // add previous conversation of client
 	}
 	content += ",{\"role\":\"user\",\"content\":\"";
-	content += escape_json(question) + "\"}"; // add current user question
+	content += convert_json(question, JSON_ESCAPE) + "\"}"; // add current user question
 	content += "],";
 	content += "\"stream\":false,";
 	content += "\"think\":false,";
@@ -155,15 +155,15 @@ bool	Bot::start_request(int client_fd, const std::string &nick, const std::strin
 // send() - send remaining request data TO ollama through bot socket.
 // recv() - receive response data FROM ollama through bot socket.
 // req.send_buffer.c_str() + req.bytes_sent ->pointer to first byte of remaining data to send 
-bool	Bot::handle_request_data(int bot_fd, int event)
+bool Bot::handle_request_data(int bot_fd, int event)
 {
+    t_request 	&req = this->_requests[bot_fd];
 	epoll_event	epoll_event;
-	char		buffer[4096];
-	ssize_t		bytes;
-	size_t		remaining;
+    char        buffer[4096];
+    ssize_t     bytes;
+    size_t      remaining;
 
-	t_request &req = this->_requests[bot_fd];
-	if (event == EPOLLOUT) // socket is ready for writing ->send request to ollama
+	if (event == EPOLLOUT) // socket is ready for writing
 	{
 		remaining = req.send_buffer.size() - req.bytes_sent; // how many bytes still need to be sent
 		if (remaining > 0)
@@ -171,24 +171,24 @@ bool	Bot::handle_request_data(int bot_fd, int event)
 			bytes = send(bot_fd, req.send_buffer.c_str() + req.bytes_sent, remaining, MSG_NOSIGNAL);
 			if (bytes <= 0)
 				return (false);
-			req.bytes_sent += bytes; // add bytes to total bytes sent
+			req.bytes_sent += bytes; // update sent bytes
 		}
-		if (req.bytes_sent == req.send_buffer.size()) // when entire request has sent -> wait for response
+		if (req.bytes_sent == req.send_buffer.size())
 		{
-			epoll_event.events = EPOLLIN;
+			epoll_event.events = EPOLLIN; // all request data sent ->monitor socket for reading
 			epoll_event.data.fd = bot_fd;
 			if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, bot_fd, &epoll_event) < 0)
 				return (false);
 		}
 	}
-	else if (event == EPOLLIN) // socket is ready for reading ->receive response from ollama
+	else if (event == EPOLLIN) // socket is ready for reading
 	{
 		bytes = recv(bot_fd, buffer, sizeof(buffer), 0);
 		if (bytes < 0)
 			return (false);
 		if (bytes == 0)
 		{
-			req.response_complete = true; // ollama closed connection ->http response has ended 
+			req.response_complete = true; // connection closed
 			return (true);
 		}
 		req.recv_buffer.append(buffer, bytes);
@@ -206,28 +206,55 @@ void	Server::send_response(int client_fd, const std::string &msg)
 	this->send_msg(it->second, "\r\n:Miku!Hatsune@ircserv PRIVMSG " + it->second.get_nick() + " :\033[36m" + msg + "\033[0m");
 }
 
-bool	Bot::handle_bot_event(Server &server, int bot_fd, int events)
+void Bot::process_bot_response(t_request &req, Server &server)
+{
+	std::string &memory = this->_memory[req.client_fd];
+	std::string answer;
+	size_t 		start;
+	size_t 		end;
+
+	if (req.recv_buffer.find("HTTP/1.1 200") != 0)
+		throw std::runtime_error("Ollama HTTP error.");
+	start = req.recv_buffer.find("\"content\":\"");
+	if (start == std::string::npos)
+		throw std::runtime_error("No response from Ollama.");
+	start += 11;
+	end = start;
+	while (end < req.recv_buffer.size()) // find where miku answer ends
+	{
+		if (req.recv_buffer[end] == '\\' && end + 1 < req.recv_buffer.size())
+			end += 2; // if is an escape char and not the last char ->skip
+		else if (req.recv_buffer[end] == '"')
+			break ;
+		else
+			++end; // move to next char
+	}
+	if (end == req.recv_buffer.size()) // no closing quote found ->incomplete response
+		throw std::runtime_error("Incomplete Ollama response.");
+	answer = convert_json(req.recv_buffer.substr(start, end - start), JSON_UNESCAPE); // extract answer and convert json to normal text
+	server.send_response(req.client_fd, answer); // send answer to client
+	if (!memory.empty())
+		memory += ","; // separate previous msgs with comma
+	memory += "{\"role\":\"user\",\"content\":\"" + convert_json(req.question, JSON_ESCAPE) + "\"}"; // add user question to memory
+	memory += ",{\"role\":\"assistant\",\"content\":\"" + convert_json(answer, JSON_ESCAPE) + "\"}"; // add miku answer to memory
+}
+
+bool Bot::handle_bot_event(Server &server, int bot_fd, int events)
 {
 	try
 	{
-		t_request &req = this->_requests[bot_fd];
-		std::string &memory = this->_memory[req.client_fd];
-		std::string answer;
-		
-		if ((events & EPOLLERR) // socket has an error
-			|| ((events & EPOLLOUT) && !this->handle_request_data(bot_fd, EPOLLOUT)) // socket is ready to send data but failed
-			|| ((events & (EPOLLIN | EPOLLHUP)) && !this->handle_request_data(bot_fd, EPOLLIN))) // socket has data to read or connection closed but reading failed
+		std::map<int, t_request>::iterator it; // each bot fd has a corresponding request
+
+		it = this->_requests.find(bot_fd);
+		if (it == this->_requests.end())
+			return (false);
+		if ((events & EPOLLERR) 
+			|| ((events & EPOLLOUT) && !this->handle_request_data(bot_fd, EPOLLOUT))
+			|| ((events & EPOLLIN) && !this->handle_request_data(bot_fd, EPOLLIN)))
 			throw std::runtime_error("Ollama socket error :/");
-		if (!req.response_complete)
-			return (true); // response is not complete -> wait for more data
-		answer = extract_response(req.recv_buffer);
-		if (answer == "Ollama returned an error." || answer == "No response from Ollama.")
-			throw std::runtime_error("Invalid Ollama response.");
-		if (!memory.empty())
-			memory += ","; // previous conversation ->add comma to separate msgs 
-		memory += "{\"role\":\"user\",\"content\":\"" + escape_json(req.question) + "\"}"; // add user question to memory
-		memory += ",{\"role\":\"assistant\",\"content\":\"" + escape_json(answer) + "\"}"; // add miku answer to memory
-		server.send_response(req.client_fd, answer); // send answer to client
+		if (!it->second.response_complete)
+			return (true); // response is not complete ->wait for more data
+		this->process_bot_response(it->second, server);
 		this->cleanup(REQUEST_COMPLETED, bot_fd, &server);
 		return (true);
 	}
@@ -236,7 +263,7 @@ bool	Bot::handle_bot_event(Server &server, int bot_fd, int events)
 		std::cerr << "Miku: " << e.what() << std::endl;
 		try
 		{
-			this->cleanup(REQUEST_FAILED, bot_fd, &server); // close failed request and notify client
+			this->cleanup(REQUEST_FAILED, bot_fd, &server);
 		}
 		catch (const std::exception &error)
 		{
@@ -245,3 +272,4 @@ bool	Bot::handle_bot_event(Server &server, int bot_fd, int events)
 		return (false);
 	}
 }
+
