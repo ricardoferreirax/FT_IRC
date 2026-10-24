@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/24 19:20:19 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/24 20:25:49 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -146,7 +146,6 @@ void Server::monitor_epoll_events()
 			current_fd = events[i].data.fd;
 			this->handle_socket_event(current_fd, events[i].events);
 		}
-		this->_bot.handle_miku_chat(*this);
 	}
 }
 

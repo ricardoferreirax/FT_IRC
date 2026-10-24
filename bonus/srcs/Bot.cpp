@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/24 19:50:51 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/24 20:25:38 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,15 +47,9 @@ void	Bot::cleanup(clear_type type, int fd, Server *server)
 	int								   client_fd;
 
 	if (type == CLIENT_DISCONNECTED)
-	{
 		this->_memory.erase(fd); // clear client memory
-		this->_last_chat.erase(fd); // clear client last chat
-	}
 	else if (type == BOT_SHUTDOWN)
-	{
 		this->_memory.clear(); // clear all memory
-		this->_last_chat.clear(); // clear all last chat
-	}
 	it = this->_requests.begin();
 	while (it != this->_requests.end())
 	{
@@ -122,7 +116,6 @@ bool	Bot::start_request(int client_fd, const std::string &nick, const std::strin
 	int			bot_fd;
 	int			res;
 
-	this->_last_chat[client_fd].last_time = time(NULL);
 	if (this->_epoll_fd < 0)
 		return (false);
 	bot_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -246,38 +239,6 @@ void Bot::process_bot_response(t_request &req, Server &server)
 	memory += ",{\"role\":\"assistant\",\"content\":\"" + convert_json(answer, JSON_ESCAPE) + "\"}"; // add miku answer to memory
 }
 
-void Bot::handle_miku_chat(Server &server)
-{
-	std::map<int, t_chat>::iterator it;
-	time_t							now;
-	static const char *messages[] = 
-	{
-        "Nee nee~ What are you doing right now? Tell me something interesting about you ♪",
-        "What's your favorite song? I really want to know!",
-        "Hey! Are you still there? Don't ignore me!",
-		"Ehehe~ You're awfully quiet today! Are you secretly planning a surprise for me?",
-		"Mouuu~ You're making me wait! Maybe you're too shy to talk to a famous virtual idol!",
-        "I'm getting bored! I need some attention! If you don't answer, I'm stealing the spotlight!",
-        "Fine! I'll start singing!",
-		"♪ World is Mine ♪\nLook at me, I'm shining bright! I'm your princess for tonight! Hear my voice across the sky!\n"
-        "Watch my turquoise dreams fly high! Stay with me beneath the light! Let's keep singing through the night!",
-		"♪ Senbonzakura ♪\nCherry blossoms fill the air! Dancing petals everywhere! Hear the drums across the night!\n"
-        "Watch the stars ignite the light! Raise your voice and sing with me! Let our dreams forever be!",
-        "♪ Melt ♪\nMy heart is racing when you're near! I have so much I want you to hear! A little smile, a gentle breeze!\n"
-        "You make my worries disappear! Underneath the morning sky! I'll sing for you, so don't be shy!"
-    };
-	
-	now = time(NULL);
-	for (it = this->_last_chat.begin(); it != this->_last_chat.end(); ++it)
-	{
-		if (now - it->second.last_time < 5 || it->second.message >= 10)
-			continue ;
-		server.send_response(it->first, messages[it->second.message]);
-		it->second.message++;
-		it->second.last_time = now;
-	}
-}
-
 bool Bot::handle_bot_event(Server &server, int bot_fd, int events)
 {
 	try
@@ -311,4 +272,3 @@ bool Bot::handle_bot_event(Server &server, int bot_fd, int events)
 		return (false);
 	}
 }
-
