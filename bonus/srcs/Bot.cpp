@@ -6,12 +6,13 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/24 22:24:20 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/24 23:01:43 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../includes/Server.hpp"
 #include "../../includes/Utils.hpp"
+#include "../includes/BotUtils.hpp"
 #include "../includes/Bot.hpp"
 #include <arpa/inet.h>
 #include <cerrno>
@@ -96,7 +97,7 @@ std::string Bot::create_request(int client_fd, const std::string &nick, const st
 	content += "Use previous messages to understand current conversation. ";
 	content += "The user's current IRC nickname is " + convert_json(nick, JSON_ESCAPE) + ". ";
 	content += "Address the user by their nickname. If user corrects a previous fact, use corrected information. ";
-	content += "If you do not know something or if a fact is unknown or uncertain, say Miku Miku Beam.\"}";
+	content += "If you do not know something say Miku Miku Beam.\"}";
 	if (!memory.empty())
 		content += "," + memory; // if there is previous conversation->add it to request
 	content += ",{\"role\":\"user\",\"content\":\"";
