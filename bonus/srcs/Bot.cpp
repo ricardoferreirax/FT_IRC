@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/24 20:25:38 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/24 22:24:20 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,6 +40,11 @@ bool	Bot::has_request(int bot_fd) const
 	return (this->_requests.find(bot_fd) != this->_requests.end());
 }
 
+void Bot::clear_channel(const std::string &channel)
+{
+    this->_chan_memory.erase(channel);
+}
+
 void	Bot::cleanup(clear_type type, int fd, Server *server)
 {
 	std::map<int, t_request>::iterator it;
@@ -47,16 +52,18 @@ void	Bot::cleanup(clear_type type, int fd, Server *server)
 	int								   client_fd;
 
 	if (type == CLIENT_DISCONNECTED)
-		this->_memory.erase(fd); // clear client memory
+		this->_user_memory.erase(fd);
 	else if (type == BOT_SHUTDOWN)
-		this->_memory.clear(); // clear all memory
+	{
+		this->_user_memory.clear();
+		this->_chan_memory.clear();
+	}
 	it = this->_requests.begin();
 	while (it != this->_requests.end())
 	{
-		bot_fd = it->first;
-		client_fd = it->second.client_fd;
-		if (type == BOT_SHUTDOWN ||
-			((type == REQUEST_COMPLETED || type == REQUEST_FAILED) && bot_fd == fd) // if request completed or failed
+		bot_fd = it->first; // bot fd associated with request
+		client_fd = it->second.client_fd; // client fd associated with bot request
+		if (type == BOT_SHUTDOWN || ((type == REQUEST_COMPLETED || type == REQUEST_FAILED) && bot_fd == fd) // if request completed or failed
 			|| (type == CLIENT_DISCONNECTED && client_fd == fd)) // if client disconnected
 		{
 			++it;
@@ -72,49 +79,45 @@ void	Bot::cleanup(clear_type type, int fd, Server *server)
 	}
 }
 
-std::string	Bot::create_request(int client_fd, const std::string &nick, const std::string &question)
+std::string Bot::create_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question)
 {
 	std::string content;
 	std::string request;
-	
+	std::string memory;
+
+	if (channel.empty())
+		memory = this->_user_memory[client_fd];
+	else
+		memory = this->_chan_memory[channel];
 	content = "{\"model\":\"qwen:latest\",";
 	content += "\"messages\":[";
 	content += "{\"role\":\"system\",\"content\":";
-	content += "\"You are Miku, a japanese singer. ";
-	content += "Always answer the latest user message. ";
+	content += "\"You are Miku, a japanese singer. Remember important facts from previous conversations. ";
+	content += "Use previous messages to understand current conversation. ";
 	content += "The user's current IRC nickname is " + convert_json(nick, JSON_ESCAPE) + ". ";
-	content += "Address the user by their nickname. ";
-	content += "If you do not know something, say Miku Miku Beam.\"}";
-	if (!this->_memory[client_fd].empty())
-	{
-		content += ",";
-		content += this->_memory[client_fd]; // add previous conversation of client
-	}
+	content += "Address the user by their nickname. If user corrects a previous fact, use corrected information. ";
+	content += "If you do not know something or if a fact is unknown or uncertain, say Miku Miku Beam.\"}";
+	if (!memory.empty())
+		content += "," + memory; // if there is previous conversation->add it to request
 	content += ",{\"role\":\"user\",\"content\":\"";
-	content += convert_json(question, JSON_ESCAPE) + "\"}"; // add current user question
-	content += "],";
-	content += "\"stream\":false,";
-	content += "\"think\":false,";
-	content += "\"keep_alive\":\"10m\",";
-	content += "\"options\":{\"num_predict\":512,"; // limit response length
-	content += "\"num_ctx\":4096,\"temperature\":0.3}}";
-	request = "POST /api/chat HTTP/1.1\r\n"; // create http request to send to ollama
+	content += convert_json(nick + ": " + question, JSON_ESCAPE) + "\"}],"; // add current user question
+	content += "\"stream\":false,\"think\":false,\"keep_alive\":\"10m\",\"options\":{\"num_predict\":512,\"num_ctx\":4096,\"temperature\":0.3}}";
+	request = "POST /api/chat HTTP/1.1\r\n"; // http request to send to ollama
 	request += "Host: 127.0.0.1:11434\r\n";
 	request += "Content-Type: application/json\r\n";
-	request += "Content-Length: " + nb_to_str(content.size()) + "\r\n"; // ollama knows when request ends
-	request += "Connection: close\r\n\r\n";
+	request += "Content-Length: " + nb_to_str(content.size()) + "\r\n" + "Connection: close\r\n\r\n"; // ollama knows when request ends
 	request += content;
 	return (request);
 }
 
 // create socket to connect to ollama
-bool	Bot::start_request(int client_fd, const std::string &nick, const std::string &question)
+bool Bot::start_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question)
 {
-	sockaddr_in	addr;
-	epoll_event	event;
-	t_request	req;
-	int			bot_fd;
-	int			res;
+	sockaddr_in addr;
+	epoll_event event;
+	t_request 	req;
+	int 		bot_fd;
+	int 		res;
 
 	if (this->_epoll_fd < 0)
 		return (false);
@@ -136,11 +139,13 @@ bool	Bot::start_request(int client_fd, const std::string &nick, const std::strin
 		return (false);
 	}
 	req.client_fd = client_fd;
+	req.nick = nick;
+	req.channel = channel;
 	req.bytes_sent = 0;
 	req.response_complete = false;
 	req.question = question;
-	req.send_buffer = this->create_request(client_fd, nick, question); // create http request with client nick
-	req.recv_buffer = ""; // initialize response buffer
+	req.send_buffer = this->create_request(client_fd, nick, channel, question); // create http request with client nick and channel
+	req.recv_buffer = "";
 	event.events = EPOLLOUT; // start monitoring socket for writing
 	event.data.fd = bot_fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, bot_fd, &event) < 0)
@@ -208,10 +213,10 @@ void	Server::send_response(int client_fd, const std::string &msg)
 
 void Bot::process_bot_response(t_request &req, Server &server)
 {
-	std::string &memory = this->_memory[req.client_fd];
+	std::string *memory;
 	std::string answer;
-	size_t 		start;
-	size_t 		end;
+	size_t start;
+	size_t end;
 
 	if (req.recv_buffer.find("HTTP/1.1 200") != 0)
 		throw std::runtime_error("Ollama HTTP error.");
@@ -233,10 +238,14 @@ void Bot::process_bot_response(t_request &req, Server &server)
 		throw std::runtime_error("Incomplete Ollama response.");
 	answer = convert_json(req.recv_buffer.substr(start, end - start), JSON_UNESCAPE); // extract answer and convert json to normal text
 	server.send_response(req.client_fd, answer); // send answer to client
-	if (!memory.empty())
-		memory += ","; // separate previous msgs with comma
-	memory += "{\"role\":\"user\",\"content\":\"" + convert_json(req.question, JSON_ESCAPE) + "\"}"; // add user question to memory
-	memory += ",{\"role\":\"assistant\",\"content\":\"" + convert_json(answer, JSON_ESCAPE) + "\"}"; // add miku answer to memory
+	if (req.channel.empty())
+		memory = &this->_user_memory[req.client_fd]; // if no channel ->store memory for this client
+	else
+		memory = &this->_chan_memory[req.channel];
+	if (!memory->empty())
+		*memory += ","; // separate previous msgs with comma
+	*memory += "{\"role\":\"user\",\"content\":\"" + convert_json(req.nick + ": " + req.question, JSON_ESCAPE) + "\"}"; // add user question to memory
+	*memory += ",{\"role\":\"assistant\",\"content\":\"" + convert_json(answer, JSON_ESCAPE) + "\"}"; // add miku answer to memory
 }
 
 bool Bot::handle_bot_event(Server &server, int bot_fd, int events)

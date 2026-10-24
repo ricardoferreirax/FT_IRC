@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/23 16:01:03 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/24 22:16:18 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -125,7 +125,7 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 	std::string 					target;
 	std::string 					msg;
 	std::string 					prefix;
-	
+
 	if (params.empty())
 		return (ERR_NORECIPIENT);
 	if (params.size() < 2 || params[1].empty()) // check if msg text is empty
@@ -136,7 +136,7 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 	{
 		try
 		{
-			if (!this->_bot.start_request(client.get_client_fd(), client.get_nick(), msg)) // bot is unavailable-> send error to client
+			if (!this->_bot.start_request(client.get_client_fd(), client.get_nick(), "", msg)) // bot is unavailable-> send error to client
 				return (ERR_MIKUUNAVAILABLE);
 		}
 		catch (const std::exception &e)
@@ -155,7 +155,7 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 			return (0);
 		}
 	}
-	return (401); // no such nick/channel error
+	return (ERR_NOSUCHNICK);
 }
 
 // ping is used to check if connection between client and server is still active.
