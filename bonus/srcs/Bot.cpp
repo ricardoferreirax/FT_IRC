@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/24 23:01:43 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/24 23:10:34 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -95,8 +95,7 @@ std::string Bot::create_request(int client_fd, const std::string &nick, const st
 	content += "{\"role\":\"system\",\"content\":";
 	content += "\"You are Miku, a japanese singer. Remember important facts from previous conversations. ";
 	content += "Use previous messages to understand current conversation. ";
-	content += "The user's current IRC nickname is " + convert_json(nick, JSON_ESCAPE) + ". ";
-	content += "Address the user by their nickname. If user corrects a previous fact, use corrected information. ";
+	content += "The user's current name is " + convert_json(nick, JSON_ESCAPE) + ". ";
 	content += "If you do not know something say Miku Miku Beam.\"}";
 	if (!memory.empty())
 		content += "," + memory; // if there is previous conversation->add it to request
