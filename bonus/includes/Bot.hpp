@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/23 18:30:58 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/24 19:16:24 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,7 @@
 # include <netinet/in.h>
 # include <string>
 # include <sys/epoll.h>
+# include <ctime>
 
 class	Server;
 
@@ -28,7 +29,7 @@ enum	clear_type
 	BOT_SHUTDOWN
 };
 
-typedef struct	t_request
+typedef struct	s_request
 {
 	std::string	send_buffer;
 	std::string	recv_buffer;
@@ -38,12 +39,19 @@ typedef struct	t_request
 	int			client_fd;
 }	t_request;
 
+typedef	struct	s_chat
+{
+    time_t  last_time;
+    int     message;
+}	t_chat;
+
 class	Bot
 {
 	private:
 		int	_epoll_fd;
 		std::map<int, t_request> 	_requests;
 		std::map<int, std::string> 	_memory;
+		std::map<int, t_chat> 		_last_chat;
 
 		std::string	create_request(int client_fd, const std::string &nick, const std::string &question);
 		bool		handle_request_data(int bot_fd, int event);
@@ -59,6 +67,7 @@ class	Bot
 		void	process_bot_response(t_request &req, Server &server);
 		bool	handle_bot_event(Server &server, int bot_fd, int events);
 		void 	cleanup(clear_type type, int fd, Server *server);
+		void    handle_miku_chat(Server &server);
 };
 
 #endif

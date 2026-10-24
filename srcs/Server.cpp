@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/23 16:19:48 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/24 19:20:19 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -117,12 +117,12 @@ void	Server::start_socket()
 
 // give bot same epoll fd used by server, bot registers its sockets w/out creating other epoll
 // epoll_wait wait till at least one registered socket have events -> return nb of ready events
-void	Server::monitor_epoll_events()
+void Server::monitor_epoll_events()
 {
-	epoll_event	event;
-	epoll_event	events[10];
-	int			ready;
-	int			current_fd;
+	epoll_event event;
+	epoll_event events[10];
+	int 		ready;
+	int 		current_fd;
 
 	this->_epoll_fd = epoll_create1(0);
 	if (this->_epoll_fd < 0)
@@ -134,7 +134,7 @@ void	Server::monitor_epoll_events()
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 	while (alive)
 	{
-		ready = epoll_wait(this->_epoll_fd, events, 10, -1);
+		ready = epoll_wait(this->_epoll_fd, events, 10, 1000);
 		if (ready < 0)
 		{
 			if (!alive)
@@ -146,6 +146,7 @@ void	Server::monitor_epoll_events()
 			current_fd = events[i].data.fd;
 			this->handle_socket_event(current_fd, events[i].events);
 		}
+		this->_bot.handle_miku_chat(*this);
 	}
 }
 
