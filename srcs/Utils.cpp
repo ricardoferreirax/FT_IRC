@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/24 22:41:37 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/25 19:36:21 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,16 +79,17 @@ bool	same_nick(const std::string &nick1, const std::string &nick2)
 // space separates: cmd from params and params from each other
 void	parse_msg(const std::string &msg, std::string &cmd, std::vector<std::string> &params)
 {
-	std::string remaining;
-	std::string trailing;
-	size_t		space;
+	size_t	space;
 
+	std::string	remaining;
+	std::string trailing;
+	
 	params.clear(); // clear previous params
 	space = msg.find(' ');
 	cmd = msg.substr(0, space);
 	for (size_t i = 0; i < cmd.size(); i++)
-		cmd[i] = std::toupper(cmd[i]);
-	if (space == std::string::npos) // no space ->no params 
+        cmd[i] = std::toupper(cmd[i]);
+	if (space == std::string::npos) // no space -> no params
 		return ;
 	remaining = msg.substr(space + 1); // everything after cmd is params
 	while (!remaining.empty())
@@ -99,8 +100,8 @@ void	parse_msg(const std::string &msg, std::string &cmd, std::vector<std::string
 			break ;
 		if (remaining[0] == ':' || params.size() == 14)
 		{
-			trailing = remaining; // after ':' is single param
-			if (trailing[0] == ':')
+			trailing = remaining; // after ':' is single param 
+			if (trailing[0] == ':') 
 				trailing.erase(0, 1);
 			params.push_back(trailing); // add this single param
 			break ;
@@ -127,7 +128,7 @@ std::string registration_reply(const Client &client, const std::string &_name, c
 	user = client.get_user();
 	host = client.get_host_ip();
 	reply += ":" + _name + " 001 " + nick + " :Welcome to the IRC Network " + nick + "!" + user + "@" + host + "\r\n";
-	reply += ":" + _name + " 003 " + nick + " :This server was created " + date + "\r\n";
+	reply += ":" + _name + " 003 " + nick + " :This server was created " + date + "\r\n" + "\r\n";
 	return (reply);
 }
 
@@ -146,8 +147,8 @@ bool	is_valid_user_mode(const std::string &mode)
 std::vector<std::string> ft_split(const std::string &s, char delim)
 {
 	std::vector<std::string> result;
-	std::stringstream 		 ss(s);
-	std::string 			 item;
+	std::stringstream ss(s);
+	std::string item;
 	
 	while (getline(ss, item, delim))
 	{
@@ -161,8 +162,8 @@ std::vector<std::string> ft_split(const std::string &s, char delim)
 std::string generateRandomString(int length)
 {
 	const std::string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-	std::string 	  random_string = "";
-	int				  index;
+	std::string random_string = "";
+	int	index;
 	
 	for (int i = 0; i < length; ++i)
 	{
@@ -170,4 +171,29 @@ std::string generateRandomString(int length)
 		random_string += chars[index];
 	}
 	return (random_string);
+}
+
+void	log_tcp(log_type type, int fd, ssize_t bytes, const std::string &data)
+{
+	if (type == IRC_CMD)
+		return ;
+	if (type == TCP_RECEIVE)
+		std::cout << "\n\033[1;32m[Client " << fd << "] Recv\033[0m   <<   ";
+	else if (type == TCP_SEND)
+		std::cout << "\033[1;34m[Server]   Send\033[0m   >>   ";
+	else
+		return ;
+	for (size_t i = 0; i < data.size(); i++)
+	{
+		if (data[i] == '\r')
+			continue ;
+		if (data[i] == '\n')
+		{
+			if (i + 1 < data.size() && data[i + 1] != '\r' && data[i + 1] != '\n')
+				std::cout << "\n                       ";
+		}
+		else
+			std::cout << data[i];
+	}
+	std::cout << " \033[90m(" << bytes << "B)\033[0m\n";
 }

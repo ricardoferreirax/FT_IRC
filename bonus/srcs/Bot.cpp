@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/24 23:10:34 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/25 19:42:02 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -208,7 +208,7 @@ void	Server::send_response(int client_fd, const std::string &msg)
 	it = this->_clients.find(client_fd); // find client that sent question
 	if (it == this->_clients.end()) // client disconnected before miku answer -> ignore response
 		return ;
-	this->send_msg(it->second, "\r\n:Miku!Hatsune@ircserv PRIVMSG " + it->second.get_nick() + " :\033[36m" + msg + "\033[0m");
+	this->send_msg(it->second, "\r\n:Miku!Hatsune@127.0.1 PRIVMSG " + it->second.get_nick() + " :\033[36m" + msg + "\033[0m");
 }
 
 void Bot::process_bot_response(t_request &req, Server &server)

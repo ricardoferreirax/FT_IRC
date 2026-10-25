@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/24 22:16:18 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/25 19:38:46 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,9 +51,7 @@ void	Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	if (!client.get_registered() && client.can_register())
 	{
 		client.set_registered(true);
-		std::cout << "\n=====================================================" << std::endl;
-		std::cout << "          CLIENT " << client.get_client_fd() << " REGISTERED!" << std::endl;
-		std::cout << "=====================================================" << std::endl;
+		std::cout << "\n\033[1;36m" << "✓ CLIENT " <<  client.get_client_fd() << " REGISTERED" << "\033[0m\n\n";
 		this->send_msg(client, registration_reply(client, this->_name, this->_date));
 	}
 }
@@ -115,7 +113,6 @@ int Server::handle_user(Client &client, const std::vector<std::string> &params)
 	if (!is_valid_user_mode(mode))
 		return (ERR_INVALIDUSERMODE);
 	client.set_user(username);
-	this->send_msg(client, ":" + this->_name + " NOTICE * :Set username to " + username);
 	return (0);
 }
 

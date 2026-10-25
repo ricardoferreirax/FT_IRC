@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/24 20:25:49 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/25 19:31:41 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,9 +65,7 @@ void	Server::close_connections(close_type type, int fd)
 			epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
 		close(fd);
 		this->_clients.erase(it);
-		std::cout << "\n=====================================================" << std::endl;
-		std::cout << "          CLIENT " << fd << " DISCONNECTED!" << std::endl;
-		std::cout << "=====================================================" << std::endl;
+		std::cout << "\n\033[1;31m- Client " << fd << " disconnected\033[0m\n\n";
 	}
 	else if (type == SERVER_SHUTDOWN)
 	{
@@ -203,9 +201,7 @@ void	Server::accept_client()
 	}
 	this->_clients[client_fd] = Client(client_fd);
 	this->_clients[client_fd].set_host_ip(inet_ntoa(client_addr.sin_addr));
-	std::cout << "\n=====================================================" << std::endl;
-	std::cout << "                CLIENT " << client_fd << " CONNECTED!" << std::endl;
-	std::cout << "=====================================================" << std::endl;
+	std::cout << "\n\033[1;32m" << "+ CLIENT " << client_fd << " CONNECTED" << "\033[0m\n";
 }
 
 // recv() - receive data FROM client through client socket
@@ -229,6 +225,7 @@ void	Server::handle_client_data(int client_fd, int event)
 		if (bytes < 0)
 			return ; // recv failed or would block ->ignore this event 
 		recv_buffer.append(buffer, bytes); // append bytes ->recv() may not receive all data at once 
+		log_tcp(TCP_RECEIVE, client_fd, bytes, std::string(buffer, bytes));
 		this->process_msg(client, recv_buffer);
 	}
 	else if (event == EPOLLOUT)
@@ -238,7 +235,8 @@ void	Server::handle_client_data(int client_fd, int event)
 			return ;
 		bytes = send(client_fd, send_buffer.c_str(), send_buffer.size(), MSG_NOSIGNAL);
 		if (bytes <= 0)
-			return ; // send failed or would block -> keep pending data 
+			return ; // send failed or would block -> keep pending data
+		log_tcp(TCP_SEND, client_fd, bytes, send_buffer.substr(0, bytes));
 		send_buffer.erase(0, bytes); // rmv only bytes successfully sent
 		if (send_buffer.empty()) // if all pending data was sent
 		{
@@ -272,6 +270,7 @@ void	Server::process_msg(Client &client, std::string &client_buffer)
 		if (!msg.empty())
 		{
 			parse_msg(msg, cmd, params);
+			log_tcp(IRC_CMD, client.get_client_fd(), msg.size() + 2, cmd);
 			this->execute_cmd(client, cmd, params);
 			if (client.get_quit())
 				return ;
