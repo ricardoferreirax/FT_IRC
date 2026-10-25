@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/25 19:38:46 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/25 20:04:29 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,7 +32,7 @@ void	Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 		this->send_error(client, 421, cmd); // unknown command error
 		return ;
 	}
-	if ((cmd == "PRIVMSG" || cmd == "JOIN" || cmd == "MIKU") && !client.get_registered())
+	if ((cmd == "PRIVMSG" || cmd == "JOIN") && !client.get_registered())
 	{
 		this->send_error(client, ERR_NOTREGISTERED, cmd);
 		return ;
@@ -62,7 +62,7 @@ int Server::handle_pass(Client &client, const std::vector<std::string> &params)
 		return (ERR_ALREADYREGISTRED);
 	if (client.get_auth())
 		return (ERR_PASSALREADYACCEPTED);
-	if (params.size() != 1)
+	if (params.empty())
 		return (ERR_NEEDMOREPARAMS);
 	if (params[0] != this->_pass)
 		return (ERR_PASSWDMISMATCH);
@@ -73,27 +73,34 @@ int Server::handle_pass(Client &client, const std::vector<std::string> &params)
 
 int Server::handle_nick(Client &client, const std::vector<std::string> &params)
 {
-	std::map<int, Client>::iterator	it;
-	std::string 					nick;
-	int								client_fd;
-	
-	client_fd = client.get_client_fd();
+	std::map<int, Client>::iterator it;
+	std::string						nick;
+	std::string						old_nick;
+	std::string						prefix;
+
 	if (!client.get_auth())
 		return (ERR_PASSREQUIRED);
-	if (params.empty())
+	if (params.empty() || params[0].empty())
 		return (ERR_NONICKNAMEGIVEN);
 	nick = params[0];
 	if (!is_valid_nick(nick))
 		return (ERR_ERRONEOUSNICKNAME);
-	if (client.get_nick() == nick)
+	old_nick = client.get_nick();
+	if (old_nick == nick)
 		return (0);
 	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
-		if (it->first != client_fd && same_nick(it->second.get_nick(), nick))
+		if (it->first != client.get_client_fd() && same_nick(it->second.get_nick(), nick)) // nick is already in use by another client
 			return (ERR_NICKNAMEINUSE);
 	}
+	if (client.get_registered())
+	{
+		prefix = ":" + old_nick + "!" + client.get_user() + "@" + client.get_host_ip();
+		this->send_msg(client, prefix + " NICK :" + nick);
+	}
+	else
+		this->send_msg(client, ":" + this->_name + " NOTICE * :Set nickname to " + nick);
 	client.set_nick(nick);
-	this->send_msg(client, ":" + this->_name + " NOTICE * :Set nickname to " + nick);
 	return (0);
 }
 
@@ -104,12 +111,16 @@ int Server::handle_user(Client &client, const std::vector<std::string> &params)
 	
 	if (client.get_registered())
 		return (ERR_ALREADYREGISTRED);
-	if (client.get_nick().empty())
-		return (ERR_NONICKNAMEGIVEN); // nick must be set before user error
+	if (!client.get_auth())
+		return (ERR_PASSREQUIRED);
 	if (params.size() < 4)
 		return (ERR_NEEDMOREPARAMS);
+	if (client.get_nick().empty())
+		return (ERR_NONICKNAMEGIVEN);
 	username = params[0];
 	mode = params[1];
+	if (username.empty())
+		return (ERR_NEEDMOREPARAMS);
 	if (!is_valid_user_mode(mode))
 		return (ERR_INVALIDUSERMODE);
 	client.set_user(username);
@@ -119,13 +130,13 @@ int Server::handle_user(Client &client, const std::vector<std::string> &params)
 int Server::handle_privmsg(Client &client, const std::vector<std::string> &params)
 {
 	std::map<int, Client>::iterator it;
-	std::string 					target;
-	std::string 					msg;
-	std::string 					prefix;
+	std::string						target;
+	std::string						msg;
+	std::string						prefix;
 
-	if (params.empty())
+	if (params.empty() || params[0].empty())
 		return (ERR_NORECIPIENT);
-	if (params.size() < 2 || params[1].empty()) // check if msg text is empty
+	if (params.size() < 2 || params[1].empty())
 		return (ERR_NOTEXTTOSEND);
 	target = params[0];
 	msg = params[1];
@@ -133,7 +144,7 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 	{
 		try
 		{
-			if (!this->_bot.start_request(client.get_client_fd(), client.get_nick(), "", msg)) // bot is unavailable-> send error to client
+			if (!this->_bot.start_request(client.get_client_fd(), client.get_nick(), "", msg))
 				return (ERR_MIKUUNAVAILABLE);
 		}
 		catch (const std::exception &e)
@@ -145,7 +156,7 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 	}
 	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
-		if (same_nick(it->second.get_nick(), target)) // if target matches a client nick
+		if (same_nick(it->second.get_nick(), target)) // if target nick matches a client nick
 		{
 			prefix = ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip();
 			this->send_msg(it->second, prefix + " PRIVMSG " + it->second.get_nick() + " :" + msg);

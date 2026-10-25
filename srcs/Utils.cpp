@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/25 19:36:21 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/25 19:52:45 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -123,12 +123,14 @@ std::string registration_reply(const Client &client, const std::string &_name, c
 	std::string user;
 	std::string host;
 	std::string reply;
-	
+
 	nick = client.get_nick();
 	user = client.get_user();
 	host = client.get_host_ip();
-	reply += ":" + _name + " 001 " + nick + " :Welcome to the IRC Network " + nick + "!" + user + "@" + host + "\r\n";
-	reply += ":" + _name + " 003 " + nick + " :This server was created " + date + "\r\n" + "\r\n";
+	reply += ":" + _name + " 001 " + nick + " :Welcome to the Internet Relay Network " + nick + "!" + user + "@" + host + "\r\n";
+	reply += ":" + _name + " 002 " + nick + " :Your host is " + _name + ", running version 1.1\r\n ";
+	reply += ":" + _name + " 003 " + nick + " :This server was created " + date + "\r\n";
+	reply += ":" + _name + " 004 " + nick + " " + _name + " 1.1 io kost k\r\n";
 	return (reply);
 }
 

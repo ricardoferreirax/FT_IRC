@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:50:09 by pedro             #+#    #+#             */
-/*   Updated: 2026/10/21 16:35:13 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/25 20:11:29 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,7 @@
 
 Channel::Channel(std::string name, t_cmode mode, Client chanop) : _name(name), _mode(mode)
 {
-	std::cout << "New Channel " << this->_name << " has been created.";
+	// std::cout << "New Channel " << this->_name << " has been created.";
 	this->_chanops.insert(chanop.get_client_fd());
 	this->_clients.insert(std::make_pair(chanop.get_client_fd(), chanop));
 }
