@@ -6,15 +6,16 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:28:03 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/22 13:28:32 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/25 20:48:24 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef CLIENT_HPP
 # define CLIENT_HPP
 
-#include <iostream>
-#include <string>
+# include <iostream>
+# include <string>
+# include <ctime>
 
 class	Client
 {
@@ -33,9 +34,8 @@ class	Client
         Client();
         Client(int client_fd);
 
-        std::string &get_recv_buffer();
-        std::string &get_send_buffer();
-		
+        std::string		  &get_recv_buffer();
+        std::string		  &get_send_buffer();
         const std::string &get_nick() const;
 		const std::string &get_user() const;
 		const std::string &get_host_ip() const;
@@ -44,14 +44,14 @@ class	Client
 		bool 			   get_auth() const;
         bool 			   get_registered() const;
 		bool 			   get_quit() const;
-		
-        void set_nick(const std::string &nick);
-        void set_user(const std::string &user);
-		void set_host_ip(const std::string &host_ip);
-        void set_auth(bool auth);
-        void set_registered(bool registered);
-		void set_quit(bool quit);
-        bool can_register() const;
+
+        void	set_nick(const std::string &nick);
+        void	set_user(const std::string &user);
+		void	set_host_ip(const std::string &host_ip);
+        void	set_auth(bool auth);
+        void	set_registered(bool registered);
+		void	set_quit(bool quit);
+        bool	can_register() const;
 };
 
 #endif

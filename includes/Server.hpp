@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/23 16:01:40 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/25 20:47:36 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -88,6 +88,7 @@ class	Server
 		int 	handle_user(Client &client, const std::vector<std::string> &params);
 		int 	handle_privmsg(Client &client, const std::vector<std::string> &params);
 		int 	handle_ping(Client &client, const std::vector<std::string> &params);
+		int		handle_pong(Client &client, const std::vector<std::string> &params);
 		int 	handle_quit(Client &client, const std::vector<std::string> &params);
 		int 	handle_join(Client &client, const std::vector<std::string> &params);
 		int 	handle_fast(Client &client, const std::vector<std::string> &params);
