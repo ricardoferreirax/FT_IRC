@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/22 15:39:18 by pedro            ###   ########.fr       */
+/*   Updated: 2026/10/24 22:16:18 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,15 +14,12 @@
 #include "../includes/Server.hpp"
 #include "../includes/Utils.hpp"
 
-void Server::execute_cmd(Client &client, const std::string &cmd,
-	const std::vector<std::string> &params)
+void	Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
 {
-	int	error;
-
-	typedef int (Server::*Cmd)(Client &, const std::vector<std::string> &);
-	// type cmd points to a member function of Server
-	std::map<std::string, Cmd> cmds;
-	// map each cmd to its corresponding member function
+	typedef int (Server::*Cmd)(Client &, const std::vector<std::string> &); // type cmd points to a member function of server
+	std::map<std::string, Cmd> cmds; // cmd corresponds to a member function
+	int						   error;
+	
 	cmds["PASS"] = &Server::handle_pass;
 	cmds["NICK"] = &Server::handle_nick;
 	cmds["USER"] = &Server::handle_user;
@@ -30,7 +27,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd,
 	cmds["JOIN"] = &Server::handle_join;
 	cmds["PING"] = &Server::handle_ping;
 	cmds["QUIT"] = &Server::handle_quit;
-	cmds["MIKU"] = &Server::handle_miku;
+	// cmds["MIKU"] = &Server::handle_miku;
 	cmds["FAST"] = &Server::handle_fast;
 	cmds["MODE"] = &Server::handle_mode;
 	cmds["PART"] = &Server::handle_part;
@@ -48,7 +45,10 @@ void Server::execute_cmd(Client &client, const std::string &cmd,
 	error = (this->*cmds[cmd])(client, params);
 	if (error != 0)
 	{
-		this->send_error(client, error, cmd);
+		if ((error == ERR_NOSUCHNICK || error == ERR_ERRONEOUSNICKNAME || error == ERR_NICKNAMEINUSE) && !params.empty())
+			this->send_error(client, error, params[0]);
+		else		
+			this->send_error(client, error, cmd);
 		return ;
 	}
 	if (cmd == "QUIT")
@@ -60,7 +60,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd,
 		std::cout << "          CLIENT " << client.get_client_fd() << " REGISTERED!" << std::endl;
 		std::cout << "=====================================================" << std::endl;
 		this->send_msg(client, registration_reply(client, this->_name,
-				this->_date), EPOLLIN | EPOLLOUT);
+				this->_date));
 	}
 }
 
@@ -99,7 +99,7 @@ int Server::handle_invite(Client &client, const std::vector<std::string> &params
 		}
 	}
 	chanit->second.inviteUser(clienit->second);
-	this->send_msg(clienit->second, "You have been invited to partcipate in " + chanit->second.getName(), EPOLLIN | EPOLLOUT);
+	this->send_msg(clienit->second, "You have been invited to partcipate in " + chanit->second.getName());
 	return 0;
 }
 
@@ -147,61 +147,41 @@ int Server::handle_part(Client &client, const std::vector<std::string> &params)
 int Server::handle_pass(Client &client, const std::vector<std::string> &params)
 {
 	if (client.get_registered())
-		return (462);
+		return (ERR_ALREADYREGISTRED);
 	if (client.get_auth())
-	{
-		this->send_msg(client, ":" + this->_name + " NOTICE * :PASS already accepted\r\n", EPOLLIN | EPOLLOUT);
-		return (0);
-	}
+		return (ERR_PASSALREADYACCEPTED);
 	if (params.size() != 1)
-		return (461);
+		return (ERR_NEEDMOREPARAMS);
 	if (params[0] != this->_pass)
-		return (464);
+		return (ERR_PASSWDMISMATCH);
 	client.set_auth(true);
-	this->send_msg(client, ":" + this->_name + " NOTICE * :PASS accepted\r\n"
-		+ "\r\n", EPOLLIN | EPOLLOUT);
+	this->send_msg(client, ":" + this->_name + " NOTICE * :PASS accepted");
 	return (0);
 }
 
 int Server::handle_nick(Client &client, const std::vector<std::string> &params)
 {
-	int	client_fd;
-
-	std::map<int, Client>::iterator it;
-	std::string nick;
+	std::map<int, Client>::iterator	it;
+	std::string 					nick;
+	int								client_fd;
+	
 	client_fd = client.get_client_fd();
 	if (!client.get_auth())
-	{
-		this->send_msg(client, ":" + this->_name + " NOTICE * :PASS must be accepted before NICK\r\n", EPOLLIN | EPOLLOUT);
-		return (0);
-	}
+		return (ERR_PASSREQUIRED);
 	if (params.empty())
-		return (431); // no nickname given error
+		return (ERR_NONICKNAMEGIVEN);
 	nick = params[0];
 	if (!is_valid_nick(nick))
-	{
-		this->send_error(client, 432, nick); // invalid nickname error
+		return (ERR_ERRONEOUSNICKNAME);
+	if (client.get_nick() == nick)
 		return (0);
-	}
-	if (same_nick(client.get_nick(), nick))
-	{
-		this->send_msg(client, ":" + this->_name + " NOTICE "
-			+ client.get_nick() + " :You are already using this nickname\r\n",
-			EPOLLIN | EPOLLOUT);
-		return (0);
-	}
 	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
 		if (it->first != client_fd && same_nick(it->second.get_nick(), nick))
-		{
-			this->send_error(client, 433, nick);
-			// nickname already in use error
-			return (0);
-		}
+			return (ERR_NICKNAMEINUSE);
 	}
 	client.set_nick(nick);
-	this->send_msg(client, ":" + this->_name + " NOTICE * :Set nickname to "
-		+ nick + "\r\n" + "\r\n", EPOLLIN | EPOLLOUT);
+	this->send_msg(client, ":" + this->_name + " NOTICE * :Set nickname to " + nick);
 	return (0);
 }
 
@@ -209,28 +189,19 @@ int Server::handle_user(Client &client, const std::vector<std::string> &params)
 {
 	std::string username;
 	std::string mode;
+	
 	if (client.get_registered())
-		return (462); // error if client is already registered
+		return (ERR_ALREADYREGISTRED);
 	if (client.get_nick().empty())
-	{
-		this->send_msg(client, ":" + this->_name + " NOTICE * :NICK must be set before USER\r\n", EPOLLIN | EPOLLOUT);
-		return (0);
-	}
+		return (ERR_NONICKNAMEGIVEN); // nick must be set before user error
 	if (params.size() < 4)
-		return (461); // not enough parameters error
+		return (ERR_NEEDMOREPARAMS);
 	username = params[0];
 	mode = params[1];
 	if (!is_valid_user_mode(mode))
-	{
-		this->send_msg(client, ":" + this->_name + " NOTICE "
-			+ client.get_nick()
-			+ " :Invalid USER mode: only numbers are allowed\r\n",
-			EPOLLIN | EPOLLOUT);
-		return (0);
-	}
+		return (ERR_INVALIDUSERMODE);
 	client.set_user(username);
-	this->send_msg(client, ":" + this->_name + " NOTICE * :Set username to "
-		+ username + "\r\n" + "\r\n", EPOLLIN | EPOLLOUT);
+	this->send_msg(client, ":" + this->_name + " NOTICE * :Set username to " + username);
 	return (0);
 }
 
@@ -238,6 +209,7 @@ int Server::handle_privmsg(Client &client,
 	const std::vector<std::string> &params)
 {
 	std::map<int, Client>::iterator clienit;
+	std::map<int, Client>::iterator it;
 	std::string target;
 	std::string msg;
 	std::string prefix;
@@ -248,20 +220,30 @@ int Server::handle_privmsg(Client &client,
 	target = params[0];
 	msg = params[1];
 	clienit = this->_clients.begin();
-	while ( clienit != this->_clients.end())
+	if (same_nick(target, "Miku"))
 	{
-		if (same_nick(clienit->second.get_nick(), target))
-		// if target matches a client's nickname
+		try
 		{
-			prefix = ":" + client.get_nick() + "!" + client.get_user() + "@"
-				+ client.get_host_ip();
-			this->send_msg(clienit->second, prefix + " PRIVMSG "
-				+ clienit->second.get_nick() + " :" + msg + "\r\n" + "\r\n",
-				EPOLLIN | EPOLLOUT);
+			if (!this->_bot.start_request(client.get_client_fd(), client.get_nick(), "", msg)) // bot is unavailable-> send error to client
+				return (ERR_MIKUUNAVAILABLE);
+		}
+		catch (const std::exception &e)
+		{
+			std::cerr << "Miku: " << e.what() << std::endl;
+			return (ERR_MIKUUNAVAILABLE);
+		}
+		return (0);
+	}
+	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
+	{
+		if (same_nick(it->second.get_nick(), target)) // if target matches a client nick
+		{
+			prefix = ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip();
+			this->send_msg(it->second, prefix + " PRIVMSG " + it->second.get_nick() + " :" + msg);
 			return (0);
 		}
-		clienit++;
 	}
+
 	std::map<std::string, Channel>::iterator chanit = this->_channels.find(target);
 	if(chanit != this->_channels.end())
 	{
@@ -272,8 +254,7 @@ int Server::handle_privmsg(Client &client,
 		while(clienit != chan_clients.end())
 		{
 			this->send_msg(*(clienit->second), prefix + " PRIVMSG "
-				+ clienit->second->get_nick() + " :" + msg + "\r\n" + "\r\n",
-				EPOLLIN | EPOLLOUT);
+				+ clienit->second->get_nick() + " :" + msg + "\r\n" + "\r\n");
 			clienit++;
 		}
 		return 0;
@@ -285,23 +266,23 @@ int Server::handle_privmsg(Client &client,
 // ping is used to check if connection between client and server is still active.
 int Server::handle_ping(Client &client, const std::vector<std::string> &params)
 {
-	std::string token;
+	std::string	token;
+	
 	if (params.empty() || params[0].empty())
-		return (409); // no origin specified error
+		return (ERR_NOORIGIN);
 	token = params[0];
-	this->send_msg(client, ":" + this->_name + " PONG " + this->_name + " :"
-		+ token + "\r\n" + "\r\n", EPOLLIN | EPOLLOUT);
+	this->send_msg(client, ":" + this->_name + " PONG " + this->_name + " :" + token);
 	return (0);
 }
 
 int Server::handle_quit(Client &client, const std::vector<std::string> &params)
 {
-	int	client_fd;
-
 	std::map<int, Client>::iterator it;
-	std::string reason;
-	std::string msg;
-	std::string client_name;
+	std::string 					reason;
+	std::string 					msg;
+	std::string 					client_name;
+	int								client_fd;
+	
 	client_fd = client.get_client_fd();
 	if (params.empty() || params[0].empty())
 		reason = "Client quit";
@@ -311,19 +292,70 @@ int Server::handle_quit(Client &client, const std::vector<std::string> &params)
 		client_name = "unregistered client";
 	else
 		client_name = client.get_nick();
-	msg = ":" + client.get_nick() + "!" + client.get_user() + "@"
-		+ client.get_host_ip() + " QUIT :" + reason + "\r\n";
+	msg = ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip() + " QUIT :" + reason;
 	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
 		if (it->first == client_fd)
-			// skip sending QUIT msg to client that sent it
-			continue ;
-		this->send_msg(it->second, msg, EPOLLIN | EPOLLOUT);
-		// send QUIT msg to all other clients
+			continue ; // skip sending QUIT msg to client that sent it
+		this->send_msg(it->second, msg); // send QUIT msg to all other clients
 	}
-	this->send_msg(client, "Closing connection for " + client_name + ": "
-		+ reason + "\r\n", EPOLLIN | EPOLLOUT);
+	this->send_msg(client, "Closing connection for " + client_name + ": " + reason);
 	client.set_quit(true);
+	return (0);
+}
+
+int	Server::handle_join(Client &client, const std::vector<std::string> &params)
+{
+	std::map<std::string, Channel>::iterator it;
+	std::vector<std::string> 				 c_names;
+	std::vector<std::string> 				 keys;
+	std::string 							 chan_name;
+	std::string 							 key;
+	size_t 									 i;
+	int 									 ret;
+
+	if (params.empty() || params.size() > 2)
+		return (ERR_NEEDMOREPARAMS);
+	c_names = ft_split(params[0], ',');
+	if (params.size() > 1)
+		keys = ft_split(params[1], ',');
+	i = 0;
+	while (i < c_names.size())
+	{
+		chan_name = c_names[i];
+		if (chan_name.empty() || (chan_name[0] != '#' && chan_name[0] != '&'))
+		{
+			this->send_error(client, ERR_BADCHANMASK, chan_name);
+			i++;
+			continue ;
+		}
+		if (i < keys.size())
+			key = keys[i];
+		else
+			key = "";
+		it = this->_channels.find(chan_name);
+		if (it == this->_channels.end())
+		{
+			Channel ch(chan_name, default_mode(), client);
+			this->_channels.insert(std::pair<std::string, Channel>(chan_name, ch));
+			this->send_msg(client, "You created Channel " + chan_name);
+		}
+		else
+		{
+			ret = it->second.joinChannel(client, key);
+			if (ret == 1)
+				this->send_error(client, ERR_USERONCHANNEL, chan_name);
+			else if (ret == 2)
+				this->send_error(client, ERR_CHANNELISFULL, chan_name);
+			else if (ret == 3)
+				this->send_error(client, ERR_INVITEONLYCHAN, chan_name);
+			else if (ret == 4)
+				this->send_error(client, ERR_BADCHANNELKEY, chan_name);
+			else
+				this->send_msg(client, "You joined " + chan_name);
+		}
+		i++;
+	}
 	return (0);
 }
 
@@ -340,7 +372,7 @@ int Server::handle_fast(Client &client, const std::vector<std::string> &params)
 	to_send += "Your home kingdom shall be: " + client.get_host_ip() + "\n";
 	to_send += "Thy user shall be sung as: " + client.get_user() + "\n";
 	to_send += "Go forth, make haste, child of Mercury\r\n";
-	this->send_msg(client, to_send, EPOLLIN | EPOLLOUT);
+	this->send_msg(client, to_send);
 	return (0);
 }
 
@@ -390,108 +422,109 @@ int Server::handle_mode(Client &client, const std::vector<std::string> &params)
 	return (0);
 }
 
-int Server::handle_join(Client &client, const std::vector<std::string> &params)
-{
-	size_t	i;
-	int		ret;
+// int Server::handle_join(Client &client, const std::vector<std::string> &params)
+// {
+// 	size_t	i;
+// 	int		ret;
+//
+// 	std::map<std::string, Channel>::iterator it;
+// 	std::vector<std::string> c_names;
+// 	std::vector<std::string> keys;
+// 	std::string chan_name;
+// 	std::string key;
+// 	if (params.empty() || params.size() > 2)
+// 		return (461);
+// 	c_names = ft_split(params[0], ',');
+// 	if (params.size() > 1)
+// 		keys = ft_split(params[1], ',');
+// 	i = 0;
+// 	while (i < c_names.size())
+// 	{
+// 		chan_name = c_names[i];
+// 		if (chan_name.empty() || (chan_name[0] != '#' && chan_name[0] != '&'))
+// 		{
+// 			this->send_msg(client,
+// 				"Invalid channel name: must start with # or &\r\n\r\n",
+// 				EPOLLIN | EPOLLOUT);
+// 			i++;
+// 			continue ;
+// 		}
+// 		if (i < keys.size())
+// 			key = keys[i];
+// 		else
+// 			key = "";
+// 		it = this->_channels.find(chan_name);
+// 		if (it == this->_channels.end())
+// 		{
+// 			Channel ch(chan_name, default_mode(), client);
+// 			this->_channels.insert(std::pair<std::string, Channel>(chan_name,
+// 					ch));
+// 			this->send_msg(client, "You created Channel " + chan_name + "\r\n"
+// 				+ "\r\n", EPOLLIN | EPOLLOUT);
+// 		}
+// 		else
+// 		{
+// 			ret = it->second.joinChannel(client, key);
+// 			if (ret == 1)
+// 				this->send_msg(client, "NOTICE: User is already in Channel\r\n",
+// 					EPOLLIN | EPOLLOUT);
+// 			else if (ret == 2)
+// 				this->send_msg(client, "Channel is full: " + chan_name
+// 					+ " ! Get yo ass outta here\r\n" + "\r\n",
+// 					EPOLLIN | EPOLLOUT);
+// 			else if (ret == 3)
+// 				this->send_msg(client, ":" + this->_name + " 473 "
+// 					+ client.get_nick() + " " + chan_name
+// 					+ " :You weren't invited to the boys club. Access denied\r\n",
+// 					EPOLLIN | EPOLLOUT);
+// 			else if (ret == 4)
+// 				this->send_msg(client, "Channel requires a key: " + chan_name
+// 					+ " ! What's the pass? This is boys only club" + "\r\n",
+// 					EPOLLIN | EPOLLOUT);
+// 			else
+// 				this->send_msg(client, "You joined " + chan_name + "\r\n"
+// 					+ "\r\n", EPOLLIN | EPOLLOUT);
+// 		}
+// 		i++;
+// 	}
+// 	return (0);
+// }
 
-	std::map<std::string, Channel>::iterator it;
-	std::vector<std::string> c_names;
-	std::vector<std::string> keys;
-	std::string chan_name;
-	std::string key;
-	if (params.empty() || params.size() > 2)
-		return (461);
-	c_names = ft_split(params[0], ',');
-	if (params.size() > 1)
-		keys = ft_split(params[1], ',');
-	i = 0;
-	while (i < c_names.size())
-	{
-		chan_name = c_names[i];
-		if (chan_name.empty() || (chan_name[0] != '#' && chan_name[0] != '&'))
-		{
-			this->send_msg(client,
-				"Invalid channel name: must start with # or &\r\n\r\n",
-				EPOLLIN | EPOLLOUT);
-			i++;
-			continue ;
-		}
-		if (i < keys.size())
-			key = keys[i];
-		else
-			key = "";
-		it = this->_channels.find(chan_name);
-		if (it == this->_channels.end())
-		{
-			Channel ch(chan_name, default_mode(), client);
-			this->_channels.insert(std::pair<std::string, Channel>(chan_name,
-					ch));
-			this->send_msg(client, "You created Channel " + chan_name + "\r\n"
-				+ "\r\n", EPOLLIN | EPOLLOUT);
-		}
-		else
-		{
-			ret = it->second.joinChannel(client, key);
-			if (ret == 1)
-				this->send_msg(client, "NOTICE: User is already in Channel\r\n",
-					EPOLLIN | EPOLLOUT);
-			else if (ret == 2)
-				this->send_msg(client, "Channel is full: " + chan_name
-					+ " ! Get yo ass outta here\r\n" + "\r\n",
-					EPOLLIN | EPOLLOUT);
-			else if (ret == 3)
-				this->send_msg(client, ":" + this->_name + " 473 "
-					+ client.get_nick() + " " + chan_name
-					+ " :You weren't invited to the boys club. Access denied\r\n",
-					EPOLLIN | EPOLLOUT);
-			else if (ret == 4)
-				this->send_msg(client, "Channel requires a key: " + chan_name
-					+ " ! What's the pass? This is boys only club" + "\r\n",
-					EPOLLIN | EPOLLOUT);
-			else
-				this->send_msg(client, "You joined " + chan_name + "\r\n"
-					+ "\r\n", EPOLLIN | EPOLLOUT);
-		}
-		i++;
-	}
-	return (0);
-}
+// int Server::handle_miku(Client &client, const std::vector<std::string> &params)
+// {
+// 	size_t	i;
+//
+// 	std::string question;
+// 	if (params.empty()) // no question provided
+// 	{
+// 		this->send_msg(client, "NOTICE " + client.get_nick()
+// 			+ " :[MIKU] Needs a question :3\r\n", EPOLLIN | EPOLLOUT);
+// 		return (0);
+// 	}
+// 	i = 0;
+// 	while (i < params.size())
+// 	{
+// 		if (i > 0)
+// 			question += " "; // add space between params
+// 		question += params[i];
+// 		// combine all params into a single question string
+// 		i++;
+// 	}
+// 	if (!question.empty() && question[0] == ':')
+// 		question.erase(0, 1); // rmv ':' if present
+// 	if (question.empty())
+// 	{
+// 		this->send_msg(client, "NOTICE " + client.get_nick()
+// 			+ " :[MIKU] Needs a question :3\r\n", EPOLLIN | EPOLLOUT);
+// 		return (0);
+// 	}
+// 	if (!this->_bot.start_request(client.get_client_fd(), question))
+// 	// miku failed to start request
+// 	{
+// 		this->send_msg(client, "NOTICE " + client.get_nick()
+// 			+ " :[MIKU] Request failed X(\r\n", EPOLLIN | EPOLLOUT);
+// 		return (0);
+// 	}
+// 	return (0);
+// }
 
-int Server::handle_miku(Client &client, const std::vector<std::string> &params)
-{
-	size_t	i;
-
-	std::string question;
-	if (params.empty()) // no question provided
-	{
-		this->send_msg(client, "NOTICE " + client.get_nick()
-			+ " :[MIKU] Needs a question :3\r\n", EPOLLIN | EPOLLOUT);
-		return (0);
-	}
-	i = 0;
-	while (i < params.size())
-	{
-		if (i > 0)
-			question += " "; // add space between params
-		question += params[i];
-		// combine all params into a single question string
-		i++;
-	}
-	if (!question.empty() && question[0] == ':')
-		question.erase(0, 1); // rmv ':' if present
-	if (question.empty())
-	{
-		this->send_msg(client, "NOTICE " + client.get_nick()
-			+ " :[MIKU] Needs a question :3\r\n", EPOLLIN | EPOLLOUT);
-		return (0);
-	}
-	if (!this->_bot.start_request(client.get_client_fd(), question))
-	// miku failed to start request
-	{
-		this->send_msg(client, "NOTICE " + client.get_nick()
-			+ " :[MIKU] Request failed X(\r\n", EPOLLIN | EPOLLOUT);
-		return (0);
-	}
-	return (0);
-}

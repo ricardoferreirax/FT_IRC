@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:31:53 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/12 17:05:15 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/24 22:56:02 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,38 +14,38 @@
 
 Client::Client()
 {
-    this->_client_fd = -1;
-    this->_auth = false;
-    this->_registered = false;
+	this->_client_fd = -1;
+	this->_auth = false;
+	this->_registered = false;
 	this->_quit = false;
 }
 
 Client::Client(int client_fd)
 {
-    this->_client_fd = client_fd;
-    this->_auth = false;
-    this->_registered = false;
+	this->_client_fd = client_fd;
+	this->_auth = false;
+	this->_registered = false;
 	this->_quit = false;
 }
 
 std::string &Client::get_recv_buffer()
 {
-    return (this->_recv_buffer);
+	return (this->_recv_buffer);
 }
 
 std::string &Client::get_send_buffer()
 {
-    return (this->_send_buffer);
+	return (this->_send_buffer);
 }
 
 int Client::get_client_fd() const
 {
-    return (this->_client_fd);
+	return (this->_client_fd);
 }
 
 const std::string &Client::get_nick() const
 {
-    return (this->_nick);
+	return (this->_nick);
 }
 
 const std::string &Client::get_user() const
@@ -64,7 +64,7 @@ bool Client::get_auth() const
 
 bool Client::get_registered() const
 {
-    return (this->_registered);
+	return (this->_registered);
 }
 
 bool Client::get_quit() const
@@ -74,7 +74,7 @@ bool Client::get_quit() const
 
 void Client::set_nick(const std::string &nick)
 {
-    this->_nick = nick;
+	this->_nick = nick;
 }
 
 void Client::set_host_ip(const std::string &host_ip)
@@ -84,17 +84,17 @@ void Client::set_host_ip(const std::string &host_ip)
 
 void Client::set_user(const std::string &user)
 {
-    this->_user = user;
+	this->_user = user;
 }
 
 void Client::set_auth(bool auth)
 {
-    this->_auth = auth;
+	this->_auth = auth;
 }
 
 void Client::set_registered(bool registered)
 {
-    this->_registered = registered;
+	this->_registered = registered;
 }
 
 void Client::set_quit(bool quit)
@@ -104,11 +104,11 @@ void Client::set_quit(bool quit)
 
 bool Client::can_register() const
 {
-    return (this->_auth && !this->_nick.empty() && !this->_user.empty());
+	return (this->_auth && !this->_nick.empty() && !this->_user.empty());
 }
 
-bool Client::is_registered(void)
-{
-	return this->_registered;
-}
+// bool Client::is_registered(void)
+// {
+// 	return this->_registered;
+// }
 

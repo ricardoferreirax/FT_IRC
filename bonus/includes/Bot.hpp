@@ -6,68 +6,71 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/18 19:59:21 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/24 22:43:12 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef BOT_HPP
 # define BOT_HPP
 
-#include <string>
-#include <map>
-#include <vector>
-#include <sys/epoll.h>
-#include <sys/socket.h>
-#include <cstdio>
-#include <unistd.h>
-#include <fcntl.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <cerrno>
-#include <cstring>
+# include <map>
+# include <netinet/in.h>
+# include <string>
+# include <sys/epoll.h>
+# include <ctime>
 
-typedef struct s_request
+class	Server;
+
+enum	clear_type
 {
-    int fd;
-    int client_fd;
-    bool connection_pending;
-	bool response_complete;
-    std::string send_buffer;
-    std::string recv_buffer;
-    size_t bytes_sent;
-} t_request;
+	REQUEST_COMPLETED,
+	REQUEST_FAILED,
+	CLIENT_DISCONNECTED,
+	BOT_SHUTDOWN
+};
 
-typedef struct s_response
+typedef struct	s_request
 {
-    int client_fd;
-    std::string msg;
-} t_response;
+	std::string	send_buffer;
+	std::string	recv_buffer;
+	std::string	question;
+	std::string	nick;
+	std::string channel;
+	size_t		bytes_sent;
+	bool		response_complete;
+	int			client_fd;
+}	t_request;
 
-class Server;
-
-class Bot
+typedef	struct	s_chat
 {
-    private:
-        int _epoll_fd;
-        std::map<int, t_request> _requests;
-		std::vector<t_response> _responses;
+    time_t  last_time;
+    int     message;
+}	t_chat;
 
-        std::string create_request(const std::string &question);
-        bool handle_request_data(int bot_fd, int event);
+class	Bot
+{
+	private:
+		int	_epoll_fd;
+		
+		std::map<std::string, std::string> _chan_memory;
+		std::map<int, std::string>  	   _user_memory;
+		std::map<int, t_request> 		   _requests;
 
-    public:
-        Bot();
-        Bot(int epoll_fd);
-        ~Bot();
+		std::string create_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question);
+		bool		handle_request_data(int bot_fd, int event);
 
-        void set_epoll_fd(int epoll_fd);
-		void close_requests(int bot_fd);
-        bool has_request(int bot_fd) const;
-        bool start_request(int client_fd, const std::string &question);
-        bool handle_event(int bot_fd, int events);
-		void send_responses(Server &server);
-		bool get_response(t_response &response);
-		std::string extract_response(const std::string &json);
+	public:
+		Bot();
+		~Bot();
+
+		void	set_epoll_fd(int epoll_fd);
+		bool	has_request(int bot_fd) const;
+		void	close_requests(int bot_fd);
+		bool	start_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question);
+		void	process_bot_response(t_request &req, Server &server);
+		bool	handle_bot_event(Server &server, int bot_fd, int events);
+		void 	cleanup(clear_type type, int fd, Server *server);
+		void	clear_channel(const std::string &channel);
 };
 
 #endif

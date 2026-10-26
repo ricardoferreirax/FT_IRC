@@ -6,33 +6,33 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 14:11:26 by pedro             #+#    #+#             */
-/*   Updated: 2026/10/22 15:50:49 by pedro            ###   ########.fr       */
+/*   Updated: 2026/10/22 13:28:21 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef CHANNELS_HPP
-#define CHANNELS_HPP
+# define CHANNELS_HPP
 
-#include <iostream>
-#include "Client.hpp"
-#include "Server.hpp"
+# include "Client.hpp"
+# include "Server.hpp"
+# include <iostream>
 # include <map>
-#include <set>
+# include <set>
 
 typedef struct s_ulimit
 {
-	size_t u_limit;
-	size_t u_count;
-} t_ulimit;
+	size_t	u_limit;
+	size_t	u_count;
+}	t_ulimit;
 
 typedef struct s_mode
 {
-	bool invite_only;
-	bool topic_restricted;
 	std::string topic;
-	t_ulimit users;
 	std::string key;
-} t_cmode;
+	t_ulimit	users;
+	bool		invite_only;
+	bool		topic_restricted;
+}	t_cmode;
 
 typedef struct s_modecmd
 {
@@ -52,6 +52,7 @@ class Channel
 		std::map<int, Client*> _clients;
 		std::set <int> _invites;
 		Channel(void);
+
 	public:
 		Channel(std::string name, t_cmode mode, Client &chanop);
 		~Channel(void);
