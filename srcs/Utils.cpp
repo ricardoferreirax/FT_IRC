@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 16:09:22 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/26 17:21:57 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -181,9 +181,9 @@ void	log_tcp(log_type type, int fd, ssize_t bytes, const std::string &data)
 	bool	started;
 	
 	if (type == TCP_RECEIVE)
-		std::cout << "\n\033[1;32m[Client " << fd << "] Recv\033[0m   <<   ";
+		std::cout << "\n\033[1;32m[Client " << fd << " -> Server]  Recv\033[0m   <<   ";
 	else if (type == TCP_SEND)
-		std::cout << "\033[1;34m[Server]   Send\033[0m   >>   ";
+		std::cout << "\033[1;34m[Server -> Client " << fd << "]  Send\033[0m   >>   ";
 	else
 		return ;
 	nl = false;

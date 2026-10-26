@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/25 20:47:36 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/26 16:22:13 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,7 +73,6 @@ class	Server
 		std::map<int, Client>			_clients;
 
 		void	accept_client();
-		void	handle_socket_event(int fd, int events);
 		void	handle_client_data(int client_fd, int event);
 		void	process_msg(Client &client, std::string &client_buffer);
 		void	close_connections(close_type type, int fd);
