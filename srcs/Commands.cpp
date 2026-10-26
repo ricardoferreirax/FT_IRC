@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 18:06:26 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/26 20:38:47 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,7 @@ void	Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 {
 	typedef int (Server::*Cmd)(Client &, const std::vector<std::string> &); // type cmd points to a member function of server
 	std::map<std::string, Cmd> cmds; // cmd corresponds to a member function
+	std::string				   param;
 	int						   error;
 	
 	cmds["PASS"] = &Server::handle_pass;
@@ -41,15 +42,17 @@ void	Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	error = (this->*cmds[cmd])(client, params);
 	if (error != 0)
 	{
-	    if ((error == ERR_NOSUCHNICK || error == ERR_ERRONEOUSNICKNAME || error == ERR_NICKNAMEINUSE) && !params.empty()) // error is related to nick and params isn't empty
-	        this->send_error(client, error, params[0]);
-	    else if ((error == ERR_NOSUCHCHANNEL || error == ERR_NOTONCHANNEL || error == ERR_CHANOPRIVSNEEDED) && cmd == "INVITE" && params.size() >= 2) // error is related to channel and cmd is INVITE
-	        this->send_error(client, error, params[1]); // send error with channel name as param
-	    else if (error == ERR_USERONCHANNEL && cmd == "INVITE" && params.size() >= 2) // error is related to user and cmd is INVITE and params has at least 2 elements
-	        this->send_error(client, error, params[0] + " " + params[1]); // send error with user and channel as param
-	    else // for all other errors send error with cmd as param
-	        this->send_error(client, error, cmd);
-	    return ;
+		param = cmd;
+		if (error == ERR_USERONCHANNEL && cmd == "INVITE" && params.size() >= 2)
+			param = params[0] + " " + params[1]; // send error with channel and nick
+		else if (cmd == "INVITE" && params.size() >= 2 && (error == ERR_NOSUCHCHANNEL || error == ERR_NOTONCHANNEL || error == ERR_CHANOPRIVSNEEDED))
+			param = params[1]; // send error with nick
+		else if (cmd == "PART" && !params.empty() && (error == ERR_NOSUCHCHANNEL || error == ERR_NOTONCHANNEL))
+			param = params[0]; // send error with channel
+		else if (!params.empty() && (error == ERR_NOSUCHNICK || error == ERR_ERRONEOUSNICKNAME || error == ERR_NICKNAMEINUSE))
+			param = params[0]; // send error with nick
+		this->send_error(client, error, param); // send error with cmd
+		return ;
 	}
 	if (cmd == "QUIT")
 		return ;
@@ -265,5 +268,48 @@ int Server::handle_invite(Client &client, const std::vector<std::string> &params
 	this->send_msg(client, ":" + this->_name + " 341 " + client.get_nick() + " " + params[0] + " " + params[1]); // confirmation msg to inviter
 	// this->send_msg(clienit->second, "You have been invited to partcipate in " + chanit->second.getName());
 	this->send_msg(clienit->second, ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip() + " INVITE " + params[0] + " :" + params[1]);
+	return (0);
+}
+
+int Server::handle_part(Client &client, const std::vector<std::string> &params)
+{
+	std::map<std::string, Channel>::iterator chanit;
+	std::vector<std::string>				 channels;
+	std::vector<std::string>				 notify_chan;
+	size_t 									 i;
+
+	if (params.empty() || params[0].empty())
+		return (ERR_NEEDMOREPARAMS);
+	i = 0;
+	while (i < channels.size())
+	{
+		chanit = this->_channels.find(channels[i]);
+		if (chanit == this->_channels.end())
+		{
+			this->send_error(client, ERR_NOSUCHCHANNEL, channels[i]);
+			return (0);
+		}
+		i++;
+	}
+	i = 0;
+	while (i < channels.size())
+	{
+		chanit = this->_channels.find(channels[i]);
+		chanit->second.leaveChannel(client);
+		chanit->second.getInvites().erase(client.get_client_fd());
+		std::cout << client.get_client_fd() << " has left " << chanit->second.getName() << std::endl;
+		if (chanit->second.getClients().size() <= 0)
+			this->_channels.erase(chanit);
+		else
+		{
+			notify_chan.clear();
+			notify_chan.push_back(channels[i]);
+			notify_chan.push_back(client.get_nick() + " has left");
+			if (params.size() == 2)
+				notify_chan.push_back("Reason: " + params[1]);
+			this->handle_privmsg(client, notify_chan);
+		}
+		i++;
+	}
 	return (0);
 }
