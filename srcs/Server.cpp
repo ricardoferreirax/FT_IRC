@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 16:21:49 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/26 17:51:53 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -299,6 +299,7 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	if (nick.empty())
 		nick = "*";
 	errors[ERR_NOSUCHNICK] = "401 " + nick + " " + param + " :No such nick/channel";
+	errors[ERR_NOSUCHCHANNEL] = "403 " + nick + " " + param + " :No such channel";
 	errors[ERR_NOORIGIN] = "409 " + nick + " :No origin specified";
 	errors[ERR_NORECIPIENT] = "411 " + nick + " :No recipient given (" + param + ")";
 	errors[ERR_NOTEXTTOSEND] = "412 " + nick + " :No text to send";
@@ -306,6 +307,7 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	errors[ERR_NONICKNAMEGIVEN] = "431 " + nick + " :No nickname given";
 	errors[ERR_ERRONEOUSNICKNAME] = "432 " + nick + " " + param + " :Erroneous nickname";
 	errors[ERR_NICKNAMEINUSE] = "433 " + nick + " " + param + " :Nickname is already in use";
+	errors[ERR_NOTONCHANNEL] = "442 " + nick + " " + param + " :You're not on that channel";
 	errors[ERR_USERONCHANNEL] = "443 " + nick + " " + param + " :is already on channel";
 	errors[ERR_NOTREGISTERED] = "451 " + nick + " :You have not registered";
 	errors[ERR_NEEDMOREPARAMS] = "461 " + nick + " " + param + " :Not enough parameters";
@@ -315,6 +317,7 @@ void Server::send_error(Client &client, int error, const std::string &param)
     errors[ERR_INVITEONLYCHAN] = "473 " + nick + " " + param + " :Cannot join channel (+i)";
     errors[ERR_BADCHANNELKEY] = "475 " + nick + " " + param + " :Cannot join channel (+k)";
 	errors[ERR_BADCHANMASK] = "476 " + nick + " " + param + " :Bad Channel Mask";
+	errors[ERR_CHANOPRIVSNEEDED] = "482 " + nick + " " + param + " :You're not channel operator";
 	errors[ERR_PASSALREADYACCEPTED] = "601 " + nick + " :PASS already accepted";
 	errors[ERR_PASSREQUIRED] = "602 " + nick + " :PASS must be accepted before NICK";
 	errors[ERR_NICKREQUIRED] = "603 " + nick + " :NICK must be set before USER";

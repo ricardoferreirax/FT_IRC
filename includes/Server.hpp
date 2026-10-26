@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 17:38:48 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/26 17:50:42 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,6 +36,7 @@ enum	close_type
 enum	e_irc_error
 {
 	ERR_NOSUCHNICK = 401,
+	ERR_NOSUCHCHANNEL = 403,
 	ERR_NOORIGIN = 409,
 	ERR_NORECIPIENT = 411,
 	ERR_NOTEXTTOSEND = 412,
@@ -43,6 +44,7 @@ enum	e_irc_error
 	ERR_NONICKNAMEGIVEN = 431,
 	ERR_ERRONEOUSNICKNAME = 432,
 	ERR_NICKNAMEINUSE = 433,
+	ERR_NOTONCHANNEL = 442,
     ERR_USERONCHANNEL = 443,
 	ERR_NOTREGISTERED = 451,
 	ERR_NEEDMOREPARAMS = 461,
@@ -52,6 +54,7 @@ enum	e_irc_error
     ERR_INVITEONLYCHAN = 473,
     ERR_BADCHANNELKEY = 475,
 	ERR_BADCHANMASK = 476,
+	ERR_CHANOPRIVSNEEDED = 482,
 	ERR_PASSALREADYACCEPTED = 601,
 	ERR_PASSREQUIRED = 602,
 	ERR_NICKREQUIRED = 603,
@@ -87,8 +90,9 @@ class	Server
 		int 	handle_nick(Client &client, const std::vector<std::string> &params);
 		int 	handle_user(Client &client, const std::vector<std::string> &params);
 		int 	handle_privmsg(Client &client, const std::vector<std::string> &params);
+		int		handle_invite(Client &client, const std::vector<std::string> &params);
+		
 		int 	handle_ping(Client &client, const std::vector<std::string> &params);
-		int		handle_pong(Client &client, const std::vector<std::string> &params);
 		int 	handle_quit(Client &client, const std::vector<std::string> &params);
 		int 	handle_join(Client &client, const std::vector<std::string> &params);
 		int 	handle_fast(Client &client, const std::vector<std::string> &params);

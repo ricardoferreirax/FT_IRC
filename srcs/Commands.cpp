@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 16:30:31 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/26 18:06:26 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,24 +27,29 @@ void	Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["PING"] = &Server::handle_ping;
 	cmds["QUIT"] = &Server::handle_quit;
 	cmds["FAST"] = &Server::handle_fast;
+	cmds["INVITE"] = &Server::handle_invite;
 	if (cmds.find(cmd) == cmds.end()) // check if cmd is in the map
 	{
 		this->send_error(client, 421, cmd); // unknown command error
 		return ;
 	}
-	if ((cmd == "PRIVMSG" || cmd == "JOIN") && !client.get_registered())
+	if ((cmd != "PASS" && cmd != "NICK" && cmd != "USER" && cmd != "FAST") && !client.get_registered())
 	{
-		this->send_error(client, ERR_NOTREGISTERED, cmd);
+		this->send_error(client, 451, cmd); // not registered error
 		return ;
 	}
 	error = (this->*cmds[cmd])(client, params);
 	if (error != 0)
 	{
-		if ((error == ERR_NOSUCHNICK || error == ERR_ERRONEOUSNICKNAME || error == ERR_NICKNAMEINUSE) && !params.empty())
-			this->send_error(client, error, params[0]);
-		else		
-			this->send_error(client, error, cmd);
-		return ;
+	    if ((error == ERR_NOSUCHNICK || error == ERR_ERRONEOUSNICKNAME || error == ERR_NICKNAMEINUSE) && !params.empty()) // error is related to nick and params isn't empty
+	        this->send_error(client, error, params[0]);
+	    else if ((error == ERR_NOSUCHCHANNEL || error == ERR_NOTONCHANNEL || error == ERR_CHANOPRIVSNEEDED) && cmd == "INVITE" && params.size() >= 2) // error is related to channel and cmd is INVITE
+	        this->send_error(client, error, params[1]); // send error with channel name as param
+	    else if (error == ERR_USERONCHANNEL && cmd == "INVITE" && params.size() >= 2) // error is related to user and cmd is INVITE and params has at least 2 elements
+	        this->send_error(client, error, params[0] + " " + params[1]); // send error with user and channel as param
+	    else // for all other errors send error with cmd as param
+	        this->send_error(client, error, cmd);
+	    return ;
 	}
 	if (cmd == "QUIT")
 		return ;
@@ -218,5 +223,47 @@ int	Server::handle_join(Client &client, const std::vector<std::string> &params)
 		}
 		i++;
 	}
+	return (0);
+}
+
+// TODO: User invite is not consumed when used
+int Server::handle_invite(Client &client, const std::vector<std::string> &params)
+{
+	std::map<std::string, Channel>::iterator chanit;
+	std::map<int, Client>::iterator 		 clienit;
+	
+	if (params.empty() || params.size() < 2)
+		return (ERR_NEEDMOREPARAMS);
+	chanit = this->_channels.find(params[1]);
+	if (chanit == this->_channels.end()) // channel doesn't exist
+	{
+		this->send_error(client, ERR_NOSUCHCHANNEL, params[1]);
+		return (0);
+	}
+	clienit = this->_clients.begin();
+	while (clienit != this->_clients.end())
+	{
+		if (clienit->second.get_nick() == params[0]) // target nick matches a client nick
+			break ;
+		clienit++;
+	}
+	if (clienit == this->_clients.end()) // target nick doesn't match any client nick
+	{
+		this->send_error(client, ERR_NOSUCHNICK, params[0]);
+		return (0);
+	}
+	if (chanit->second.getMode().invite_only)
+	{
+		if (chanit->second.getChannops().find(client.get_client_fd()) == chanit->second.getChannops().end()) // client isn't channel operator
+		{
+			// this->send_error(client, 401, "You lack sudo");
+			this->send_error(client, ERR_CHANOPRIVSNEEDED, params[1]);
+			return (0);
+		}
+	}
+	chanit->second.inviteUser(clienit->second);
+	this->send_msg(client, ":" + this->_name + " 341 " + client.get_nick() + " " + params[0] + " " + params[1]); // confirmation msg to inviter
+	// this->send_msg(clienit->second, "You have been invited to partcipate in " + chanit->second.getName());
+	this->send_msg(clienit->second, ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip() + " INVITE " + params[0] + " :" + params[1]);
 	return (0);
 }
