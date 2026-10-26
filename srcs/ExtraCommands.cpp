@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 16:30:38 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/26 21:12:31 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -64,3 +64,21 @@ int Server::handle_fast(Client &client, const std::vector<std::string> &params)
 	client.set_host_ip("localhost");
 	return (0);
 }
+
+// int Server::handle_fast(Client &client, const std::vector<std::string> &params)
+// {
+// 	std::string to_send;
+// 	(void)params;
+
+// 	client.set_auth(true);
+// 	client.set_nick(generateRandomString(3));
+// 	client.set_user(generateRandomString(3));
+// 	client.set_registered(true);
+// 	client.set_host_ip(generateRandomString(9));
+// 	to_send += "You shall be named: " + client.get_nick() + "\n";
+// 	to_send += "Your home kingdom shall be: " + client.get_host_ip() + "\n";
+// 	to_send += "Thy user shall be sung as: " + client.get_user() + "\n";
+// 	to_send += "Go forth, make haste, child of Mercury\r\n";
+// 	this->send_msg(client, to_send);
+// 	return (0);
+// }

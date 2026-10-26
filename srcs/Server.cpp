@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 20:54:50 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/26 21:15:08 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -315,6 +315,7 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	errors[ERR_ALREADYREGISTRED] = "462 " + nick + " :You may not reregister";
 	errors[ERR_PASSWDMISMATCH] = "464 " + nick + " :Password incorrect";
     errors[ERR_CHANNELISFULL] = "471 " + nick + " " + param + " :Cannot join channel (+l)";
+	errors[ERR_UNKNOWNMODE] = "472 " + nick + " " + param + " :is unknown mode char to me";
     errors[ERR_INVITEONLYCHAN] = "473 " + nick + " " + param + " :Cannot join channel (+i)";
     errors[ERR_BADCHANNELKEY] = "475 " + nick + " " + param + " :Cannot join channel (+k)";
 	errors[ERR_BADCHANMASK] = "476 " + nick + " " + param + " :Bad Channel Mask";

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 21:00:44 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/26 21:23:47 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,10 +25,12 @@ void	Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["USER"] = &Server::handle_user;
 	cmds["PRIVMSG"] = &Server::handle_privmsg;
 	cmds["JOIN"] = &Server::handle_join;
+	cmds["INVITE"] = &Server::handle_invite;
+	cmds["MODE"] = &Server::handle_mode;
+	cmds["PART"] = &Server::handle_part;
 	cmds["PING"] = &Server::handle_ping;
 	cmds["QUIT"] = &Server::handle_quit;
 	cmds["FAST"] = &Server::handle_fast;
-	cmds["INVITE"] = &Server::handle_invite;
 	if (cmds.find(cmd) == cmds.end()) // check if cmd is in the map
 	{
 		this->send_error(client, 421, cmd); // unknown command error
@@ -286,6 +288,54 @@ int Server::handle_invite(Client &client, const std::vector<std::string> &params
 	this->send_msg(client, ":" + this->_name + " 341 " + client.get_nick() + " " + params[0] + " " + params[1]); // confirmation msg to inviter
 	// this->send_msg(clienit->second, "You have been invited to partcipate in " + chanit->second.getName());
 	this->send_msg(clienit->second, ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip() + " INVITE " + params[0] + " :" + params[1]);
+	return (0);
+}
+
+// TODO: Users can use MODE in a channel they are not part of nor have channop
+int Server::handle_mode(Client &client, const std::vector<std::string> &params)
+{
+	std::vector<t_modecmd> flags;
+	size_t 				   i;
+	bool				   res;
+
+	if (params.empty() || params[0].empty())
+		return (ERR_NEEDMOREPARAMS);
+	if (this->_channels.find(params[0]) == this->_channels.end())
+		return (ERR_NOSUCHCHANNEL);
+	if (params.size() < 2)
+	{
+		return (0);
+	}
+	if (!tokenize_mode_flags(params[1], flags, params, 2))
+	{
+		this->send_error(client, 401, "You're doing the same shit");
+	}
+	i = 0;
+	while (i < flags.size())
+	{
+		res = false;
+		switch (flags[i].flag)
+		{
+			case 'i':
+				res = handle_imode(client, params[0], flags[i]);
+				break ;
+			case 't':
+				res = handle_tmode(client, params[0], flags[i]);
+				break ;
+			case 'k':
+				res = handle_kmode(client, params[0], flags[i]);
+				break ;
+			case 'o':
+				res = handle_omode(client, params[0], flags[i]);
+				break ;
+			case 'l':
+				res = handle_lmode(client, params[0], flags[i]);
+				break ;
+		}
+		if (!res)
+			return (-1);
+		i++;
+	}
 	return (0);
 }
 
