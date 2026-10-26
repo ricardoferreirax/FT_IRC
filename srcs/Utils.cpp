@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 17:21:57 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/26 21:05:49 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -200,7 +200,7 @@ void	log_tcp(log_type type, int fd, ssize_t bytes, const std::string &data)
 		}
 		if (nl)
 		{
-			std::cout << "\n                       ";
+			std::cout << "\n                                  ";
 			nl = false;
 		}
 		std::cout << data[i];

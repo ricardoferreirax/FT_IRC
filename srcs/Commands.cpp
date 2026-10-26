@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 20:38:47 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/26 21:00:44 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -137,10 +137,13 @@ int Server::handle_user(Client &client, const std::vector<std::string> &params)
 
 int Server::handle_privmsg(Client &client, const std::vector<std::string> &params)
 {
-	std::map<int, Client>::iterator it;
-	std::string						target;
-	std::string						msg;
-	std::string						prefix;
+	std::map<std::string, Channel>::iterator chanit;
+	std::map<int, Client *>::iterator 		 clienit;
+	std::map<int, Client *> 				 chan_clients;
+	std::map<int, Client>::iterator 		 it;
+	std::string								 target;
+	std::string								 msg;
+	std::string								 prefix;
 
 	if (params.empty() || params[0].empty())
 		return (ERR_NORECIPIENT);
@@ -148,6 +151,7 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 		return (ERR_NOTEXTTOSEND);
 	target = params[0];
 	msg = params[1];
+	prefix = ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip();
 	if (same_nick(target, "Miku"))
 	{
 		try
@@ -162,14 +166,28 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 		}
 		return (0);
 	}
-	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
+	it = this->_clients.begin();
+	while (it != this->_clients.end())
 	{
-		if (same_nick(it->second.get_nick(), target)) // if target nick matches a client nick
+		if (same_nick(it->second.get_nick(), target))
 		{
-			prefix = ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip();
-			this->send_msg(it->second, prefix + " PRIVMSG " + it->second.get_nick() + " :" + msg);
+			this->send_msg(it->second, prefix + " PRIVMSG " + it->second.get_nick() + " :" + msg); // nick matches a client nick ->send msg to that client
 			return (0);
 		}
+		it++;
+	}
+	chanit = this->_channels.find(target);
+	if (chanit != this->_channels.end())
+	{
+		chan_clients = chanit->second.getClients(); // get all clients in channel
+		clienit = chan_clients.begin();
+		while (clienit != chan_clients.end())
+		{
+			if (clienit->second->get_client_fd() != client.get_client_fd()) // 
+				this->send_msg(*(clienit->second), prefix + " PRIVMSG " + target + " :" + msg); // if client is not who sends ->send msg to that client
+			clienit++;
+		}
+		return (0);
 	}
 	return (ERR_NOSUCHNICK);
 }

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 17:51:53 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/26 20:54:50 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -300,6 +300,7 @@ void Server::send_error(Client &client, int error, const std::string &param)
 		nick = "*";
 	errors[ERR_NOSUCHNICK] = "401 " + nick + " " + param + " :No such nick/channel";
 	errors[ERR_NOSUCHCHANNEL] = "403 " + nick + " " + param + " :No such channel";
+	errors[ERR_CANNOTSENDTOCHAN] = "404 " + nick + " " + param + " :Cannot send to channel";
 	errors[ERR_NOORIGIN] = "409 " + nick + " :No origin specified";
 	errors[ERR_NORECIPIENT] = "411 " + nick + " :No recipient given (" + param + ")";
 	errors[ERR_NOTEXTTOSEND] = "412 " + nick + " :No text to send";

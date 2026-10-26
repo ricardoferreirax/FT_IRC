@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:50:09 by pedro             #+#    #+#             */
-/*   Updated: 2026/10/26 17:26:57 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/26 21:06:32 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,14 +21,14 @@
 
 Channel::Channel(std::string name, t_cmode mode, Client &chanop) : _name(name), _mode(mode)
 {
-	std::cout << "New Channel " << this->_name << " has been created.";
+	// std::cout << "New Channel " << this->_name << " has been created.";
 	this->_chanops.insert(chanop.get_client_fd());
 	this->_clients.insert(std::make_pair(chanop.get_client_fd(), &chanop));
 }
 
 Channel::~Channel()
 {
-	std::cout << "Channel " << this->_name << " was destroyed" << std::endl;
+	// std::cout << "Channel " << this->_name << " was destroyed" << std::endl;
 }
 
 int Channel::joinChannel(Client &guest, std::string key = "")
