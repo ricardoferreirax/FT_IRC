@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/25 20:47:25 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/26 16:02:35 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -270,7 +270,6 @@ void	Server::process_msg(Client &client, std::string &client_buffer)
 		if (!msg.empty())
 		{
 			parse_msg(msg, cmd, params);
-			log_tcp(IRC_CMD, client.get_client_fd(), msg.size() + 2, cmd);
 			this->execute_cmd(client, cmd, params);
 			if (client.get_quit())
 				return ;

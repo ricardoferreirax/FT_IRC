@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/25 20:41:03 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/26 16:09:22 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -128,7 +128,7 @@ std::string registration_reply(const Client &client, const std::string &_name, c
 	user = client.get_user();
 	host = client.get_host_ip();
 	reply += ":" + _name + " 001 " + nick + " :Welcome to the Internet Relay Network " + nick + "!" + user + "@" + host + "\r\n";
-	reply += ":" + _name + " 002 " + nick + " :Your host is " + _name + ", running version 1.1\r\n ";
+	reply += ":" + _name + " 002 " + nick + " :Your host is " + _name + ", running version 1.1\r\n";
 	reply += ":" + _name + " 003 " + nick + " :This server was created " + date + "\r\n";
 	reply += ":" + _name + " 004 " + nick + " " + _name + " 1.1 io kost k\r\n";
 	return (reply);
@@ -177,25 +177,34 @@ std::string generateRandomString(int length)
 
 void	log_tcp(log_type type, int fd, ssize_t bytes, const std::string &data)
 {
-	if (type == IRC_CMD)
-		return ;
+	bool	nl;
+	bool	started;
+	
 	if (type == TCP_RECEIVE)
 		std::cout << "\n\033[1;32m[Client " << fd << "] Recv\033[0m   <<   ";
 	else if (type == TCP_SEND)
 		std::cout << "\033[1;34m[Server]   Send\033[0m   >>   ";
 	else
 		return ;
+	nl = false;
+	started = false;
 	for (size_t i = 0; i < data.size(); i++)
 	{
 		if (data[i] == '\r')
 			continue ;
 		if (data[i] == '\n')
 		{
-			if (i + 1 < data.size() && data[i + 1] != '\r' && data[i + 1] != '\n')
-				std::cout << "\n                       ";
+			if (started)
+				nl = true;
+			continue ;
 		}
-		else
-			std::cout << data[i];
+		if (nl)
+		{
+			std::cout << "\n                       ";
+			nl = false;
+		}
+		std::cout << data[i];
+		started = true;
 	}
 	std::cout << " \033[90m(" << bytes << "B)\033[0m\n";
 }
