@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 16:22:13 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/26 17:38:48 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,8 @@
 
 extern volatile sig_atomic_t	alive;
 
-class Channel;
+class							Channel;
+typedef struct s_modecmd		t_modecmd;
 
 enum	close_type
 {
@@ -92,6 +93,17 @@ class	Server
 		int 	handle_join(Client &client, const std::vector<std::string> &params);
 		int 	handle_fast(Client &client, const std::vector<std::string> &params);
 
+		int		handle_mode(Client &client, const std::vector<std::string> &params);
+		bool 	handle_imode(Client &client, std::string chan_name, t_modecmd flag);
+		bool 	handle_tmode(Client &client, std::string chan_name, t_modecmd flag);
+		bool 	handle_kmode(Client &client, std::string chan_name, t_modecmd flag);
+		bool 	handle_omode(Client &client, std::string chan_name, t_modecmd flag);
+		bool 	handle_lmode(Client &client, std::string chan_name, t_modecmd flag);
+		
+		Channel *validate_channel_op(Client &client, const std::string &channel_name, bool needs_sudo);
+
+	public:
+
 	public:
 		Server(const std::string &port, const std::string &pass);
 		~Server();
@@ -106,5 +118,7 @@ class	Server
 
 void	handle_signal(int signal);
 void	setup_signals(void);
+
+bool	tokenize_mode_flags(const std::string &params, std::vector<t_modecmd> &flags, const std::vector<std::string> cmdargs, size_t arg_idx);
 
 #endif
