@@ -34,6 +34,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd,
 	cmds["FAST"] = &Server::handle_fast;
 	cmds["MODE"] = &Server::handle_mode;
 	cmds["PART"] = &Server::handle_part;
+	cmds["INVITE"] = &Server::handle_invite;
 	if (cmds.find(cmd) == cmds.end()) // check if cmd is in the map
 	{
 		this->send_error(client, 421, cmd); // unknown command error
@@ -63,6 +64,45 @@ void Server::execute_cmd(Client &client, const std::string &cmd,
 	}
 }
 
+//TODO: User invite is not consumed when used
+int Server::handle_invite(Client &client, const std::vector<std::string> &params)
+{
+	if(params.empty() || params.size() < 2)
+	{
+		this->send_error(client, 401, "Too Few Args");
+		return -1;
+	}
+	std::map<int, Client>::iterator clienit = this->_clients.begin();
+	while(clienit != this->_clients.end())
+	{
+		if(clienit->second.get_nick() == params[0])
+			break;
+		clienit++;
+	}
+	if(clienit == this->_clients.end())
+	{
+		this->send_error(client, 401, "No such client");
+		return -1;
+	}
+	std::map<std::string, Channel>::iterator chanit = this->_channels.find(params[1]);
+	if(chanit == this->_channels.end())
+	{
+		this->send_error(client, 401, "No such channel");
+		return -1;
+	}
+	if(chanit->second.getMode().invite_only)
+	{
+		if(chanit->second.getChannops().find(client.get_client_fd()) == chanit->second.getChannops().end())
+		{
+			this->send_error(client, 401, "You lack sudo");
+			return -1;
+		}
+	}
+	chanit->second.inviteUser(clienit->second);
+	this->send_msg(clienit->second, "You have been invited to partcipate in " + chanit->second.getName(), EPOLLIN | EPOLLOUT);
+	return 0;
+}
+
 int Server::handle_part(Client &client, const std::vector<std::string> &params)
 {
 	if(params.empty() || params.size() > 2)
@@ -87,6 +127,7 @@ int Server::handle_part(Client &client, const std::vector<std::string> &params)
 	{
 		std::map<std::string, Channel>::iterator chanit = this->_channels.find(channels[i]);
 		chanit->second.leaveChannel(client);
+		chanit->second.getInvites().erase(client.get_client_fd());
 		std::cout << client.get_client_fd() << " has left " << chanit->second.getName() << std::endl;
 		if(chanit->second.getClients().size() <= 0)
 			this->_channels.erase(chanit);
@@ -304,7 +345,7 @@ int Server::handle_fast(Client &client, const std::vector<std::string> &params)
 }
 
 
-
+//TODO: Users can use MODE in a channel they are not part of nor have channop
 int Server::handle_mode(Client &client, const std::vector<std::string> &params)
 {
 	std::string to_send = client.get_send_buffer();

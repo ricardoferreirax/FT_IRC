@@ -43,6 +43,7 @@ int Channel::joinChannel(Client &guest, std::string key = "")
 	if(!this->_mode.key.empty() && this->_mode.key != key)
 		return 4;
 	this->_clients.insert(std::make_pair(guest.get_client_fd(), &guest));
+	this->_invites.erase(guest.get_client_fd());
 	this->_mode.users.u_count++;
 	std::cout << "Client has joined the channel" << std::endl;
 	return 0;
