@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 21:14:28 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/27 10:29:26 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,28 @@ enum	close_type
 	SERVER_SHUTDOWN
 };
 
+enum	e_reply
+{
+    RPL_WELCOME = 1,
+    RPL_YOURHOST = 2,
+    RPL_CREATED = 3,
+    RPL_MYINFO = 4,
+    RPL_ISUPPORT = 5,
+    RPL_CHANNELMODEIS = 324,
+    RPL_NOTOPIC = 331,
+    RPL_TOPIC = 332,
+    RPL_INVITING = 341,
+    RPL_NAMREPLY = 353,
+    RPL_ENDOFNAMES = 366,
+    RPL_HELPSTART = 704,
+    RPL_HELPTXT = 705,
+    RPL_ENDOFHELP = 706,
+    RPL_PASSACCEPTED = 800,
+    RPL_NICKSET = 801,
+    RPL_CHANNELCREATED = 802,
+    RPL_CHANNELJOINED = 803
+};
+
 enum	e_irc_error
 {
 	ERR_NOSUCHNICK = 401,
@@ -57,6 +79,7 @@ enum	e_irc_error
     ERR_BADCHANNELKEY = 475,
 	ERR_BADCHANMASK = 476,
 	ERR_CHANOPRIVSNEEDED = 482,
+	ERR_HELPNOTFOUND = 524,
 	ERR_PASSALREADYACCEPTED = 601,
 	ERR_PASSREQUIRED = 602,
 	ERR_NICKREQUIRED = 603,
@@ -85,6 +108,7 @@ class	Server
 
 		void	disconnect_client(int client_fd);
 		void 	send_msg(Client &client, const std::string &msg);
+		void	send_reply(Client &client, int reply, const std::string &param, const std::string &text);
 		void	send_error(Client &client, int error, const std::string &cmd);
 
 		void	execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params);

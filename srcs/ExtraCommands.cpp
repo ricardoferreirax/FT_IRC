@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 21:12:31 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/27 10:21:53 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -80,5 +80,49 @@ int Server::handle_fast(Client &client, const std::vector<std::string> &params)
 // 	to_send += "Thy user shall be sung as: " + client.get_user() + "\n";
 // 	to_send += "Go forth, make haste, child of Mercury\r\n";
 // 	this->send_msg(client, to_send);
+// 	return (0);
+// }
+
+// int Server::handle_help(Client &client, const std::vector<std::string> &params)
+// {
+// 	std::string subject = "*";
+// 	std::string help;
+	
+// 	if (!params.empty())
+// 		subject = params[0];
+// 	if (subject == "*")
+// 		help = "Commands: PASS NICK USER PING JOIN PRIVMSG PART INVITE MODE QUIT FAST HELP";
+// 	else if (subject == "PASS")
+// 		help = "PASS <password>";
+// 	else if (subject == "NICK")
+// 		help = "NICK <nickname>";
+// 	else if (subject == "USER")
+// 		help = "USER <username> <mode> <unused> :<realname>";
+// 	else if (subject == "PING")
+// 		help = "PING <token>";
+// 	else if (subject == "JOIN")
+// 		help = "JOIN <channel> [key]";
+// 	else if (subject == "PRIVMSG")
+// 		help = "PRIVMSG <target> :<message>";
+// 	else if (subject == "PART")
+// 		help = "PART <channel> [:reason]";
+// 	else if (subject == "INVITE")
+// 		help = "INVITE <nickname> <channel>";
+// 	else if (subject == "MODE")
+// 		help = "MODE <channel> [modes] [parameters]";
+// 	else if (subject == "QUIT")
+// 		help = "QUIT [:reason]";
+// 	else if (subject == "FAST")
+// 		help = "FAST";
+// 	else if (subject == "HELP")
+// 		help = "HELP [command]";
+// 	else
+// 		return (ERR_HELPNOTFOUND);
+// 	this->send_msg(client, ":" + this->_name + " 704 " + client.get_nick() + " "
+// 		+ subject + " :IRC Help");
+// 	this->send_msg(client, ":" + this->_name + " 705 " + client.get_nick() + " "
+// 		+ subject + " :" + help);
+// 	this->send_msg(client, ":" + this->_name + " 706 " + client.get_nick() + " "
+// 		+ subject + " :End of HELP");
 // 	return (0);
 // }
