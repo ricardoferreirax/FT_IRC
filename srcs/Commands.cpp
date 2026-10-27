@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/27 21:51:29 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/27 22:23:53 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -69,10 +69,8 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 
 int Server::handle_pass(Client &client, const std::vector<std::string> &params)
 {
-	if (client.get_registered())
+	if (client.get_registered() || client.get_auth())
 		return (ERR_ALREADYREGISTRED);
-	if (client.get_auth())
-		return (ERR_PASSALREADYACCEPTED);
 	if (params.empty())
 		return (ERR_NEEDMOREPARAMS);
 	if (params[0] != this->_pass)
@@ -123,7 +121,7 @@ int Server::handle_user(Client &client, const std::vector<std::string> &params)
 	if (client.get_registered())
 		return (ERR_ALREADYREGISTRED);
 	if (!client.get_auth())
-		return (ERR_PASSREQUIRED);
+		return (ERR_NOTREGISTERED);
 	if (params.size() < 4)
 		return (ERR_NEEDMOREPARAMS);
 	if (client.get_nick().empty())
@@ -160,12 +158,16 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 		try
 		{
 			if (!this->_bot.start_request(client.get_client_fd(), client.get_nick(), "", msg))
-				return (ERR_MIKUUNAVAILABLE);
+			{
+				this->send_notice(client, MIKUUNAVAILABLE, "");
+				return (0);
+			}
 		}
 		catch (const std::exception &e)
 		{
 			std::cerr << "Miku: " << e.what() << std::endl;
-			return (ERR_MIKUUNAVAILABLE);
+			this->send_notice(client, MIKUUNAVAILABLE, "");
+			return (0);
 		}
 		return (0);
 	}

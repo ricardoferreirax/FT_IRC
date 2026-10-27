@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/28 23:24:23 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/28 23:25:13 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -99,6 +99,21 @@ int Server::handle_quit(Client &client, const std::vector<std::string> &params)
 	return (0);
 }
 
+<<<<<<< HEAD
+=======
+int Server::handle_fast(Client &client, const std::vector<std::string> &params)
+{
+	(void)params;
+	
+	if (!client.get_auth())
+		return (ERR_NOTREGISTERED);
+	client.set_nick("Nick");
+	client.set_user("User");
+	client.set_host_ip("localhost");
+	return (0);
+}
+
+>>>>>>> c94c482 (Made some improvements and fix leak)
 // int Server::handle_fast(Client &client, const std::vector<std::string> &params)
 // {
 // 	(void)params;
