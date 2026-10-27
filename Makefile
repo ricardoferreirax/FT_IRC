@@ -6,7 +6,7 @@
 #    By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/09/27 23:34:05 by rmedeiro          #+#    #+#              #
-#    Updated: 2026/10/26 17:35:12 by rmedeiro         ###   ########.fr        #
+#    Updated: 2026/10/27 21:56:50 by rmedeiro         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -27,6 +27,7 @@ SRCS = srcs/main.cpp \
        srcs/Client.cpp \
        srcs/Commands.cpp \
 	   srcs/ExtraCommands.cpp \
+	   srcs/Messages.cpp \
        srcs/Channels.cpp \
 	   srcs/Mode.cpp \
        srcs/Utils.cpp \

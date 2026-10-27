@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/27 21:36:13 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/27 21:51:29 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -186,8 +186,8 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 		clienit = chan_clients.begin();
 		while (clienit != chan_clients.end())
 		{
-			if (clienit->second->get_client_fd() != client.get_client_fd()) // 
-				this->send_msg(*(clienit->second), prefix + " PRIVMSG " + target + " :" + msg); // if client is not who sends ->send msg to that client
+			if (clienit->second->get_client_fd() != client.get_client_fd()) // if client is not who sends
+				this->send_msg(*(clienit->second), prefix + " PRIVMSG " + target + " :" + msg); // send msg to that client
 			clienit++;
 		}
 		return (0);
