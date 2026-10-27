@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/27 21:56:22 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/27 22:23:24 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -76,11 +76,8 @@ enum	e_irc_error
 	ERR_BADCHANMASK = 476,
 	ERR_CHANOPRIVSNEEDED = 482,
 	ERR_HELPNOTFOUND = 524,
-	ERR_PASSALREADYACCEPTED = 601,
-	ERR_PASSREQUIRED = 602,
-	ERR_NICKREQUIRED = 603,
+	ERR_PASSREQUIRED = 601,
 	ERR_INVALIDUSERMODE = 604,
-	ERR_MIKUUNAVAILABLE = 605
 };
 
 enum	e_notice
@@ -88,7 +85,8 @@ enum	e_notice
 	PASSACCEPTED,
 	NICKSET,
 	CHANNELCREATED,
-	CHANNELJOINED
+	CHANNELJOINED,
+	MIKUUNAVAILABLE
 };
 
 class	Server

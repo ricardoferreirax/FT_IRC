@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/27 21:38:41 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/27 22:15:02 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -104,7 +104,7 @@ int Server::handle_fast(Client &client, const std::vector<std::string> &params)
 	(void)params;
 	
 	if (!client.get_auth())
-		return (ERR_PASSREQUIRED);
+		return (ERR_NOTREGISTERED);
 	client.set_nick("Nick");
 	client.set_user("User");
 	client.set_host_ip("localhost");

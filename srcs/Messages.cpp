@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/27 21:54:47 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/27 22:22:46 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -88,11 +88,8 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	errors[ERR_BADCHANMASK] = "476 " + nick + " " + param + " :Bad Channel Mask";
 	errors[ERR_CHANOPRIVSNEEDED] = "482 " + nick + " " + param + " :You're not channel operator";
 	errors[ERR_HELPNOTFOUND] = "524 " + nick + " " + param + " :Help topic not found";
-	errors[ERR_PASSALREADYACCEPTED] = "601 " + nick + " :PASS already accepted";
-	errors[ERR_PASSREQUIRED] = "602 " + nick + " :PASS must be accepted before NICK";
-	errors[ERR_NICKREQUIRED] = "603 " + nick + " :NICK must be set before USER";
+	errors[ERR_PASSREQUIRED] = "601 " + nick + " :Password must be accepted before nickname";
 	errors[ERR_INVALIDUSERMODE] = "604 " + nick + " :Invalid USER mode: only numbers are allowed";
-	errors[ERR_MIKUUNAVAILABLE] = "605 " + nick + " :Miku is unavailable";
 	if (errors.find(error) == errors.end())
 		return ; // error code is not in map -> ignore it
 	this->send_msg(client, ":" + this->_name + " " + errors[error]);
@@ -111,6 +108,7 @@ void	Server::send_notice(Client &client, int notice, const std::string &param)
 	notices[NICKSET] = "Set nickname to " + param;
 	notices[CHANNELCREATED] = "You created Channel " + param;
 	notices[CHANNELJOINED] = "You joined " + param;
+	notices[MIKUUNAVAILABLE] = "Miku is unavailable :/ Try again later.";
 	it = notices.find(notice);
 	if (it == notices.end())
 		return ;
