@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/27 10:26:04 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/27 21:30:54 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -358,4 +358,23 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	if (errors.find(error) == errors.end())
 		return ; // error code is not in map -> ignore it
 	this->send_msg(client, ":" + this->_name + " " + errors[error]);
+}
+
+void	Server::send_notice(Client &client, int notice, const std::string &param)
+{
+	std::map<int, std::string>::iterator it;
+	std::map<int, std::string> 			 notices;
+	std::string							 nick;
+
+	nick = client.get_nick();
+	if (nick.empty())
+		nick = "*";
+	notices[PASSACCEPTED] = "PASS accepted";
+	notices[NICKSET] = "Set nickname to " + param;
+	notices[CHANNELCREATED] = "You created Channel " + param;
+	notices[CHANNELJOINED] = "You joined " + param;
+	it = notices.find(notice);
+	if (it == notices.end())
+		return ;
+	this->send_msg(client, ":" + this->_name + " NOTICE " + nick + " :" + it->second);
 }

@@ -6,12 +6,57 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/28 23:22:17 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/28 23:24:23 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../includes/Server.hpp"
-#include "../includes/Utils.hpp"
+# include "../includes/Server.hpp"
+# include "../includes/Utils.hpp"
+
+// used to send a notice msg to a specific client or all clients in a channel.
+int Server::handle_notice(Client &client, const std::vector<std::string> &params)
+{
+	std::map<std::string, Channel>::iterator chanit;
+	std::map<int, Client>::iterator 		 it;
+	std::map<int, Client *> 				 chan_clients;
+	std::map<int, Client *>::iterator 		 clienit;
+	std::string								 target;
+	std::string								 msg;
+	std::string								 prefix;
+
+	if (params.size() < 2 || params[0].empty() || params[1].empty())
+		return (0);
+	target = params[0];
+	msg = params[1];
+	prefix = ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip();
+	it = this->_clients.begin();
+	while (it != this->_clients.end())
+	{
+		if (same_nick(it->second.get_nick(), target)) // nick matches a client nick
+		{
+			this->send_msg(it->second, prefix + " NOTICE " + it->second.get_nick() + " :" + msg); // send msg to that client
+			return (0);
+		}
+		it++;
+	}
+	chanit = this->_channels.find(target);
+	if (chanit != this->_channels.end()) // if target matches a channel name
+	{
+		chan_clients = chanit->second.getClients(); // get all clients in channel
+		if (chan_clients.find(client.get_client_fd()) == chan_clients.end()) // if client is not in channel ->ignore notice
+			return (0);
+		clienit = chan_clients.begin();
+		while (clienit != chan_clients.end())
+		{
+			if (clienit->second->get_client_fd() != client.get_client_fd()) // if client is not who sends ->send msg to that client
+			{
+				this->send_msg(*(clienit->second), prefix + " NOTICE " + target + " :" + msg);
+			}
+			clienit++;
+		}
+	}
+	return (0);
+}
 
 // ping is used to check if connection between client and server is still active.
 int Server::handle_ping(Client &client, const std::vector<std::string> &params)
