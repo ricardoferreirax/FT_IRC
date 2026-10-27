@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
+#include "../includes/Utils.hpp"
 
 // ping is used to check if connection between client and server is still active.
 int Server::handle_ping(Client &client, const std::vector<std::string> &params)
@@ -53,32 +54,32 @@ int Server::handle_quit(Client &client, const std::vector<std::string> &params)
 	return (0);
 }
 
-int Server::handle_fast(Client &client, const std::vector<std::string> &params)
-{
-	(void)params;
-	
-	if (!client.get_auth())
-		return (ERR_PASSREQUIRED);
-	client.set_nick("Nick");
-	client.set_user("User");
-	client.set_host_ip("localhost");
-	return (0);
-}
-
 // int Server::handle_fast(Client &client, const std::vector<std::string> &params)
 // {
-// 	std::string to_send;
 // 	(void)params;
-
-// 	client.set_auth(true);
-// 	client.set_nick(generateRandomString(3));
-// 	client.set_user(generateRandomString(3));
-// 	client.set_registered(true);
-// 	client.set_host_ip(generateRandomString(9));
-// 	to_send += "You shall be named: " + client.get_nick() + "\n";
-// 	to_send += "Your home kingdom shall be: " + client.get_host_ip() + "\n";
-// 	to_send += "Thy user shall be sung as: " + client.get_user() + "\n";
-// 	to_send += "Go forth, make haste, child of Mercury\r\n";
-// 	this->send_msg(client, to_send);
+//
+// 	if (!client.get_auth())
+// 		return (ERR_PASSREQUIRED);
+// 	client.set_nick("Nick");
+// 	client.set_user("User");
+// 	client.set_host_ip("localhost");
 // 	return (0);
 // }
+
+int Server::handle_fast(Client &client, const std::vector<std::string> &params)
+{
+	std::string to_send;
+	(void)params;
+
+	client.set_auth(true);
+	client.set_nick(generateRandomString(3));
+	client.set_user(generateRandomString(3));
+	client.set_registered(true);
+	client.set_host_ip(generateRandomString(9));
+	to_send += "You shall be named: " + client.get_nick() + "\n";
+	to_send += "Your home kingdom shall be: " + client.get_host_ip() + "\n";
+	to_send += "Thy user shall be sung as: " + client.get_user() + "\n";
+	to_send += "Go forth, make haste, child of Mercury\r\n";
+	this->send_msg(client, to_send);
+	return (0);
+}
