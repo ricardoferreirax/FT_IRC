@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/27 21:07:25 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/27 21:36:13 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,6 +28,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["INVITE"] = &Server::handle_invite;
 	cmds["MODE"] = &Server::handle_mode;
 	cmds["PART"] = &Server::handle_part;
+	cmds["NOTICE"] = &Server::handle_notice;
 	cmds["PING"] = &Server::handle_ping;
 	cmds["QUIT"] = &Server::handle_quit;
 	cmds["FAST"] = &Server::handle_fast;
@@ -77,7 +78,7 @@ int Server::handle_pass(Client &client, const std::vector<std::string> &params)
 	if (params[0] != this->_pass)
 		return (ERR_PASSWDMISMATCH);
 	client.set_auth(true);
-	this->send_msg(client, ":" + this->_name + " NOTICE * :PASS accepted");
+	this->send_notice(client, PASSACCEPTED, "");
 	return (0);
 }
 
@@ -109,7 +110,7 @@ int Server::handle_nick(Client &client, const std::vector<std::string> &params)
 		this->send_msg(client, prefix + " NICK :" + nick);
 	}
 	else
-		this->send_msg(client, ":" + this->_name + " NOTICE * :Set nickname to " + nick);
+		this->send_notice(client, NICKSET, nick);
 	client.set_nick(nick);
 	return (0);
 }
@@ -229,7 +230,7 @@ int	Server::handle_join(Client &client, const std::vector<std::string> &params)
 			Channel ch(chan_name, default_mode(), client);
 			
 			this->_channels.insert(std::pair<std::string, Channel>(chan_name, ch));
-			this->send_msg(client, ":" + this->_name + " NOTICE " + client.get_nick() + " :You created Channel " + chan_name);
+			this->send_notice(client, CHANNELCREATED, chan_name);
 		}
 		else
 		{
@@ -243,7 +244,7 @@ int	Server::handle_join(Client &client, const std::vector<std::string> &params)
 			else if (ret == 4)
 				this->send_error(client, ERR_BADCHANNELKEY, chan_name);
 			else
-				this->send_msg(client, ":" + this->_name + " NOTICE " + client.get_nick() + " :You joined " + chan_name);
+				this->send_notice(client, CHANNELJOINED, chan_name);
 		}
 		i++;
 	}

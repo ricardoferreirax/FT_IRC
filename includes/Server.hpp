@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/27 10:29:26 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/27 21:31:32 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,24 +35,20 @@ enum	close_type
 
 enum	e_reply
 {
-    RPL_WELCOME = 1,
-    RPL_YOURHOST = 2,
-    RPL_CREATED = 3,
-    RPL_MYINFO = 4,
-    RPL_ISUPPORT = 5,
-    RPL_CHANNELMODEIS = 324,
-    RPL_NOTOPIC = 331,
-    RPL_TOPIC = 332,
-    RPL_INVITING = 341,
-    RPL_NAMREPLY = 353,
-    RPL_ENDOFNAMES = 366,
-    RPL_HELPSTART = 704,
-    RPL_HELPTXT = 705,
-    RPL_ENDOFHELP = 706,
-    RPL_PASSACCEPTED = 800,
-    RPL_NICKSET = 801,
-    RPL_CHANNELCREATED = 802,
-    RPL_CHANNELJOINED = 803
+	RPL_WELCOME = 1,
+	RPL_YOURHOST = 2,
+	RPL_CREATED = 3,
+	RPL_MYINFO = 4,
+	RPL_ISUPPORT = 5,
+	RPL_CHANNELMODEIS = 324,
+	RPL_NOTOPIC = 331,
+	RPL_TOPIC = 332,
+	RPL_INVITING = 341,
+	RPL_NAMREPLY = 353,
+	RPL_ENDOFNAMES = 366,
+	RPL_HELPSTART = 704,
+	RPL_HELPTXT = 705,
+	RPL_ENDOFHELP = 706,
 };
 
 enum	e_irc_error
@@ -68,15 +64,15 @@ enum	e_irc_error
 	ERR_ERRONEOUSNICKNAME = 432,
 	ERR_NICKNAMEINUSE = 433,
 	ERR_NOTONCHANNEL = 442,
-    ERR_USERONCHANNEL = 443,
+	ERR_USERONCHANNEL = 443,
 	ERR_NOTREGISTERED = 451,
 	ERR_NEEDMOREPARAMS = 461,
 	ERR_ALREADYREGISTRED = 462,
 	ERR_PASSWDMISMATCH = 464,
 	ERR_CHANNELISFULL = 471,
 	ERR_UNKNOWNMODE = 472,
-    ERR_INVITEONLYCHAN = 473,
-    ERR_BADCHANNELKEY = 475,
+	ERR_INVITEONLYCHAN = 473,
+	ERR_BADCHANNELKEY = 475,
 	ERR_BADCHANMASK = 476,
 	ERR_CHANOPRIVSNEEDED = 482,
 	ERR_HELPNOTFOUND = 524,
@@ -85,6 +81,14 @@ enum	e_irc_error
 	ERR_NICKREQUIRED = 603,
 	ERR_INVALIDUSERMODE = 604,
 	ERR_MIKUUNAVAILABLE = 605
+};
+
+enum	e_notice
+{
+	PASSACCEPTED,
+	NICKSET,
+	CHANNELCREATED,
+	CHANNELJOINED
 };
 
 class	Server
@@ -110,6 +114,7 @@ class	Server
 		void 	send_msg(Client &client, const std::string &msg);
 		void	send_reply(Client &client, int reply, const std::string &param, const std::string &text);
 		void	send_error(Client &client, int error, const std::string &cmd);
+		void	send_notice(Client &client, int notice, const std::string &param);
 
 		void	execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params);
 		int 	handle_pass(Client &client, const std::vector<std::string> &params);
@@ -119,6 +124,7 @@ class	Server
 		int		handle_invite(Client &client, const std::vector<std::string> &params);
 		int 	handle_part(Client &client, const std::vector<std::string> &params);
 
+		int		handle_notice(Client &client, const std::vector<std::string> &params);
 		int 	handle_ping(Client &client, const std::vector<std::string> &params);
 		int 	handle_quit(Client &client, const std::vector<std::string> &params);
 		int 	handle_join(Client &client, const std::vector<std::string> &params);
