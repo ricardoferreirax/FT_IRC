@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/27 21:31:32 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/27 21:56:22 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -109,8 +109,7 @@ class	Server
 		void	handle_client_data(int client_fd, int event);
 		void	process_msg(Client &client, std::string &client_buffer);
 		void	close_connections(close_type type, int fd);
-
-		void	disconnect_client(int client_fd);
+		
 		void 	send_msg(Client &client, const std::string &msg);
 		void	send_reply(Client &client, int reply, const std::string &param, const std::string &text);
 		void	send_error(Client &client, int error, const std::string &cmd);
