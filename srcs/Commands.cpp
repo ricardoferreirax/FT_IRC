@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/27 22:23:53 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/28 14:43:10 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,6 +32,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["PING"] = &Server::handle_ping;
 	cmds["QUIT"] = &Server::handle_quit;
 	cmds["FAST"] = &Server::handle_fast;
+	cmds["HELP"] = &Server::handle_help;
 	if (cmds.find(cmd) == cmds.end())
 	{
 		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
