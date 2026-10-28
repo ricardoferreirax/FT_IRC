@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/27 22:22:46 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/28 22:07:09 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,14 @@ void	Server::send_msg(Client &client, const std::string &msg)
 	event.data.fd = client_fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
+}
+
+void	Server::send_cmd(Client &sender, Client &receiver, const std::string &message)
+{
+	std::string prefix;
+
+	prefix = ":" + sender.get_nick() + "!" + sender.get_user() + "@" + sender.get_host_ip();
+	this->send_msg(receiver, prefix + " " + message);
 }
 
 void	Server::send_reply(Client &client, int reply, const std::string &param, const std::string &text)

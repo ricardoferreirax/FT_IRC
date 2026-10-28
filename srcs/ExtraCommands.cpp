@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/28 23:25:57 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/28 23:27:25 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,41 +55,34 @@ int Server::handle_help(Client &client, const std::vector<std::string> &params)
 int Server::handle_notice(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, Channel>::iterator chanit;
-	std::map<int, Client>::iterator 		 it;
 	std::map<int, Client *> 				 chan_clients;
 	std::map<int, Client *>::iterator 		 clienit;
-	std::string								 target;
-	std::string								 msg;
-	std::string								 prefix;
+	std::map<int, Client>::iterator 		 it;
+	std::string 							 target;
+	std::string 							 msg;
 
 	if (params.size() < 2 || params[0].empty() || params[1].empty())
 		return (0);
 	target = params[0];
 	msg = params[1];
-	prefix = ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip();
-	it = this->_clients.begin();
-	while (it != this->_clients.end())
+	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
-		if (same_nick(it->second.get_nick(), target)) // nick matches a client nick
+		if (same_nick(it->second.get_nick(), target))
 		{
-			this->send_msg(it->second, prefix + " NOTICE " + it->second.get_nick() + " :" + msg); // send msg to that client
+			this->send_cmd(client, it->second, "NOTICE " + it->second.get_nick() + " :" + msg);
 			return (0);
 		}
-		it++;
 	}
 	chanit = this->_channels.find(target);
-	if (chanit != this->_channels.end()) // if target matches a channel name
+	if (chanit == this->_channels.end())
+		return (0);
+	chan_clients = chanit->second.getClients();
+	if (chan_clients.find(client.get_client_fd()) == chan_clients.end())
+		return (0);
+	for (clienit = chan_clients.begin(); clienit != chan_clients.end(); ++clienit)
 	{
-		chan_clients = chanit->second.getClients(); // get all clients in channel
-		if (chan_clients.find(client.get_client_fd()) == chan_clients.end()) // if client is not in channel ->ignore notice
-			return (0);
-		clienit = chan_clients.begin();
-		while (clienit != chan_clients.end())
-		{
-			if (clienit->second->get_client_fd() != client.get_client_fd()) // if client is not who sends ->send msg to that client
-				this->send_msg(*(clienit->second), prefix + " NOTICE " + target + " :" + msg);
-			clienit++;
-		}
+		if (clienit->first != client.get_client_fd())
+			this->send_cmd(client, *(clienit->second), "NOTICE " + target + " :" + msg);
 	}
 	return (0);
 }
