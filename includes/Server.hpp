@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/28 14:28:40 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/28 22:07:48 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -109,6 +109,7 @@ class	Server
 		void	close_connections(close_type type, int fd);
 		
 		void 	send_msg(Client &client, const std::string &msg);
+		void	send_cmd(Client &sender, Client &receiver, const std::string &message);
 		void	send_reply(Client &client, int reply, const std::string &param, const std::string &text);
 		void	send_error(Client &client, int error, const std::string &cmd);
 		void	send_notice(Client &client, int notice, const std::string &param);
