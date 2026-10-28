@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/28 22:58:24 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/28 23:19:05 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,7 @@ void Server::send_cmd(Client &sender, Client &receiver, const std::string &msg)
 	int 		fd;
 
 	fd = receiver.get_client_fd();
-	receiver.get_send_buffer() += ":" + sender.get_nick() + "!" + sender.get_user() + "@" + sender.get_host_ip() + " " + msg + "\r\n";
+	receiver.get_send_buffer() += ":" + sender.get_nick() + "!" + sender.get_user() + "@" + sender.get_host_ip() + " " + msg + "\r\n\r\n";
 	event.events = EPOLLIN | EPOLLOUT;
 	event.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
@@ -65,7 +65,7 @@ void Server::send_reply(Client &client, int reply, const std::string &param, con
 	if (it == replies.end())
 		return ;
 	fd = client.get_client_fd();
-	client.get_send_buffer() += ":" + this->_name + " " + it->second + "\r\n";
+	client.get_send_buffer() += ":" + this->_name + " " + it->second + "\r\n\r\n";
 	event.events = EPOLLIN | EPOLLOUT;
 	event.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
@@ -110,7 +110,7 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	if (errors.find(error) == errors.end())
 		return ;
 	fd = client.get_client_fd();
-	client.get_send_buffer() += ":" + this->_name + " " + errors[error] + "\r\n";
+	client.get_send_buffer() += ":" + this->_name + " " + errors[error] + "\r\n\r\n";
 	event.events = EPOLLIN | EPOLLOUT;
 	event.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
@@ -149,7 +149,7 @@ void Server::send_notice(Client &client, int notice, const std::string &param)
 	}
 	fd = client.get_client_fd();
 	client.get_send_buffer() += msg;
-	if (msg.size() < 2 || msg.substr(msg.size() - 2) != "\r\n")
+	if (msg.size() < 2 || msg.substr(msg.size() - 2) != "\r\n\r\n")
 		client.get_send_buffer() += "\r\n";
 	event.events = EPOLLIN | EPOLLOUT;
 	event.data.fd = fd;
