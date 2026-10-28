@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/28 14:43:10 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/28 22:54:51 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -64,7 +64,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	{
 		client.set_registered(true);
 		std::cout << "\n\033[1;36m" << "✓ CLIENT " << client.get_client_fd() << " REGISTERED" << "\033[0m\n\n";
-		this->send_msg(client, registration_reply(client, this->_name, this->_date));
+		this->send_notice(client, REGISTRATION, "");
 	}
 }
 
@@ -83,11 +83,10 @@ int Server::handle_pass(Client &client, const std::vector<std::string> &params)
 
 int Server::handle_nick(Client &client, const std::vector<std::string> &params)
 {
-	std::map<int, Client>::iterator it;
-	std::string						nick;
-	std::string						old_nick;
-	std::string						prefix;
-
+	std::map<std::string, Channel>::iterator chanit;
+	std::map<int, Client>::iterator 		 it;
+	std::string 							 nick;
+	
 	if (!client.get_auth())
 		return (ERR_PASSREQUIRED);
 	if (params.empty() || params[0].empty())
@@ -95,18 +94,29 @@ int Server::handle_nick(Client &client, const std::vector<std::string> &params)
 	nick = params[0];
 	if (!is_valid_nick(nick))
 		return (ERR_ERRONEOUSNICKNAME);
-	old_nick = client.get_nick();
-	if (old_nick == nick)
+	if (client.get_nick() == nick)
 		return (0);
 	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
-		if (it->first != client.get_client_fd() && same_nick(it->second.get_nick(), nick)) // nick is already in use by another client
+		if (it->first != client.get_client_fd() && same_nick(it->second.get_nick(), nick))
 			return (ERR_NICKNAMEINUSE);
 	}
 	if (client.get_registered())
 	{
-		prefix = ":" + old_nick + "!" + client.get_user() + "@" + client.get_host_ip();
-		this->send_msg(client, prefix + " NICK :" + nick);
+		this->send_cmd(client, client, "NICK :" + nick);
+		for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
+		{
+			if (it->first == client.get_client_fd())
+				continue ;
+			for (chanit = this->_channels.begin(); chanit != this->_channels.end(); ++chanit)
+			{
+				if (chanit->second.getClients().count(client.get_client_fd()) && chanit->second.getClients().count(it->first))
+				{
+					this->send_cmd(client, it->second, "NICK :" + nick);
+					break ;
+				}
+			}
+		}
 	}
 	else
 		this->send_notice(client, NICKSET, nick);
@@ -140,12 +150,11 @@ int Server::handle_user(Client &client, const std::vector<std::string> &params)
 int Server::handle_privmsg(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, Channel>::iterator chanit;
-	std::map<int, Client *>::iterator 		 clienit;
 	std::map<int, Client *> 				 chan_clients;
+	std::map<int, Client *>::iterator 		 clienit;
 	std::map<int, Client>::iterator 		 it;
-	std::string								 target;
-	std::string								 msg;
-	std::string								 prefix;
+	std::string 							 target;
+	std::string 							 msg;
 
 	if (params.empty() || params[0].empty())
 		return (ERR_NORECIPIENT);
@@ -153,49 +162,38 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 		return (ERR_NOTEXTTOSEND);
 	target = params[0];
 	msg = params[1];
-	prefix = ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip();
 	if (same_nick(target, "Miku"))
 	{
 		try
 		{
 			if (!this->_bot.start_request(client.get_client_fd(), client.get_nick(), "", msg))
-			{
 				this->send_notice(client, MIKUUNAVAILABLE, "");
-				return (0);
-			}
 		}
 		catch (const std::exception &e)
 		{
 			std::cerr << "Miku: " << e.what() << std::endl;
 			this->send_notice(client, MIKUUNAVAILABLE, "");
-			return (0);
 		}
 		return (0);
 	}
-	it = this->_clients.begin();
-	while (it != this->_clients.end())
+	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
 		if (same_nick(it->second.get_nick(), target))
 		{
-			this->send_msg(it->second, prefix + " PRIVMSG " + it->second.get_nick() + " :" + msg); // nick matches a client nick ->send msg to that client
+			this->send_cmd(client, it->second, "PRIVMSG " + it->second.get_nick() + " :" + msg);
 			return (0);
 		}
-		it++;
 	}
 	chanit = this->_channels.find(target);
-	if (chanit != this->_channels.end())
+	if (chanit == this->_channels.end())
+		return (ERR_NOSUCHNICK);
+	chan_clients = chanit->second.getClients();
+	for (clienit = chan_clients.begin(); clienit != chan_clients.end(); ++clienit)
 	{
-		chan_clients = chanit->second.getClients(); // get all clients in channel
-		clienit = chan_clients.begin();
-		while (clienit != chan_clients.end())
-		{
-			if (clienit->second->get_client_fd() != client.get_client_fd()) // if client is not who sends
-				this->send_msg(*(clienit->second), prefix + " PRIVMSG " + target + " :" + msg); // send msg to that client
-			clienit++;
-		}
-		return (0);
+		if (clienit->first != client.get_client_fd())
+			this->send_cmd(client, *(clienit->second), "PRIVMSG " + target + " :" + msg);
 	}
-	return (ERR_NOSUCHNICK);
+	return (0);
 }
 
 int	Server::handle_join(Client &client, const std::vector<std::string> &params)
@@ -281,8 +279,7 @@ int Server::handle_invite(Client &client, const std::vector<std::string> &params
 	}
 	chanit->second.inviteUser(clienit->second);
 	this->send_reply(client, RPL_INVITING, params[0] + " " + params[1], ""); // confirmation msg to inviter
-	// this->send_msg(clienit->second, "You have been invited to partcipate in " + chanit->second.getName());
-	this->send_msg(clienit->second, ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip() + " INVITE " + params[0] + " :" + params[1]);
+	this->send_cmd(client, clienit->second, "INVITE " + params[0] + " :" + params[1]);
 	return (0);
 }
 

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/28 23:27:25 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/28 23:28:06 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -90,40 +90,35 @@ int Server::handle_notice(Client &client, const std::vector<std::string> &params
 // ping is used to check if connection between client and server is still active.
 int Server::handle_ping(Client &client, const std::vector<std::string> &params)
 {
-	std::string	token;
-	
 	if (params.empty() || params[0].empty())
 		return (ERR_NOORIGIN);
-	token = params[0];
-	this->send_msg(client, ":" + this->_name + " PONG " + this->_name + " :" + token);
+	this->send_notice(client, PONGREPLY, params[0]);
 	return (0);
 }
 
 int Server::handle_quit(Client &client, const std::vector<std::string> &params)
 {
-	std::map<int, Client>::iterator it;
-	std::string 					reason;
-	std::string 					msg;
-	std::string 					client_name;
-	int								client_fd;
-	
-	client_fd = client.get_client_fd();
+	std::map<std::string, Channel>::iterator chanit;
+	std::map<int, Client>::iterator 		 it;
+	std::string 							 reason;
+
 	if (params.empty() || params[0].empty())
 		reason = "Client quit";
 	else
 		reason = params[0];
-	if (client.get_nick().empty())
-		client_name = "unregistered client";
-	else
-		client_name = client.get_nick();
-	msg = ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip() + " QUIT :" + reason;
 	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
-		if (it->first == client_fd)
-			continue ; // skip sending QUIT msg to client that sent it
-		this->send_msg(it->second, msg); // send QUIT msg to all other clients
+		if (it->first == client.get_client_fd())
+			continue ;
+		for (chanit = this->_channels.begin(); chanit != this->_channels.end(); ++chanit)
+		{
+			if (chanit->second.getClients().count(client.get_client_fd()) && chanit->second.getClients().count(it->first))
+			{
+				this->send_cmd(client, it->second, "QUIT :" + reason);
+				break ;
+			}
+		}
 	}
-	this->send_msg(client, "Closing connection for " + client_name + ": " + reason);
 	client.set_quit(true);
 	return (0);
 }
@@ -154,6 +149,7 @@ int Server::handle_fast(Client &client, const std::vector<std::string> &params)
 // 	client.set_host_ip("localhost");
 // 	return (0);
 // }
+<<<<<<< HEAD
 
 int Server::handle_fast(Client &client, const std::vector<std::string> &params)
 {
@@ -172,3 +168,5 @@ int Server::handle_fast(Client &client, const std::vector<std::string> &params)
 	this->send_msg(client, to_send);
 	return (0);
 }
+=======
+>>>>>>> acb1896 (Remove send_msg() and move send buffer management and epoll updates to send_cmd(), send_reply(), send_error(), and send_notice(). Use send_notice() to handle PONG responses, client registration messages, and miku replies.)
