@@ -60,9 +60,9 @@ class Channel
 		int leaveChannel(Client guest);
 		bool inviteUser(Client guest);
 		std::string	getName(void) const;
-		std::set<int> getChannops(void) const;
-		std::map<int, Client*> getClients(void) const;
-		std::set<int> getInvites(void) const;
+		std::set<int> &getChannops(void);
+		std::map<int, Client*> &getClients(void);
+		std::set<int> &getInvites(void);
 		t_cmode getMode(void) const;
 		void setMode(bool invite, bool topic_restricted, std::string topic, t_ulimit users, std::string key);
 };

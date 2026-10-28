@@ -53,6 +53,9 @@ int Channel::leaveChannel(Client guest)
 {
 	this->_clients.erase(guest.get_client_fd());
 	this->_chanops.erase(guest.get_client_fd());
+	// std::map<int, Client*>::iterator clienit = this->_clients.begin();
+	// if(this->_chanops.size() <= 0)
+		// this->_chanops.insert(clienit->first);
 	this->_mode.users.u_count--;
 	return 0;
 }
@@ -68,18 +71,18 @@ std::string	Channel::getName(void) const
 	return (this->_name);
 }
 
-std::set<int> Channel::getChannops(void) const
+std::set<int> &Channel::getChannops(void)
 {
 	return (this->_chanops);
 }
 
 
-std::map<int, Client*> Channel::getClients(void) const
+std::map<int, Client*> &Channel::getClients(void)
 {
 	return (this->_clients);
 }
 
-std::set<int> Channel::getInvites(void) const
+std::set<int> &Channel::getInvites(void)
 {
 	return (this->_invites);
 }

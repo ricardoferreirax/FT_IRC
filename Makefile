@@ -14,7 +14,7 @@ NAME = ircserv
 
 CXX = c++
 
-CXXFLAGS = -Wall -Wextra -Werror -MMD -MP -g
+CXXFLAGS = -Wall -Wextra -Werror -MMD -MP
 CXXAFLAGS = -std=c++98
 
 DEBUG_FLAGS = -g

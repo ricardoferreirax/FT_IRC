@@ -61,6 +61,18 @@ void	Server::close_connections(close_type type, int fd)
 		it = this->_clients.find(fd);
 		if (it == this->_clients.end()) // client not found
 			return ;
+		std::map<std::string, Channel>::iterator chanit = this->_channels.begin();
+		std::vector<std::string> chans;
+		std::string chanstemp;
+		while(chanit != this->_channels.end())
+		{
+			chanstemp += chanit->second.getName();
+			// chanit-
+			chanstemp += ',';
+			chanit++;
+		}
+		chans.push_back(chanstemp);
+		this->handle_part(it->second, chans);
 		if (this->_epoll_fd != -1)
 			epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
 		close(fd);

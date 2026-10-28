@@ -64,7 +64,6 @@ void	Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	}
 }
 
-//TODO: User invite is not consumed when used
 int Server::handle_invite(Client &client, const std::vector<std::string> &params)
 {
 	if(params.empty() || params.size() < 2)
@@ -126,8 +125,6 @@ int Server::handle_part(Client &client, const std::vector<std::string> &params)
 	while(i < channels.size())
 	{
 		std::map<std::string, Channel>::iterator chanit = this->_channels.find(channels[i]);
-		chanit->second.leaveChannel(client);
-		chanit->second.getInvites().erase(client.get_client_fd());
 		std::cout << client.get_client_fd() << " has left " << chanit->second.getName() << std::endl;
 		if(chanit->second.getClients().size() <= 0)
 			this->_channels.erase(chanit);
@@ -139,6 +136,16 @@ int Server::handle_part(Client &client, const std::vector<std::string> &params)
 				notify_chan.push_back("Reason: " + params[1]);
 			this->handle_privmsg(client, notify_chan);
 		}
+		chanit->second.leaveChannel(client);
+		chanit->second.getInvites().erase(client.get_client_fd());
+		if(chanit->second.getChannops().size() <= 0)
+		{
+			std::map<int, Client*>::iterator clienit = chanit->second.getClients().begin();
+			chanit->second.getChannops().insert(clienit->first);
+			this->send_msg(*clienit->second, "You are now a channop in channel " + chanit->second.getName());
+		}
+		if(chanit->second.getMode().users.u_count <= 0)
+			this->_channels.erase(chanit);
 		i++;
 	}
 	return 0;
@@ -205,6 +212,7 @@ int Server::handle_user(Client &client, const std::vector<std::string> &params)
 	return (0);
 }
 
+//TODO: Clients can send messages to a channel that is not part of the channel
 int Server::handle_privmsg(Client &client,
 	const std::vector<std::string> &params)
 {
@@ -248,6 +256,11 @@ int Server::handle_privmsg(Client &client,
 	if(chanit != this->_channels.end())
 	{
 		std::map<int, Client*> chan_clients = chanit->second.getClients();
+		if(chan_clients.find(client.get_client_fd()) == chan_clients.end())
+		{
+			this->send_error(client, 401, "YoU ain't part of this channel");
+			return -1;
+		}
 		std::map<int, Client*>::iterator clienit = chan_clients.begin();
 		prefix = ":" + client.get_nick() + "!" + client.get_user() + "@"
 			+ client.get_host_ip();
@@ -421,110 +434,3 @@ int Server::handle_mode(Client &client, const std::vector<std::string> &params)
 	}
 	return (0);
 }
-
-// int Server::handle_join(Client &client, const std::vector<std::string> &params)
-// {
-// 	size_t	i;
-// 	int		ret;
-//
-// 	std::map<std::string, Channel>::iterator it;
-// 	std::vector<std::string> c_names;
-// 	std::vector<std::string> keys;
-// 	std::string chan_name;
-// 	std::string key;
-// 	if (params.empty() || params.size() > 2)
-// 		return (461);
-// 	c_names = ft_split(params[0], ',');
-// 	if (params.size() > 1)
-// 		keys = ft_split(params[1], ',');
-// 	i = 0;
-// 	while (i < c_names.size())
-// 	{
-// 		chan_name = c_names[i];
-// 		if (chan_name.empty() || (chan_name[0] != '#' && chan_name[0] != '&'))
-// 		{
-// 			this->send_msg(client,
-// 				"Invalid channel name: must start with # or &\r\n\r\n",
-// 				EPOLLIN | EPOLLOUT);
-// 			i++;
-// 			continue ;
-// 		}
-// 		if (i < keys.size())
-// 			key = keys[i];
-// 		else
-// 			key = "";
-// 		it = this->_channels.find(chan_name);
-// 		if (it == this->_channels.end())
-// 		{
-// 			Channel ch(chan_name, default_mode(), client);
-// 			this->_channels.insert(std::pair<std::string, Channel>(chan_name,
-// 					ch));
-// 			this->send_msg(client, "You created Channel " + chan_name + "\r\n"
-// 				+ "\r\n", EPOLLIN | EPOLLOUT);
-// 		}
-// 		else
-// 		{
-// 			ret = it->second.joinChannel(client, key);
-// 			if (ret == 1)
-// 				this->send_msg(client, "NOTICE: User is already in Channel\r\n",
-// 					EPOLLIN | EPOLLOUT);
-// 			else if (ret == 2)
-// 				this->send_msg(client, "Channel is full: " + chan_name
-// 					+ " ! Get yo ass outta here\r\n" + "\r\n",
-// 					EPOLLIN | EPOLLOUT);
-// 			else if (ret == 3)
-// 				this->send_msg(client, ":" + this->_name + " 473 "
-// 					+ client.get_nick() + " " + chan_name
-// 					+ " :You weren't invited to the boys club. Access denied\r\n",
-// 					EPOLLIN | EPOLLOUT);
-// 			else if (ret == 4)
-// 				this->send_msg(client, "Channel requires a key: " + chan_name
-// 					+ " ! What's the pass? This is boys only club" + "\r\n",
-// 					EPOLLIN | EPOLLOUT);
-// 			else
-// 				this->send_msg(client, "You joined " + chan_name + "\r\n"
-// 					+ "\r\n", EPOLLIN | EPOLLOUT);
-// 		}
-// 		i++;
-// 	}
-// 	return (0);
-// }
-
-// int Server::handle_miku(Client &client, const std::vector<std::string> &params)
-// {
-// 	size_t	i;
-//
-// 	std::string question;
-// 	if (params.empty()) // no question provided
-// 	{
-// 		this->send_msg(client, "NOTICE " + client.get_nick()
-// 			+ " :[MIKU] Needs a question :3\r\n", EPOLLIN | EPOLLOUT);
-// 		return (0);
-// 	}
-// 	i = 0;
-// 	while (i < params.size())
-// 	{
-// 		if (i > 0)
-// 			question += " "; // add space between params
-// 		question += params[i];
-// 		// combine all params into a single question string
-// 		i++;
-// 	}
-// 	if (!question.empty() && question[0] == ':')
-// 		question.erase(0, 1); // rmv ':' if present
-// 	if (question.empty())
-// 	{
-// 		this->send_msg(client, "NOTICE " + client.get_nick()
-// 			+ " :[MIKU] Needs a question :3\r\n", EPOLLIN | EPOLLOUT);
-// 		return (0);
-// 	}
-// 	if (!this->_bot.start_request(client.get_client_fd(), question))
-// 	// miku failed to start request
-// 	{
-// 		this->send_msg(client, "NOTICE " + client.get_nick()
-// 			+ " :[MIKU] Request failed X(\r\n", EPOLLIN | EPOLLOUT);
-// 		return (0);
-// 	}
-// 	return (0);
-// }
-
