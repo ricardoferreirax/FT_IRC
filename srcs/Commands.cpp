@@ -6,20 +6,20 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 21:23:47 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/27 21:07:25 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
 #include "../includes/Utils.hpp"
 
-void	Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
+void Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
 {
-	typedef int (Server::*Cmd)(Client &, const std::vector<std::string> &); // type cmd points to a member function of server
-	std::map<std::string, Cmd> cmds; // cmd corresponds to a member function
+	typedef int (Server::*Cmd)(Client &, const std::vector<std::string> &);
+	std::map<std::string, Cmd> cmds;
 	std::string				   param;
-	int						   error;
-	
+	int						   ret;
+
 	cmds["PASS"] = &Server::handle_pass;
 	cmds["NICK"] = &Server::handle_nick;
 	cmds["USER"] = &Server::handle_user;
@@ -31,9 +31,9 @@ void	Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["PING"] = &Server::handle_ping;
 	cmds["QUIT"] = &Server::handle_quit;
 	cmds["FAST"] = &Server::handle_fast;
-	if (cmds.find(cmd) == cmds.end()) // check if cmd is in the map
+	if (cmds.find(cmd) == cmds.end())
 	{
-		this->send_error(client, 421, cmd); // unknown command error
+		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
 		return ;
 	}
 	if ((cmd != "PASS" && cmd != "NICK" && cmd != "USER" && cmd != "FAST") && !client.get_registered())
@@ -41,19 +41,19 @@ void	Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 		this->send_error(client, 451, cmd); // not registered error
 		return ;
 	}
-	error = (this->*cmds[cmd])(client, params);
-	if (error != 0)
+	ret = (this->*cmds[cmd])(client, params);
+	if (ret != 0)
 	{
 		param = cmd;
-		if (error == ERR_USERONCHANNEL && cmd == "INVITE" && params.size() >= 2)
-			param = params[0] + " " + params[1]; // send error with channel and nick
-		else if (cmd == "INVITE" && params.size() >= 2 && (error == ERR_NOSUCHCHANNEL || error == ERR_NOTONCHANNEL || error == ERR_CHANOPRIVSNEEDED))
-			param = params[1]; // send error with nick
-		else if (cmd == "PART" && !params.empty() && (error == ERR_NOSUCHCHANNEL || error == ERR_NOTONCHANNEL))
-			param = params[0]; // send error with channel
-		else if (!params.empty() && (error == ERR_NOSUCHNICK || error == ERR_ERRONEOUSNICKNAME || error == ERR_NICKNAMEINUSE))
-			param = params[0]; // send error with nick
-		this->send_error(client, error, param); // send error with cmd
+		if (ret == ERR_USERONCHANNEL && cmd == "INVITE" && params.size() >= 2)
+			param = params[0] + " " + params[1]; // error w/ channel and nick
+		else if (cmd == "INVITE" && params.size() >= 2 && (ret == ERR_NOSUCHCHANNEL || ret == ERR_NOTONCHANNEL || ret == ERR_CHANOPRIVSNEEDED))
+			param = params[1]; // error w/ INVITE + nick
+		else if (cmd == "PART" && !params.empty() && (ret == ERR_NOSUCHCHANNEL || ret == ERR_NOTONCHANNEL))
+			param = params[0]; // error w/ PART + channel
+		else if (!params.empty() && (ret == ERR_NOSUCHNICK || ret == ERR_ERRONEOUSNICKNAME || ret == ERR_NICKNAMEINUSE))
+			param = params[0]; // error w/ nick
+		this->send_error(client, ret, param); // error w/ cmd
 		return ;
 	}
 	if (cmd == "QUIT")
@@ -61,7 +61,7 @@ void	Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	if (!client.get_registered() && client.can_register())
 	{
 		client.set_registered(true);
-		std::cout << "\n\033[1;36m" << "✓ CLIENT " <<  client.get_client_fd() << " REGISTERED" << "\033[0m\n\n";
+		std::cout << "\n\033[1;36m" << "✓ CLIENT " << client.get_client_fd() << " REGISTERED" << "\033[0m\n\n";
 		this->send_msg(client, registration_reply(client, this->_name, this->_date));
 	}
 }
@@ -197,14 +197,14 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 int	Server::handle_join(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, Channel>::iterator it;
-	std::vector<std::string> 				 c_names;
-	std::vector<std::string> 				 keys;
+	std::vector<std::string>				 c_names;
+	std::vector<std::string>				 keys;
 	std::string 							 chan_name;
 	std::string 							 key;
 	size_t 									 i;
 	int 									 ret;
 
-	if (params.empty() || params.size() > 2)
+	if (params.empty() || params[0].empty() || params.size() > 2)
 		return (ERR_NEEDMOREPARAMS);
 	c_names = ft_split(params[0], ',');
 	if (params.size() > 1)
@@ -227,8 +227,9 @@ int	Server::handle_join(Client &client, const std::vector<std::string> &params)
 		if (it == this->_channels.end())
 		{
 			Channel ch(chan_name, default_mode(), client);
+			
 			this->_channels.insert(std::pair<std::string, Channel>(chan_name, ch));
-			this->send_msg(client, "You created Channel " + chan_name);
+			this->send_msg(client, ":" + this->_name + " NOTICE " + client.get_nick() + " :You created Channel " + chan_name);
 		}
 		else
 		{
@@ -242,7 +243,7 @@ int	Server::handle_join(Client &client, const std::vector<std::string> &params)
 			else if (ret == 4)
 				this->send_error(client, ERR_BADCHANNELKEY, chan_name);
 			else
-				this->send_msg(client, "You joined " + chan_name);
+				this->send_msg(client, ":" + this->_name + " NOTICE " + client.get_nick() + " :You joined " + chan_name);
 		}
 		i++;
 	}
@@ -258,11 +259,8 @@ int Server::handle_invite(Client &client, const std::vector<std::string> &params
 	if (params.empty() || params.size() < 2)
 		return (ERR_NEEDMOREPARAMS);
 	chanit = this->_channels.find(params[1]);
-	if (chanit == this->_channels.end()) // channel doesn't exist
-	{
-		this->send_error(client, ERR_NOSUCHCHANNEL, params[1]);
-		return (0);
-	}
+	if (chanit == this->_channels.end())
+		return (ERR_NOSUCHCHANNEL);
 	clienit = this->_clients.begin();
 	while (clienit != this->_clients.end())
 	{
@@ -270,22 +268,15 @@ int Server::handle_invite(Client &client, const std::vector<std::string> &params
 			break ;
 		clienit++;
 	}
-	if (clienit == this->_clients.end()) // target nick doesn't match any client nick
-	{
-		this->send_error(client, ERR_NOSUCHNICK, params[0]);
-		return (0);
-	}
+	if (clienit == this->_clients.end())
+		return (ERR_NOSUCHNICK);
 	if (chanit->second.getMode().invite_only)
 	{
 		if (chanit->second.getChannops().find(client.get_client_fd()) == chanit->second.getChannops().end()) // client isn't channel operator
-		{
-			// this->send_error(client, 401, "You lack sudo");
-			this->send_error(client, ERR_CHANOPRIVSNEEDED, params[1]);
-			return (0);
-		}
+			return (ERR_CHANOPRIVSNEEDED);
 	}
 	chanit->second.inviteUser(clienit->second);
-	this->send_msg(client, ":" + this->_name + " 341 " + client.get_nick() + " " + params[0] + " " + params[1]); // confirmation msg to inviter
+	this->send_reply(client, RPL_INVITING, params[0] + " " + params[1], ""); // confirmation msg to inviter
 	// this->send_msg(clienit->second, "You have been invited to partcipate in " + chanit->second.getName());
 	this->send_msg(clienit->second, ":" + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip() + " INVITE " + params[0] + " :" + params[1]);
 	return (0);
@@ -304,12 +295,11 @@ int Server::handle_mode(Client &client, const std::vector<std::string> &params)
 		return (ERR_NOSUCHCHANNEL);
 	if (params.size() < 2)
 	{
+		// send RPL_CHANNELMODEIS 
 		return (0);
 	}
 	if (!tokenize_mode_flags(params[1], flags, params, 2))
-	{
-		this->send_error(client, 401, "You're doing the same shit");
-	}
+		return (ERR_UNKNOWNMODE);
 	i = 0;
 	while (i < flags.size())
 	{
@@ -331,9 +321,11 @@ int Server::handle_mode(Client &client, const std::vector<std::string> &params)
 			case 'l':
 				res = handle_lmode(client, params[0], flags[i]);
 				break ;
+			default:
+				return (ERR_UNKNOWNMODE);
 		}
 		if (!res)
-			return (-1);
+			return (0);
 		i++;
 	}
 	return (0);

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 21:15:08 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/27 10:26:04 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -290,6 +290,35 @@ void	Server::send_msg(Client &client, const std::string &msg)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 }
 
+void	Server::send_reply(Client &client, int reply, const std::string &param, const std::string &text)
+{
+    std::map<int, std::string>::iterator it;
+    std::map<int, std::string> 			 replies;
+    std::string 						 nick;
+
+    nick = client.get_nick();
+    if (nick.empty())
+        nick = "*";
+    replies[RPL_WELCOME] = "001 " + nick + " :" + text;
+    replies[RPL_YOURHOST] = "002 " + nick + " :" + text;
+    replies[RPL_CREATED] = "003 " + nick + " :" + text;
+    replies[RPL_MYINFO] = "004 " + nick + " " + param;
+    replies[RPL_ISUPPORT] = "005 " + nick + " " + param + " :are supported by this server";
+    replies[RPL_CHANNELMODEIS] = "324 " + nick + " " + param;
+    replies[RPL_NOTOPIC] = "331 " + nick + " " + param + " :No topic is set";
+    replies[RPL_TOPIC] = "332 " + nick + " " + param + " :" + text;
+    replies[RPL_INVITING] = "341 " + nick + " " + param;
+    replies[RPL_NAMREPLY] = "353 " + nick + " " + param + " :" + text;
+    replies[RPL_ENDOFNAMES] = "366 " + nick + " " + param + " :End of /NAMES list";
+    replies[RPL_HELPSTART] = "704 " + nick + " " + param + " :" + text;
+    replies[RPL_HELPTXT] = "705 " + nick + " " + param + " :" + text;
+    replies[RPL_ENDOFHELP] = "706 " + nick + " " + param + " :" + text;
+    it = replies.find(reply);
+    if (it == replies.end())
+        return ;
+    this->send_msg(client, ":" + this->_name + " " + it->second);
+}
+
 void Server::send_error(Client &client, int error, const std::string &param)
 {
 	std::map<int, std::string> errors; // each error code has a corresponding error msg
@@ -320,6 +349,7 @@ void Server::send_error(Client &client, int error, const std::string &param)
     errors[ERR_BADCHANNELKEY] = "475 " + nick + " " + param + " :Cannot join channel (+k)";
 	errors[ERR_BADCHANMASK] = "476 " + nick + " " + param + " :Bad Channel Mask";
 	errors[ERR_CHANOPRIVSNEEDED] = "482 " + nick + " " + param + " :You're not channel operator";
+	errors[ERR_HELPNOTFOUND] = "524 " + nick + " " + param + " :Help topic not found";
 	errors[ERR_PASSALREADYACCEPTED] = "601 " + nick + " :PASS already accepted";
 	errors[ERR_PASSREQUIRED] = "602 " + nick + " :PASS must be accepted before NICK";
 	errors[ERR_NICKREQUIRED] = "603 " + nick + " :NICK must be set before USER";
