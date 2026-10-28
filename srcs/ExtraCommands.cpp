@@ -6,12 +6,50 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/28 23:25:13 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/28 23:25:57 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 # include "../includes/Server.hpp"
 # include "../includes/Utils.hpp"
+
+int Server::handle_help(Client &client, const std::vector<std::string> &params)
+{
+	std::map<std::string, std::string>::iterator it;
+	std::map<std::string, std::string> 			 descripts;
+	std::map<std::string, std::string> 			 parameters;
+	std::string 								 topic;
+
+	descripts["PASS"] = "Authenticate with server.";
+	descripts["HELP"] = "Display information about IRC commands.";
+	parameters["PASS"] = "<password>";
+	parameters["HELP"] = "[<subject>]";
+	if (params.empty())
+		topic = "";
+	else
+		topic = params[0];
+	if (topic.empty())
+	{
+		this->send_reply(client, RPL_HELPSTART, "*", "** Help System **");
+		this->send_reply(client, RPL_HELPTXT, "*", "Use /HELP USERCMDS to list available commands.");
+		this->send_reply(client, RPL_ENDOFHELP, "*", "Use /HELP <command> for specific command information.");
+		return (0);
+	}
+	if (topic == "USERCMDS")
+	{
+		this->send_reply(client, RPL_HELPSTART, topic, "** Available IRC Commands **");
+		for (it = parameters.begin(); it != parameters.end(); ++it)
+			this->send_reply(client, RPL_HELPTXT, topic, it->first + " " + it->second);
+		this->send_reply(client, RPL_ENDOFHELP, topic, "End of command list.");
+		return (0);
+	}
+	if (descripts.find(topic) == descripts.end())
+		return (ERR_HELPNOTFOUND);
+	this->send_reply(client, RPL_HELPSTART, topic, "** " + topic + " command **");
+	this->send_reply(client, RPL_HELPTXT, topic, descripts[topic]);
+	this->send_reply(client, RPL_ENDOFHELP, topic, topic + " " + parameters[topic]);
+	return (0);
+}
 
 // used to send a notice msg to a specific client or all clients in a channel.
 int Server::handle_notice(Client &client, const std::vector<std::string> &params)
@@ -49,9 +87,7 @@ int Server::handle_notice(Client &client, const std::vector<std::string> &params
 		while (clienit != chan_clients.end())
 		{
 			if (clienit->second->get_client_fd() != client.get_client_fd()) // if client is not who sends ->send msg to that client
-			{
 				this->send_msg(*(clienit->second), prefix + " NOTICE " + target + " :" + msg);
-			}
 			clienit++;
 		}
 	}
