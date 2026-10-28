@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/28 22:54:51 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/28 23:17:19 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,7 +38,8 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
 		return ;
 	}
-	if ((cmd != "PASS" && cmd != "NICK" && cmd != "USER" && cmd != "FAST") && !client.get_registered())
+	if ((cmd != "PASS" && cmd != "NICK" && cmd != "USER" && cmd != "FAST" && cmd != "HELP" 
+		&& cmd != "QUIT" && cmd != "PING") && !client.get_registered())
 	{
 		this->send_error(client, 451, cmd); // not registered error
 		return ;

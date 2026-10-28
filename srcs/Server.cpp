@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/27 21:54:37 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/28 23:12:19 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -223,6 +223,11 @@ void	Server::handle_client_data(int client_fd, int event)
 		recv_buffer.append(buffer, bytes); // append bytes ->recv() may not receive all data at once 
 		log_tcp(TCP_RECEIVE, client_fd, bytes, std::string(buffer, bytes));
 		this->process_msg(client, recv_buffer);
+		if (client.get_quit())
+		{
+			this->close_connections(CLIENT_DISCONNECT, client_fd);
+			return ;
+		}
 	}
 	else if (event == EPOLLOUT)
 	{
