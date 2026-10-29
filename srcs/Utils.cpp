@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 21:05:49 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/29 14:15:04 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -131,6 +131,7 @@ std::string registration_reply(const Client &client, const std::string &_name, c
 	reply += ":" + _name + " 002 " + nick + " :Your host is " + _name + ", running version 1.1\r\n";
 	reply += ":" + _name + " 003 " + nick + " :This server was created " + date + "\r\n";
 	reply += ":" + _name + " 004 " + nick + " " + _name + " 1.1 io kost k\r\n";
+	reply += "\r\n";
 	return (reply);
 }
 

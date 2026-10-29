@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/29 13:34:11 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/29 14:03:10 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,16 +51,22 @@ std::string Server::getName(void) const
 	return (this->_name);
 }
 
-void	Server::close_connections(close_type type, int fd)
+void Server::close_connections(close_type type, int fd)
 {
-	std::map<int, Client>::iterator it;
+	std::map<std::string, Channel>::iterator chanit;
+	std::map<int, Client>::iterator 		 it;
 	
 	if (type == CLIENT_DISCONNECT)
 	{
-		this->_bot.cleanup(CLIENT_DISCONNECTED, fd, NULL); // clear client memory and requests
+		this->_bot.cleanup(CLIENT_DISCONNECTED, fd, NULL);
 		it = this->_clients.find(fd);
-		if (it == this->_clients.end()) // client not found
+		if (it == this->_clients.end())
 			return ;
+		for (chanit = this->_channels.begin(); chanit != this->_channels.end(); ++chanit)
+		{
+			if (chanit->second.getClients().count(fd))
+				chanit->second.leaveChannel(it->second);
+		}
 		if (this->_epoll_fd != -1)
 			epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
 		close(fd);
@@ -69,10 +75,11 @@ void	Server::close_connections(close_type type, int fd)
 	}
 	else if (type == SERVER_SHUTDOWN)
 	{
-		this->_bot.cleanup(BOT_SHUTDOWN, -1, NULL); // clear all requests and memory
+		this->_bot.cleanup(BOT_SHUTDOWN, -1, NULL);
 		for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
-			close(it->first);   // close all client sockets
-		this->_clients.clear(); // rmv all clients
+			close(it->first);
+		this->_clients.clear();
+		this->_channels.clear();
 		if (this->_listen_fd != -1)
 		{
 			close(this->_listen_fd);
