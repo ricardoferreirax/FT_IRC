@@ -19,7 +19,7 @@ Client::Client()
 	this->_registered = false;
 	this->_quit = false;
 }
-
+// faaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaah
 Client::Client(int client_fd)
 {
 	this->_client_fd = client_fd;
@@ -109,6 +109,5 @@ bool Client::can_register() const
 
 // bool Client::is_registered(void)
 // {
-// 	return this->_registered;
+// 	return (this->_registered);
 // }
-

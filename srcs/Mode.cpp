@@ -92,7 +92,7 @@ bool	tokenize_mode_flags(const std::string &params,
 	return (true);
 }
 
-Channel *Server::validate_channel_op(Client &client, const std::string &channel_name, bool needs_sudo)
+Channel *Server::validate_channel_op(Client &client, const std::string &channel_name)
 {
 	std::map<std::string, Channel>::iterator chanit = this->_channels.find(channel_name);
 	if(chanit == this->_channels.end())
@@ -100,7 +100,7 @@ Channel *Server::validate_channel_op(Client &client, const std::string &channel_
 		this->send_error(client, 401, "No such channel");
 		return NULL;
 	}
-	if(needs_sudo && chanit->second.getChannops().find(client.get_client_fd()) == chanit->second.getChannops().end())
+	if(chanit->second.getChannops().find(client.get_client_fd()) == chanit->second.getChannops().end())
 	{
 		this->send_error(client, 401, "No perms, try using sudo");
 		return NULL;
@@ -110,7 +110,7 @@ Channel *Server::validate_channel_op(Client &client, const std::string &channel_
 
 bool Server::handle_imode(Client &client, std::string chan_name, t_modecmd flag)
 {
-	Channel *channel = validate_channel_op(client, chan_name, 1);
+	Channel *channel = validate_channel_op(client, chan_name);
 	if(!channel)
 		return false;
 	channel->setMode(flag.is_add, channel->getMode().topic_restricted, channel->getMode().topic, channel->getMode().users, channel->getMode().key);
@@ -120,7 +120,7 @@ bool Server::handle_imode(Client &client, std::string chan_name, t_modecmd flag)
 
 bool Server::handle_tmode(Client &client, std::string chan_name, t_modecmd flag)
 {
-	Channel *channel = validate_channel_op(client, chan_name, 0);
+	Channel *channel = validate_channel_op(client, chan_name);
 	if(!channel)
 		return false;
 	channel->setMode(channel->getMode().invite_only, flag.is_add, channel->getMode().topic, channel->getMode().users, channel->getMode().key);
@@ -130,7 +130,7 @@ bool Server::handle_tmode(Client &client, std::string chan_name, t_modecmd flag)
 
 bool Server::handle_kmode(Client &client, std::string chan_name, t_modecmd flag)
 {
-	Channel *channel = validate_channel_op(client, chan_name, 1);
+	Channel *channel = validate_channel_op(client, chan_name);
 	if(!channel)
 		return false;
 	if(flag.is_add)
@@ -141,18 +141,25 @@ bool Server::handle_kmode(Client &client, std::string chan_name, t_modecmd flag)
 	return true;
 }
 
-bool Server::handle_omode(Client &client, std::string chan_name, t_modecmd flag)
+std::map<int, Client>::iterator Server::reverseClientSearch(std::string nick)
 {
-	Channel *channel = validate_channel_op(client, chan_name, 1);
-	if(!channel)
-		return false;
 	std::map<int, Client>::iterator clienit = this->_clients.begin();
 	while(clienit != this->_clients.end())
 	{
-		if(clienit->second.get_nick() == flag.param)
+		if(nick == clienit->second.get_nick())
 			break;
 		clienit++;
 	}
+	return clienit;
+}
+
+bool Server::handle_omode(Client &client, std::string chan_name, t_modecmd flag)
+{
+	Channel *channel = validate_channel_op(client, chan_name);
+	if(!channel)
+		return false;
+	std::map<int, Client>::iterator clienit;
+	clienit = this->reverseClientSearch(flag.param);
 	if(clienit == this->_clients.end())
 	{
 		this->send_error(client, 401, "No such client");
@@ -162,13 +169,15 @@ bool Server::handle_omode(Client &client, std::string chan_name, t_modecmd flag)
 		channel->getChannops().insert(clienit->second.get_client_fd());
 	else
 		channel->getChannops().erase(clienit->second.get_client_fd());
+	if(channel->getChannops().size() <= 0)
+		channel->getChannops().insert(channel->getClients().begin()->first);
 	std::cout << "Channel " << chan_name << " now has " << flag.is_add << " o" << std::endl;
 	return true;
 }
 
 bool Server::handle_lmode(Client &client, std::string chan_name, t_modecmd flag)
 {
-	Channel *channel = validate_channel_op(client, chan_name, 1);
+	Channel *channel = validate_channel_op(client, chan_name);
 	if(!channel)
 		return false;
 	t_ulimit users;

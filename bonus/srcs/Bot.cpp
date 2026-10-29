@@ -12,8 +12,8 @@
 
 #include "../../includes/Server.hpp"
 #include "../../includes/Utils.hpp"
-#include "../includes/BotUtils.hpp"
 #include "../includes/Bot.hpp"
+#include "../includes/BotUtils.hpp"
 #include <arpa/inet.h>
 #include <cerrno>
 #include <fcntl.h>
@@ -31,27 +31,27 @@ Bot::~Bot()
 	this->cleanup(BOT_SHUTDOWN, -1, NULL); // clear all bot requests and memory
 }
 
-void	Bot::set_epoll_fd(int epoll_fd)
+void Bot::set_epoll_fd(int epoll_fd)
 {
 	this->_epoll_fd = epoll_fd;
 }
 
-bool	Bot::has_request(int bot_fd) const
+bool Bot::has_request(int bot_fd) const
 {
 	return (this->_requests.find(bot_fd) != this->_requests.end());
 }
 
 void Bot::clear_channel(const std::string &channel)
 {
-    this->_chan_memory.erase(channel);
+	this->_chan_memory.erase(channel);
 }
 
-void	Bot::cleanup(clear_type type, int fd, Server *server)
+void Bot::cleanup(clear_type type, int fd, Server *server)
 {
-	std::map<int, t_request>::iterator it;
-	int								   bot_fd;
-	int								   client_fd;
+	int	bot_fd;
+	int	client_fd;
 
+	std::map<int, t_request>::iterator it;
 	if (type == CLIENT_DISCONNECTED)
 		this->_user_memory.erase(fd);
 	else if (type == BOT_SHUTDOWN)
@@ -62,10 +62,10 @@ void	Bot::cleanup(clear_type type, int fd, Server *server)
 	it = this->_requests.begin();
 	while (it != this->_requests.end())
 	{
-		bot_fd = it->first; // bot fd associated with request
-		client_fd = it->second.client_fd; // client fd associated with bot request
+		bot_fd = it->first;                                                                                 // bot fd associated with request
+		client_fd = it->second.client_fd;                                                                   // client fd associated with bot request
 		if (type == BOT_SHUTDOWN || ((type == REQUEST_COMPLETED || type == REQUEST_FAILED) && bot_fd == fd) // if request completed or failed
-			|| (type == CLIENT_DISCONNECTED && client_fd == fd)) // if client disconnected
+			|| (type == CLIENT_DISCONNECTED && client_fd == fd))                                            // if client disconnected
 		{
 			++it;
 			if (this->_epoll_fd != -1)
@@ -85,7 +85,6 @@ std::string Bot::create_request(int client_fd, const std::string &nick, const st
 	std::string content;
 	std::string request;
 	std::string memory;
-
 	if (channel.empty())
 		memory = this->_user_memory[client_fd];
 	else
@@ -114,11 +113,11 @@ std::string Bot::create_request(int client_fd, const std::string &nick, const st
 // create socket to connect to ollama
 bool Bot::start_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question)
 {
-	sockaddr_in addr;
-	epoll_event event;
-	t_request 	req;
-	int 		bot_fd;
-	int 		res;
+	sockaddr_in	addr;
+	epoll_event	event;
+	t_request	req;
+	int			bot_fd;
+	int			res;
 
 	if (this->_epoll_fd < 0)
 		return (false);
@@ -160,15 +159,15 @@ bool Bot::start_request(int client_fd, const std::string &nick, const std::strin
 
 // send() - send remaining request data TO ollama through bot socket.
 // recv() - receive response data FROM ollama through bot socket.
-// req.send_buffer.c_str() + req.bytes_sent ->pointer to first byte of remaining data to send 
+// req.send_buffer.c_str() + req.bytes_sent ->pointer to first byte of remaining data to send
 bool Bot::handle_request_data(int bot_fd, int event)
 {
-    t_request 	&req = this->_requests[bot_fd];
 	epoll_event	epoll_event;
-    char        buffer[4096];
-    ssize_t     bytes;
-    size_t      remaining;
+	char		buffer[4096];
+	ssize_t		bytes;
+	size_t		remaining;
 
+	t_request &req = this->_requests[bot_fd];
 	if (event == EPOLLOUT) // socket is ready for writing
 	{
 		remaining = req.send_buffer.size() - req.bytes_sent; // how many bytes still need to be sent
@@ -202,23 +201,22 @@ bool Bot::handle_request_data(int bot_fd, int event)
 	return (true);
 }
 
-void	Server::send_response(int client_fd, const std::string &msg)
+void Server::send_response(int client_fd, const std::string &msg)
 {
 	std::map<int, Client>::iterator it;
-
 	it = this->_clients.find(client_fd); // find client that sent question
-	if (it == this->_clients.end()) // client disconnected before miku answer -> ignore response
+	if (it == this->_clients.end())      // client disconnected before miku answer -> ignore response
 		return ;
 	this->send_msg(it->second, "\r\n:Miku!Hatsune@ircserv PRIVMSG " + it->second.get_nick() + " :\033[36m" + msg + "\033[0m");
 }
 
 void Bot::process_bot_response(t_request &req, Server &server)
 {
+	size_t	start;
+	size_t	end;
+
 	std::string *memory;
 	std::string answer;
-	size_t start;
-	size_t end;
-
 	if (req.recv_buffer.find("HTTP/1.1 200") != 0)
 		throw std::runtime_error("Ollama HTTP error.");
 	start = req.recv_buffer.find("\"content\":\"");
@@ -238,15 +236,15 @@ void Bot::process_bot_response(t_request &req, Server &server)
 	if (end == req.recv_buffer.size()) // no closing quote found ->incomplete response
 		throw std::runtime_error("Incomplete Ollama response.");
 	answer = convert_json(req.recv_buffer.substr(start, end - start), JSON_UNESCAPE); // extract answer and convert json to normal text
-	server.send_response(req.client_fd, answer); // send answer to client
+	server.send_response(req.client_fd, answer);                                      // send answer to client
 	if (req.channel.empty())
 		memory = &this->_user_memory[req.client_fd]; // if no channel ->store memory for this client
 	else
 		memory = &this->_chan_memory[req.channel];
 	if (!memory->empty())
-		*memory += ","; // separate previous msgs with comma
+		*memory += ",";                                                                                                 // separate previous msgs with comma
 	*memory += "{\"role\":\"user\",\"content\":\"" + convert_json(req.nick + ": " + req.question, JSON_ESCAPE) + "\"}"; // add user question to memory
-	*memory += ",{\"role\":\"assistant\",\"content\":\"" + convert_json(answer, JSON_ESCAPE) + "\"}"; // add miku answer to memory
+	*memory += ",{\"role\":\"assistant\",\"content\":\"" + convert_json(answer, JSON_ESCAPE) + "\"}";                   // add miku answer to memory
 }
 
 bool Bot::handle_bot_event(Server &server, int bot_fd, int events)
@@ -254,13 +252,10 @@ bool Bot::handle_bot_event(Server &server, int bot_fd, int events)
 	try
 	{
 		std::map<int, t_request>::iterator it; // each bot fd has a corresponding request
-
 		it = this->_requests.find(bot_fd);
 		if (it == this->_requests.end())
 			return (false);
-		if ((events & EPOLLERR) 
-			|| ((events & EPOLLOUT) && !this->handle_request_data(bot_fd, EPOLLOUT))
-			|| ((events & EPOLLIN) && !this->handle_request_data(bot_fd, EPOLLIN)))
+		if ((events & EPOLLERR) || ((events & EPOLLOUT) && !this->handle_request_data(bot_fd, EPOLLOUT)) || ((events & EPOLLIN) && !this->handle_request_data(bot_fd, EPOLLIN)))
 			throw std::runtime_error("Ollama socket error :/");
 		if (!it->second.response_complete)
 			return (true); // response is not complete ->wait for more data

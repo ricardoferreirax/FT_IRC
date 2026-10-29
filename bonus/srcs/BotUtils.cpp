@@ -15,7 +15,6 @@
 std::string nb_to_str(size_t nb)
 {
 	std::string res;
-	
 	if (nb == 0)
 		return ("0");
 	while (nb > 0)
@@ -29,7 +28,6 @@ std::string nb_to_str(size_t nb)
 std::string convert_json(const std::string &text, e_json type)
 {
 	std::string res;
-	
 	for (size_t i = 0; i < text.size(); i++)
 	{
 		if (type == JSON_ESCAPE) // convert normal text to json

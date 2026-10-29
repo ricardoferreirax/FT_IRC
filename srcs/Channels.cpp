@@ -49,15 +49,26 @@ int Channel::joinChannel(Client &guest, std::string key = "")
 	return 0;
 }
 
+/**
+ * @brief Makes a client leave the channel
+ * @return Returns the new channop FD if the use that left was the last channop, -1 if there's no more user in the channel, otherwise it retunrs 0
+ */
 int Channel::leaveChannel(Client guest)
 {
+	int ret_val = 0;
 	this->_clients.erase(guest.get_client_fd());
 	this->_chanops.erase(guest.get_client_fd());
-	// std::map<int, Client*>::iterator clienit = this->_clients.begin();
-	// if(this->_chanops.size() <= 0)
-		// this->_chanops.insert(clienit->first);
+	this->getInvites().erase(guest.get_client_fd());
+	std::map<int, Client*>::iterator clienit = this->_clients.begin();
+	if(this->_chanops.size() <= 0)
+	{
+		this->_chanops.insert(clienit->first);
+		ret_val = clienit->first;
+	}
 	this->_mode.users.u_count--;
-	return 0;
+	if(this->_mode.users.u_count <= 0)
+		return -1;
+	return ret_val;
 }
 
 bool Channel::inviteUser(Client guest)
