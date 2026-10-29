@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/29 15:45:23 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/29 18:16:39 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -130,7 +130,8 @@ int Server::handle_user(Client &client, const std::vector<std::string> &params)
 {
 	std::string username;
 	std::string mode;
-	
+	std::string realname;
+
 	if (client.get_registered())
 		return (ERR_ALREADYREGISTRED);
 	if (!client.get_auth())
@@ -141,11 +142,13 @@ int Server::handle_user(Client &client, const std::vector<std::string> &params)
 		return (ERR_NONICKNAMEGIVEN);
 	username = params[0];
 	mode = params[1];
+	realname = params[3];
 	if (username.empty())
 		return (ERR_NEEDMOREPARAMS);
 	if (!is_valid_user_mode(mode))
 		return (ERR_INVALIDUSERMODE);
 	client.set_user(username);
+	client.set_realname(realname);
 	return (0);
 }
 

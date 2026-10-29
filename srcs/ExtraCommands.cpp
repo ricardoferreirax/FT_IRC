@@ -6,11 +6,12 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/29 18:04:27 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/29 18:11:25 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 # include "../includes/Server.hpp"
+# include "../includes/Client.hpp"
 # include "../includes/Utils.hpp"
 
 int Server::handle_help(Client &client, const std::vector<std::string> &params)
@@ -115,12 +116,23 @@ int Server::handle_notice(Client &client, const std::vector<std::string> &params
 
 int Server::handle_who(Client &client, const std::vector<std::string> &params)
 {
-	std::string mask;
+	std::map<int, Client>::iterator it;
+	std::string						mask;
+	std::string						info;
 
 	if (params.empty() || params[0].empty() || params[0] == "0")
 		mask = "*";
 	else
 		mask = params[0];
+	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
+	{
+		if (same_nick(it->second.get_nick(), mask))
+		{
+			info = "* " + it->second.get_user() + " " + it->second.get_host_ip() + " " + this->_name + " " + it->second.get_nick() + " H";
+			this->send_reply(client, RPL_WHOREPLY, info, "0 " + it->second.get_realname());
+			break ;
+		}
+	}
 	this->send_reply(client, RPL_ENDOFWHO, mask, "");
 	return (0);
 }

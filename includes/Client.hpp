@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:28:03 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/25 20:48:24 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/29 18:14:00 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,6 +25,7 @@ class	Client
 		std::string _nick;
 		std::string _user;
 		std::string _host_ip;
+		std::string _realname;
 		bool 		_auth;
 		bool 		_registered;
 		bool 		_quit;
@@ -39,6 +40,7 @@ class	Client
         const std::string &get_nick() const;
 		const std::string &get_user() const;
 		const std::string &get_host_ip() const;
+		const std::string &get_realname() const;
 		void			   clear_buffers();
 		int 			   get_client_fd() const;
 		bool 			   get_auth() const;
@@ -48,6 +50,7 @@ class	Client
         void	set_nick(const std::string &nick);
         void	set_user(const std::string &user);
 		void	set_host_ip(const std::string &host_ip);
+		void	set_realname(const std::string &realname);
         void	set_auth(bool auth);
         void	set_registered(bool registered);
 		void	set_quit(bool quit);

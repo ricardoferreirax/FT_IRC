@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:31:53 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/29 15:54:21 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/29 18:16:31 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -57,6 +57,11 @@ const std::string &Client::get_host_ip() const
 	return (this->_host_ip);
 }
 
+const std::string &Client::get_realname() const
+{
+	return (this->_realname);
+}
+
 bool Client::get_auth() const
 {
 	return (this->_auth);
@@ -80,6 +85,11 @@ void Client::set_nick(const std::string &nick)
 void Client::set_host_ip(const std::string &host_ip)
 {
 	this->_host_ip = host_ip;
+}
+
+void Client::set_realname(const std::string &realname)
+{
+	this->_realname = realname;
 }
 
 void Client::set_user(const std::string &user)
