@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/28 23:12:19 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/29 13:34:11 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -223,33 +223,32 @@ void	Server::handle_client_data(int client_fd, int event)
 		recv_buffer.append(buffer, bytes); // append bytes ->recv() may not receive all data at once 
 		log_tcp(TCP_RECEIVE, client_fd, bytes, std::string(buffer, bytes));
 		this->process_msg(client, recv_buffer);
-		if (client.get_quit())
-		{
-			this->close_connections(CLIENT_DISCONNECT, client_fd);
-			return ;
-		}
 	}
 	else if (event == EPOLLOUT)
 	{
 		std::string &send_buffer = client.get_send_buffer();
-		if (send_buffer.empty()) // no pending data to send to client
+		if (send_buffer.empty()) // no pending data to send
+		{
+			if (client.get_quit())
+				this->close_connections(CLIENT_DISCONNECT, client_fd);
 			return ;
+		}
 		bytes = send(client_fd, send_buffer.c_str(), send_buffer.size(), MSG_NOSIGNAL);
 		if (bytes <= 0)
 			return ; // send failed or would block -> keep pending data
 		log_tcp(TCP_SEND, client_fd, bytes, send_buffer.substr(0, bytes));
 		send_buffer.erase(0, bytes); // rmv only bytes successfully sent
-		if (send_buffer.empty()) // if all pending data was sent
+		if (send_buffer.empty()) // all pending data sent ->stop monitoring EPOLLOUT
 		{
-			if (client.get_quit())
-				this->close_connections(CLIENT_DISCONNECT, client_fd); // QUIT was received -> disconnect client
-			else
+			if (client.get_quit()) // client requested to quit ->close connection after sending all pending data
 			{
-				ev.events = EPOLLIN; // no pending data ->monitor socket for reading only
-				ev.data.fd = client_fd;
-				if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &ev) < 0)
-					this->close_connections(CLIENT_DISCONNECT, client_fd);
+				this->close_connections(CLIENT_DISCONNECT, client_fd);
+				return ;
 			}
+			ev.events = EPOLLIN;
+			ev.data.fd = client_fd;
+			if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &ev) < 0)
+				throw std::runtime_error("IRC: epoll_ctl() failed.");
 		}
 	}
 }

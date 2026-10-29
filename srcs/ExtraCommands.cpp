@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/29 10:43:13 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/29 13:41:26 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -125,6 +125,7 @@ int Server::handle_quit(Client &client, const std::vector<std::string> &params)
 	std::map<std::string, Channel>::iterator chanit;
 	std::map<int, Client>::iterator 		 it;
 	std::string 							 reason;
+	epoll_event 							 event;
 
 	if (params.empty() || params[0].empty())
 		reason = "Client quit";
@@ -138,11 +139,16 @@ int Server::handle_quit(Client &client, const std::vector<std::string> &params)
 		{
 			if (chanit->second.getClients().count(client.get_client_fd()) && chanit->second.getClients().count(it->first))
 			{
-				this->send_cmd(client, it->second, "QUIT :" + reason);
+				this->send_cmd(client, it->second, "QUIT :Quit: " + reason);
 				break ;
 			}
 		}
 	}
+	client.get_send_buffer() += "Closing connection: " + client.get_nick() + " (Quit: " + reason + ")\r\n";
+	event.events = EPOLLOUT;
+	event.data.fd = client.get_client_fd();
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client.get_client_fd(), &event) < 0)
+		throw std::runtime_error("IRC: epoll_ctl() failed.");
 	client.set_quit(true);
 	return (0);
 }
