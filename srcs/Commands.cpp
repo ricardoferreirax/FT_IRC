@@ -35,6 +35,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["PART"] = &Server::handle_part;
 	cmds["INVITE"] = &Server::handle_invite;
 	cmds["KICK"] = &Server::handle_kick;
+	cmds["WHOIS"] = &Server::handle_whois;
 	if (cmds.find(cmd) == cmds.end()) // check if cmd is in the map
 	{
 		this->send_error(client, 421, cmd); // unknown command error
@@ -64,6 +65,54 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 		std::cout << "=====================================================" << std::endl;
 		this->send_msg(client, registration_reply(client, this->_name, this->_date));
 	}
+}
+
+int Server::handle_whois(Client &client, const std::vector<std::string> &params)
+{
+	size_t	i;
+	std::string to_print;
+
+	if (params.empty() || params.size() > 1)
+		return (-1);
+	std::vector<std::string> users = ft_split(params[0], ',');
+	i = 0;
+	std::string channels;
+	std::string chan_opers;
+	while (i < users.size())
+	{
+		std::map<int, Client>::iterator clienit = this->reverseClientSearch(users[i]);
+		if (clienit == this->_clients.end())
+		{
+			this->send_error(client, 401, "No such client " + users[i]);
+			i++;
+			continue ;
+		}
+		to_print += users[i] + " is " + clienit->second.get_user() + "@" + clienit->second.get_host_ip() + "\n";
+		std::map<std::string, Channel>::iterator chanit = this->_channels.begin();
+		while (chanit != this->_channels.end())
+		{
+			if (chanit->second.getChannops().find(clienit->first) != chanit->second.getChannops().end())
+			{
+				if(!chan_opers.empty())
+					channels += ',';
+				chan_opers += chanit->second.getName();
+			}
+			else if (chanit->second.getClients().find(clienit->first) != chanit->second.getClients().end())
+			{
+				if(!channels.empty())
+					channels += ',';
+				channels += chanit->second.getName();
+			}
+			chanit++;
+		}
+		if(!chan_opers.empty())
+			to_print += "User is channop in the following channels: " + chan_opers + "\n";
+		if(!channels.empty())
+			to_print += "User is a member of the following channels: " + channels + "\n";
+		i++;
+	}
+	this->send_msg(client, to_print);
+	return (0);
 }
 
 int Server::handle_invite(Client &client, const std::vector<std::string> &params)
@@ -469,6 +518,9 @@ int Server::handle_mode(Client &client, const std::vector<std::string> &params)
 			break ;
 		case 'l':
 			res = handle_lmode(client, params[0], flags[i]);
+			break ;
+		case 'b':
+			res = handle_bmode(client, params[0], flags[i]);
 			break ;
 		}
 		if (!res)

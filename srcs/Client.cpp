@@ -19,7 +19,6 @@ Client::Client()
 	this->_registered = false;
 	this->_quit = false;
 }
-// faaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaah
 Client::Client(int client_fd)
 {
 	this->_client_fd = client_fd;

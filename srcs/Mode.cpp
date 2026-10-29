@@ -73,7 +73,7 @@ bool	tokenize_mode_flags(const std::string &params,
 				if (!is_add && params[i] == 'l')
 					needs_param = false;
 				else if (params[i] == 'k' || params[i] == 'o'
-					|| params[i] == 'l')
+					|| params[i] == 'l' || params[i] == 'b')
 				{
 					needs_param = true;
 					if(arg_idx >= cmdargs.size())
@@ -187,5 +187,14 @@ bool Server::handle_lmode(Client &client, std::string chan_name, t_modecmd flag)
 		users.u_limit = 0;
 	channel->setMode(channel->getMode().invite_only, channel->getMode().topic_restricted, channel->getMode().topic, users, channel->getMode().key);
 	std::cout << "Channel " << chan_name << " now has " << flag.is_add << " l" << std::endl;
+	return true;
+}
+
+bool Server::handle_bmode(Client &client, std::string chan_name, t_modecmd flag)
+{
+	(void) client;
+	(void) chan_name;
+	(void) flag;
+	//do something
 	return true;
 }

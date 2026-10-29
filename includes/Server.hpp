@@ -97,11 +97,13 @@ class Server
 	int handle_part(Client &client, const std::vector<std::string> &params);
 	int handle_kick(Client &client, const std::vector<std::string> &params);
 	int handle_invite(Client &client, const std::vector<std::string> &params);
+	int handle_whois(Client &client, const std::vector<std::string> &params);
 	bool handle_imode(Client &client, std::string chan_name, t_modecmd flag);
 	bool handle_tmode(Client &client, std::string chan_name, t_modecmd flag);
 	bool handle_kmode(Client &client, std::string chan_name, t_modecmd flag);
 	bool handle_omode(Client &client, std::string chan_name, t_modecmd flag);
 	bool handle_lmode(Client &client, std::string chan_name, t_modecmd flag);
+	bool handle_bmode(Client &client, std::string chan_name, t_modecmd flag);
 
 	//Helper
 
