@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/29 10:16:53 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/29 10:43:13 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,19 +20,43 @@ int Server::handle_help(Client &client, const std::vector<std::string> &params)
 	std::map<std::string, std::string> 			 parameters;
 	std::string 								 topic;
 
-	descripts["PASS"] = "Authenticate with server.";
-	descripts["HELP"] = "Display information about IRC commands.";
+	descripts["PASS"] = "Authenticate with server using a password before registering.";
 	parameters["PASS"] = "<password>";
-	parameters["HELP"] = "[<subject>]";
+	descripts["NICK"] = "Set/change your nickname which will be used to identify you to other users on server.";
+	parameters["NICK"] = "<nickname>";
+	descripts["USER"] = "Set your username and real name to complete the registration.";
+	parameters["USER"] = "<username> <mode> <unused> :<realname>";
+	descripts["PRIVMSG"] = "Send a message to another user or  to all members of a channel.";
+	parameters["PRIVMSG"] = "<nickname|channel> :<message>";
+	descripts["JOIN"] = "Join an existing channel or create a new one if it doesn't exist. A key may be required to join certain channels.";
+	parameters["JOIN"] = "<channel>[,<channel>...] [<key>[,<key>...]]";
+	descripts["QUIT"] = "Disconnects from server and optionally sendes a reason for disconnection.";
+	parameters["QUIT"] = "[:<reason>]";
+	descripts["INVITE"] = "Invite another user to a channel.";
+	parameters["INVITE"] = "<nickname> <channel>";
+	descripts["MODE"] = "View or change channel/user modes, including invite access, keys, user limits and operators.";
+	parameters["MODE"] = "<channel> [<+|-mode> [<parameter>]]";
+	descripts["PART"] = "Leave one or more channels without disconnecting from server. An optional reason may be provided.";
+	parameters["PART"] = "<channel>[,<channel>...] [:<reason>]";
+	descripts["NOTICE"] = "Send a informational message to a user or channel without expecting an automatic error reply.";
+	parameters["NOTICE"] = "<nickname|channel> :<message>";
+	descripts["PING"] = "Check if the connection to the server is still active.";
+	parameters["PING"] = "<token>";
+	descripts["HELP"] = "Display available IRC commands, their descriptions and parameters required to use them.";
+	parameters["HELP"] = "[<command|USERCMDS>]";
 	if (params.empty())
-		topic = "";
+	topic = "";
 	else
+	{
 		topic = params[0];
+		for (size_t i = 0; i < topic.size(); i++)
+			topic[i] = std::toupper(static_cast<unsigned char>(topic[i]));
+	}
 	if (topic.empty())
 	{
 		this->send_reply(client, RPL_HELPSTART, "*", "** Help System **");
-		this->send_reply(client, RPL_HELPTXT, "*", "Use /HELP USERCMDS to list available commands.");
-		this->send_reply(client, RPL_ENDOFHELP, "*", "Use /HELP <command> for specific command information.");
+		this->send_reply(client, RPL_HELPTXT, "*", "Use HELP USERCMDS to list available commands.");
+		this->send_reply(client, RPL_ENDOFHELP, "*", "Use HELP <command> for specific command information.");
 		return (0);
 	}
 	if (topic == "USERCMDS")

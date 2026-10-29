@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/28 23:19:05 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/29 10:24:23 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -149,8 +149,8 @@ void Server::send_notice(Client &client, int notice, const std::string &param)
 	}
 	fd = client.get_client_fd();
 	client.get_send_buffer() += msg;
-	if (msg.size() < 2 || msg.substr(msg.size() - 2) != "\r\n\r\n")
-		client.get_send_buffer() += "\r\n";
+	if (msg.size() < 2 || msg.substr(msg.size() - 2) != "\r\n")
+		client.get_send_buffer() += "\r\n\r\n";
 	event.events = EPOLLIN | EPOLLOUT;
 	event.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
