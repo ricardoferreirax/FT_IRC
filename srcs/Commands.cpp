@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/28 23:17:19 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/29 15:45:23 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,6 +29,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["MODE"] = &Server::handle_mode;
 	cmds["PART"] = &Server::handle_part;
 	cmds["NOTICE"] = &Server::handle_notice;
+	cmds["WHO"] = &Server::handle_who;
 	cmds["PING"] = &Server::handle_ping;
 	cmds["QUIT"] = &Server::handle_quit;
 	cmds["FAST"] = &Server::handle_fast;

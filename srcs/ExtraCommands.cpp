@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/29 13:55:07 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/29 18:04:27 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,19 +27,21 @@ int Server::handle_help(Client &client, const std::vector<std::string> &params)
 	descripts["USER"] = "Set your username and real name to complete the registration.";
 	parameters["USER"] = "<username> <mode> <unused> :<realname>";
 	descripts["PRIVMSG"] = "Send a message to another user or  to all members of a channel.";
-	parameters["PRIVMSG"] = "<nickname|channel> :<message>";
+	parameters["PRIVMSG"] = "<nickname|channel>{,<nickname|channel>} :<message>";
 	descripts["JOIN"] = "Join an existing channel or create a new one if it doesn't exist. A key may be required to join certain channels.";
-	parameters["JOIN"] = "<channel>[,<channel>...] [<key>[,<key>...]]";
+	parameters["JOIN"] = "<channel>{,<channel>} [<key>{,<key>}]";
 	descripts["QUIT"] = "Disconnects from server and optionally sendes a reason for disconnection.";
 	parameters["QUIT"] = "[:<reason>]";
 	descripts["INVITE"] = "Invite another user to a channel.";
 	parameters["INVITE"] = "<nickname> <channel>";
 	descripts["MODE"] = "View or change channel/user modes, including invite access, keys, user limits and operators.";
-	parameters["MODE"] = "<channel> [<+|-mode> [<parameter>]]";
+	parameters["MODE"] = "<nickname|channel> [<+|-modes> [<modeparams>]]";
 	descripts["PART"] = "Leave one or more channels without disconnecting from server. An optional reason may be provided.";
-	parameters["PART"] = "<channel>[,<channel>...] [:<reason>]";
+	parameters["PART"] = "<channel>{,<channel>} [:<part message>]";
 	descripts["NOTICE"] = "Send a informational message to a user or channel without expecting an automatic error reply.";
-	parameters["NOTICE"] = "<nickname|channel> :<message>";
+	parameters["NOTICE"] = "<nickname|channel>{,<nickname|channel>} :<message>";
+	descripts["WHO"] = "Lists info about users matching a nickname, channel, or mask. Without params, lists all visible users.";
+	parameters["WHO"] = "<mask>";
 	descripts["PING"] = "Check if the connection to the server is still active.";
 	parameters["PING"] = "<token>";
 	descripts["HELP"] = "Display available IRC commands, their descriptions and parameters required to use them.";
@@ -108,6 +110,18 @@ int Server::handle_notice(Client &client, const std::vector<std::string> &params
 		if (clienit->first != client.get_client_fd())
 			this->send_cmd(client, *(clienit->second), "NOTICE " + target + " :" + msg);
 	}
+	return (0);
+}
+
+int Server::handle_who(Client &client, const std::vector<std::string> &params)
+{
+	std::string mask;
+
+	if (params.empty() || params[0].empty() || params[0] == "0")
+		mask = "*";
+	else
+		mask = params[0];
+	this->send_reply(client, RPL_ENDOFWHO, mask, "");
 	return (0);
 }
 

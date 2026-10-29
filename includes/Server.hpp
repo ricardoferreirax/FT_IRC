@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/28 22:56:11 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/29 15:44:54 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,11 +39,12 @@ enum	e_reply
 	RPL_YOURHOST = 2,
 	RPL_CREATED = 3,
 	RPL_MYINFO = 4,
-	RPL_ISUPPORT = 5,
+	RPL_ENDOFWHO = 315,
 	RPL_CHANNELMODEIS = 324,
 	RPL_NOTOPIC = 331,
 	RPL_TOPIC = 332,
 	RPL_INVITING = 341,
+	RPL_WHOREPLY = 352,
 	RPL_NAMREPLY = 353,
 	RPL_ENDOFNAMES = 366,
 	RPL_HELPSTART = 704,
@@ -127,6 +128,7 @@ class	Server
 
 		int		handle_notice(Client &client, const std::vector<std::string> &params);
 		int		handle_help(Client &client, const std::vector<std::string> &params);
+		int 	handle_who(Client &client, const std::vector<std::string> &params);
 		int 	handle_ping(Client &client, const std::vector<std::string> &params);
 		int 	handle_quit(Client &client, const std::vector<std::string> &params);
 		int 	handle_join(Client &client, const std::vector<std::string> &params);

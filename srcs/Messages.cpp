@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/29 14:17:58 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/29 15:53:24 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,11 +51,12 @@ void Server::send_reply(Client &client, int reply, const std::string &param, con
 	replies[RPL_YOURHOST] = "002 " + nick + " :" + text;
 	replies[RPL_CREATED] = "003 " + nick + " :" + text;
 	replies[RPL_MYINFO] = "004 " + nick + " " + param;
-	replies[RPL_ISUPPORT] = "005 " + nick + " " + param + " :are supported by this server";
+	replies[RPL_ENDOFWHO] = "315 " + nick + " " + param + " :End of WHO list";
 	replies[RPL_CHANNELMODEIS] = "324 " + nick + " " + param;
 	replies[RPL_NOTOPIC] = "331 " + nick + " " + param + " :No topic is set";
 	replies[RPL_TOPIC] = "332 " + nick + " " + param + " :" + text;
 	replies[RPL_INVITING] = "341 " + nick + " " + param;
+	replies[RPL_WHOREPLY] = "352 " + nick + " " + param + " :" + text;
 	replies[RPL_NAMREPLY] = "353 " + nick + " " + param + " :" + text;
 	replies[RPL_ENDOFNAMES] = "366 " + nick + " " + param + " :End of /NAMES list ";
 	replies[RPL_HELPSTART] = "704 " + nick + " " + param + " :" + text;
