@@ -6,77 +6,13 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/29 18:11:25 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/30 10:37:06 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 # include "../includes/Server.hpp"
 # include "../includes/Client.hpp"
 # include "../includes/Utils.hpp"
-
-int Server::handle_help(Client &client, const std::vector<std::string> &params)
-{
-	std::map<std::string, std::string>::iterator it;
-	std::map<std::string, std::string> 			 descripts;
-	std::map<std::string, std::string> 			 parameters;
-	std::string 								 topic;
-
-	descripts["PASS"] = "Authenticate with server using a password before registering.";
-	parameters["PASS"] = "<password>";
-	descripts["NICK"] = "Set/change your nickname which will be used to identify you to other users on server.";
-	parameters["NICK"] = "<nickname>";
-	descripts["USER"] = "Set your username and real name to complete the registration.";
-	parameters["USER"] = "<username> <mode> <unused> :<realname>";
-	descripts["PRIVMSG"] = "Send a message to another user or  to all members of a channel.";
-	parameters["PRIVMSG"] = "<nickname|channel>{,<nickname|channel>} :<message>";
-	descripts["JOIN"] = "Join an existing channel or create a new one if it doesn't exist. A key may be required to join certain channels.";
-	parameters["JOIN"] = "<channel>{,<channel>} [<key>{,<key>}]";
-	descripts["QUIT"] = "Disconnects from server and optionally sendes a reason for disconnection.";
-	parameters["QUIT"] = "[:<reason>]";
-	descripts["INVITE"] = "Invite another user to a channel.";
-	parameters["INVITE"] = "<nickname> <channel>";
-	descripts["MODE"] = "View or change channel/user modes, including invite access, keys, user limits and operators.";
-	parameters["MODE"] = "<nickname|channel> [<+|-modes> [<modeparams>]]";
-	descripts["PART"] = "Leave one or more channels without disconnecting from server. An optional reason may be provided.";
-	parameters["PART"] = "<channel>{,<channel>} [:<part message>]";
-	descripts["NOTICE"] = "Send a informational message to a user or channel without expecting an automatic error reply.";
-	parameters["NOTICE"] = "<nickname|channel>{,<nickname|channel>} :<message>";
-	descripts["WHO"] = "Lists info about users matching a nickname, channel, or mask. Without params, lists all visible users.";
-	parameters["WHO"] = "<mask>";
-	descripts["PING"] = "Check if the connection to the server is still active.";
-	parameters["PING"] = "<token>";
-	descripts["HELP"] = "Display available IRC commands, their descriptions and parameters required to use them.";
-	parameters["HELP"] = "[<command|USERCMDS>]";
-	if (params.empty())
-	topic = "";
-	else
-	{
-		topic = params[0];
-		for (size_t i = 0; i < topic.size(); i++)
-			topic[i] = std::toupper(static_cast<unsigned char>(topic[i]));
-	}
-	if (topic.empty())
-	{
-		this->send_reply(client, RPL_HELPSTART, "*", "** Help System **");
-		this->send_reply(client, RPL_HELPTXT, "*", "Use HELP USERCMDS to list available commands.");
-		this->send_reply(client, RPL_ENDOFHELP, "*", "Use HELP <command> for specific command information.");
-		return (0);
-	}
-	if (topic == "USERCMDS")
-	{
-		this->send_reply(client, RPL_HELPSTART, topic, "** Available IRC Commands **");
-		for (it = parameters.begin(); it != parameters.end(); ++it)
-			this->send_reply(client, RPL_HELPTXT, topic, it->first + " " + it->second);
-		this->send_reply(client, RPL_ENDOFHELP, topic, "End of command list.");
-		return (0);
-	}
-	if (descripts.find(topic) == descripts.end())
-		return (ERR_HELPNOTFOUND);
-	this->send_reply(client, RPL_HELPSTART, topic, "** " + topic + " command **");
-	this->send_reply(client, RPL_HELPTXT, topic, descripts[topic]);
-	this->send_reply(client, RPL_ENDOFHELP, topic, topic + " " + parameters[topic]);
-	return (0);
-}
 
 // used to send a notice msg to a specific client or all clients in a channel.
 int Server::handle_notice(Client &client, const std::vector<std::string> &params)
@@ -116,21 +52,34 @@ int Server::handle_notice(Client &client, const std::vector<std::string> &params
 
 int Server::handle_who(Client &client, const std::vector<std::string> &params)
 {
-	std::map<int, Client>::iterator it;
-	std::string						mask;
-	std::string						info;
+	std::map<std::string, Channel>::iterator chanit;
+	std::map<int, Client *>::iterator 		 clienit;
+	std::map<int, Client>::iterator 		 it;
+	std::map<int, Client *> 				 clients;
+	std::string 							 mask;
+	std::string 							 info;
 
-	if (params.empty() || params[0].empty() || params[0] == "0")
-		mask = "*";
-	else
+	mask = "*";
+	if (!params.empty() && !params[0].empty() && params[0] != "0") // mask is provided and not 0
 		mask = params[0];
-	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
+	chanit = this->_channels.find(mask); // mask matches a channel
+	if (chanit != this->_channels.end())
 	{
-		if (same_nick(it->second.get_nick(), mask))
+		clients = chanit->second.getClients(); // get all clients in channel
+		for (clienit = clients.begin(); clienit != clients.end(); ++clienit)
 		{
+			info = mask + " " + clienit->second->get_user() + " " + clienit->second->get_host_ip() + " " + this->_name + " " + clienit->second->get_nick() + " H";
+			this->send_reply(client, RPL_WHOREPLY, info, "0 " + clienit->second->get_realname()); // send for each client in channel
+		}
+	}
+	else // mask doesn't match a channel
+	{
+		for (it = this->_clients.begin(); it != this->_clients.end(); ++it) // iterate through all clients
+		{
+			if (mask != "*" && !same_nick(it->second.get_nick(), mask))
+				continue ; // mask doesn't match client nick
 			info = "* " + it->second.get_user() + " " + it->second.get_host_ip() + " " + this->_name + " " + it->second.get_nick() + " H";
-			this->send_reply(client, RPL_WHOREPLY, info, "0 " + it->second.get_realname());
-			break ;
+			this->send_reply(client, RPL_WHOREPLY, info, "0 " + it->second.get_realname()); // send for matching client
 		}
 	}
 	this->send_reply(client, RPL_ENDOFWHO, mask, "");
@@ -176,6 +125,70 @@ int Server::handle_quit(Client &client, const std::vector<std::string> &params)
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client.get_client_fd(), &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 	client.set_quit(true);
+	return (0);
+}
+
+int Server::handle_help(Client &client, const std::vector<std::string> &params)
+{
+	std::map<std::string, std::string>::iterator it;
+	std::map<std::string, std::string> 			 descripts;
+	std::map<std::string, std::string> 			 parameters;
+	std::string 								 topic;
+
+	descripts["PASS"] = "Authenticate with server using a password before registering.";
+	parameters["PASS"] = "<password>";
+	descripts["NICK"] = "Set/change your nickname which will be used to identify you to other users on server.";
+	parameters["NICK"] = "<nickname>";
+	descripts["USER"] = "Set your username and real name to complete the registration.";
+	parameters["USER"] = "<username> <mode> <unused> :<realname>";
+	descripts["PRIVMSG"] = "Send a message to another user or  to all members of a channel.";
+	parameters["PRIVMSG"] = "<nickname|channel>{,<nickname|channel>} :<message>";
+	descripts["JOIN"] = "Join an existing channel or create a new one if it doesn't exist. A key may be required to join certain channels.";
+	parameters["JOIN"] = "<channel>{,<channel>} [<key>{,<key>}]";
+	descripts["QUIT"] = "Disconnects from server and optionally sendes a reason for disconnection.";
+	parameters["QUIT"] = "[:<reason>]";
+	descripts["INVITE"] = "Invite another user to a channel.";
+	parameters["INVITE"] = "<nickname> <channel>";
+	descripts["MODE"] = "View or change channel/user modes, including invite access, keys, user limits and operators.";
+	parameters["MODE"] = "<nickname|channel> [<+|-modes> [<modeparams>]]";
+	descripts["PART"] = "Leave one or more channels without disconnecting from server. An optional reason may be provided.";
+	parameters["PART"] = "<channel>{,<channel>} [:<part message>]";
+	descripts["NOTICE"] = "Send a informational message to a user or channel without expecting an automatic error reply.";
+	parameters["NOTICE"] = "<nickname|channel>{,<nickname|channel>} :<message>";
+	descripts["WHO"] = "Lists info about users matching a nickname, channel, or mask. Without parameters, lists all visible users.";
+	parameters["WHO"] = "[<mask> [o]]";
+	descripts["PING"] = "Check if the connection to the server is still active.";
+	parameters["PING"] = "<token>";
+	descripts["HELP"] = "Display available IRC commands, their descriptions and parameters required to use them.";
+	parameters["HELP"] = "[<command|USERCMDS>]";
+	if (params.empty())
+	topic = "";
+	else
+	{
+		topic = params[0];
+		for (size_t i = 0; i < topic.size(); i++)
+			topic[i] = std::toupper(static_cast<unsigned char>(topic[i]));
+	}
+	if (topic.empty())
+	{
+		this->send_reply(client, RPL_HELPSTART, "*", "** Help System **");
+		this->send_reply(client, RPL_HELPTXT, "*", "Use HELP USERCMDS to list available commands.");
+		this->send_reply(client, RPL_ENDOFHELP, "*", "Use HELP <command> for specific command information.");
+		return (0);
+	}
+	if (topic == "USERCMDS")
+	{
+		this->send_reply(client, RPL_HELPSTART, topic, "** Available IRC Commands **");
+		for (it = parameters.begin(); it != parameters.end(); ++it)
+			this->send_reply(client, RPL_HELPTXT, topic, it->first + " " + it->second);
+		this->send_reply(client, RPL_ENDOFHELP, topic, "End of command list.");
+		return (0);
+	}
+	if (descripts.find(topic) == descripts.end())
+		return (ERR_HELPNOTFOUND);
+	this->send_reply(client, RPL_HELPSTART, topic, "** " + topic + " command **");
+	this->send_reply(client, RPL_HELPTXT, topic, descripts[topic]);
+	this->send_reply(client, RPL_ENDOFHELP, topic, topic + " " + parameters[topic]);
 	return (0);
 }
 
