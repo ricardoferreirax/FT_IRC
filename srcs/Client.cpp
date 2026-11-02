@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:31:53 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/02 14:18:38 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/02 16:30:34 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -77,6 +77,11 @@ bool Client::get_quit() const
 	return (this->_quit);
 }
 
+const std::string &Client::get_away_msg() const
+{
+	return (this->_away_msg);
+}
+
 void Client::set_nick(const std::string &nick)
 {
 	this->_nick = nick;
@@ -112,7 +117,17 @@ void Client::set_quit(bool quit)
 	this->_quit = quit;
 }
 
+void Client::set_away_msg(const std::string &msg)
+{
+	this->_away_msg = msg;
+}
+
 bool Client::can_register() const
 {
 	return (this->_auth && !this->_nick.empty() && !this->_user.empty());
+}
+
+bool Client::is_away() const
+{
+	return (!this->_away_msg.empty());
 }

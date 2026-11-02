@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/29 18:25:50 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/02 16:33:33 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,6 +29,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["MODE"] = &Server::handle_mode;
 	cmds["PART"] = &Server::handle_part;
 	cmds["NOTICE"] = &Server::handle_notice;
+	cmds["AWAY"] = &Server::handle_away;
 	cmds["WHO"] = &Server::handle_who;
 	cmds["PING"] = &Server::handle_ping;
 	cmds["QUIT"] = &Server::handle_quit;
@@ -155,8 +156,8 @@ int Server::handle_user(Client &client, const std::vector<std::string> &params)
 int Server::handle_privmsg(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, Channel>::iterator chanit;
-	std::map<int, Client *> 				 chan_clients;
 	std::map<int, Client *>::iterator 		 clienit;
+	std::map<int, Client *> 				 chan_clients;
 	std::map<int, Client>::iterator 		 it;
 	std::string 							 target;
 	std::string 							 msg;
@@ -185,7 +186,9 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 	{
 		if (same_nick(it->second.get_nick(), target))
 		{
-			this->send_cmd(client, it->second, "PRIVMSG " + it->second.get_nick() + " :" + msg);
+			this->send_cmd(client, it->second, "PRIVMSG " + it->second.get_nick() + " :" + msg); // if target matches a client nick->send msg to target client
+			if (it->second.is_away())
+				this->send_reply(client, RPL_AWAY, it->second.get_nick(), it->second.get_away_msg()); // if target client is away->send away msg to sender
 			return (0);
 		}
 	}
@@ -196,7 +199,7 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 	for (clienit = chan_clients.begin(); clienit != chan_clients.end(); ++clienit)
 	{
 		if (clienit->first != client.get_client_fd())
-			this->send_cmd(client, *(clienit->second), "PRIVMSG " + target + " :" + msg);
+			this->send_cmd(client, *(clienit->second), "PRIVMSG " + target + " :" + msg); // if target is in channel->send msg to all clients in channel except sender
 	}
 	return (0);
 }

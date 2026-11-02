@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/02 14:21:18 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/02 15:32:46 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,6 +46,21 @@ int Server::handle_notice(Client &client, const std::vector<std::string> &params
 	{
 		if (clienit->first != client.get_client_fd())
 			this->send_cmd(client, *(clienit->second), "NOTICE " + target + " :" + msg);
+	}
+	return (0);
+}
+
+int Server::handle_away(Client &client, const std::vector<std::string> &params)
+{
+	if (params.empty() || params[0].empty()) // no away msg provided
+	{
+		client.set_away_msg("");
+		this->send_reply(client, RPL_UNAWAY, "", "");
+	}
+	else // away msg provided
+	{
+		client.set_away_msg(params[0]);
+		this->send_reply(client, RPL_NOWAWAY, "", "");
 	}
 	return (0);
 }
@@ -144,31 +159,33 @@ int Server::handle_help(Client &client, const std::vector<std::string> &params)
 	std::map<std::string, std::string> 			 parameters;
 	std::string 								 cmd;
 
-	descripts["PASS"] = "Authenticate with server using a password before registering.";
+	descripts["PASS"] = "Authenticate with server using a password. Must be sent before registration.";
 	parameters["PASS"] = "<password>";
-	descripts["NICK"] = "Set/change your nickname which will be used to identify you to other users on server.";
+	descripts["NICK"] = "Set/change nickname on server. NICK is used by other users to send privmsgs or/and invite to channels.";
 	parameters["NICK"] = "<nickname>";
-	descripts["USER"] = "Set your username and real name to complete the registration.";
+	descripts["USER"] = "Provide username and real name. Along with PASS and NICK, USER completes registration.";
 	parameters["USER"] = "<username> <mode> <unused> :<realname>";
-	descripts["PRIVMSG"] = "Send a message to another user or  to all members of a channel.";
+	descripts["PRIVMSG"] = "Send private message to another user or to all members of a channel. Can send to several users/channels.";
 	parameters["PRIVMSG"] = "<nickname|channel>{,<nickname|channel>} :<message>";
-	descripts["JOIN"] = "Join an existing channel or create a new one if it doesn't exist. A key may be required to join certain channels.";
+	descripts["JOIN"] = "Join one or more channels. If a channel doesn't exist, it'll be created. Some channels require a password (key) or an invitation.";
 	parameters["JOIN"] = "<channel>{,<channel>} [<key>{,<key>}]";
-	descripts["QUIT"] = "Disconnects from server and optionally sendes a reason for disconnection.";
+	descripts["QUIT"] = "Disconnect from server and notify other user(s) who share same channel(s). Can provide a reason.";
 	parameters["QUIT"] = "[:<reason>]";
-	descripts["INVITE"] = "Invite another user to a channel.";
+	descripts["INVITE"] = "Invite another user to join a specific channel. It's useful for invite only channels, where users need invitation before they can join.";
 	parameters["INVITE"] = "<nickname> <channel>";
-	descripts["MODE"] = "View or change channel/user modes, including invite access, keys, user limits and operators.";
+	descripts["MODE"] = "View/modify user and channel modes. Can control invite (+i), pass (+k), user limits (+l), topics (+t) and operators (+o). Use + to enable a mode or - to disable it.";
 	parameters["MODE"] = "<nickname|channel> [<+|-modes> [<modeparams>]]";
-	descripts["PART"] = "Leave one or more channels without disconnecting from server. An optional reason may be provided.";
+	descripts["PART"] = "Leave one or more channels without disconnecting from server. Other members will be notified, and may include an parting message.";
 	parameters["PART"] = "<channel>{,<channel>} [:<part message>]";
-	descripts["NOTICE"] = "Send a informational message to a user or channel without expecting an automatic error reply.";
+	descripts["NOTICE"] = "Send info message to user/channel. Unlike PRIVMSG, NOTICE shouldn't create automatic error replies, it's useful for automated messages.";
 	parameters["NOTICE"] = "<nickname|channel>{,<nickname|channel>} :<message>";
-	descripts["WHO"] = "Lists info about users matching a nickname, channel, or mask. Without parameters, lists all visible users.";
+	descripts["WHO"] = "Display info about users matching a nickname/channel/search mask. Use * to search for multiple users or omit mask to list users.";
 	parameters["WHO"] = "[<mask> [o]]";
-	descripts["PING"] = "Check if the connection to the server is still active.";
+	descripts["AWAY"] = "Mark as away from server by setting an absence message. Use AWAY w/out message to remove away status.";
+	parameters["AWAY"] = "[:<message>]";
+	descripts["PING"] = "Check if client-server connection is still active. Server responds with PONG containing same token.";
 	parameters["PING"] = "<token>";
-	descripts["HELP"] = "Display available IRC commands, their descriptions and parameters required to use them.";
+	descripts["HELP"] = "Display info about IRC commands. Specify command to view its description or use without params to list available commands.";
 	parameters["HELP"] = "[<command|USERCMDS>]";
 	if (params.empty()) 
 		cmd = "";
@@ -176,7 +193,7 @@ int Server::handle_help(Client &client, const std::vector<std::string> &params)
 	{
 		cmd = params[0];
 		for (size_t i = 0; i < cmd.size(); i++)
-			cmd[i] = std::toupper(static_cast<unsigned char>(cmd[i]));
+			cmd[i] = std::toupper(cmd[i]);
 	}
 	if (cmd.empty()) // no cmd-> send general help
 	{

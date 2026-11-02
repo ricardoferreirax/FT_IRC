@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/29 15:53:24 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/02 15:38:11 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,6 +51,9 @@ void Server::send_reply(Client &client, int reply, const std::string &param, con
 	replies[RPL_YOURHOST] = "002 " + nick + " :" + text;
 	replies[RPL_CREATED] = "003 " + nick + " :" + text;
 	replies[RPL_MYINFO] = "004 " + nick + " " + param;
+	replies[RPL_AWAY] = "301 " + nick + " " + param + " :" + text;
+	replies[RPL_UNAWAY] = "305 " + nick + " :You are no longer marked as being away";
+	replies[RPL_NOWAWAY] = "306 " + nick + " :You have been marked as being away";
 	replies[RPL_ENDOFWHO] = "315 " + nick + " " + param + " :End of WHO list";
 	replies[RPL_CHANNELMODEIS] = "324 " + nick + " " + param;
 	replies[RPL_NOTOPIC] = "331 " + nick + " " + param + " :No topic is set";
