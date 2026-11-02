@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/30 11:00:13 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/02 10:59:12 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,24 +58,32 @@ int Server::handle_who(Client &client, const std::vector<std::string> &params)
 	std::map<int, Client *> 				 clients;
 	std::string 							 mask;
 	std::string 							 info;
+	std::string 							 flags;
 
 	mask = "*";
-	if (!params.empty() && !params[0].empty() && params[0] != "0") // mask is provided and not 0
+	if (!params.empty() && !params[0].empty() && params[0] != "0") // mask is provided and isn't 0
 		mask = params[0];
-	chanit = this->_channels.find(mask); // mask matches a channel
-	if (chanit != this->_channels.end())
+	chanit = this->_channels.find(mask);
+	if (chanit != this->_channels.end()) // mask matches a channel
 	{
 		clients = chanit->second.getClients(); // get all clients in channel
 		for (clienit = clients.begin(); clienit != clients.end(); ++clienit)
 		{
-			info = mask + " " + clienit->second->get_user() + " " + clienit->second->get_host_ip() + " " + this->_name + " " + clienit->second->get_nick() + " H";
+			if (!clienit->second->get_registered())
+				continue ;
+			flags = "H";
+			if (chanit->second.getChannops().count(clienit->second->get_client_fd())) // check client is channop
+				flags += "@";
+			info = mask + " " + clienit->second->get_user() + " " + clienit->second->get_host_ip() + " " + this->_name + " " + clienit->second->get_nick() + " " + flags;
 			this->send_reply(client, RPL_WHOREPLY, info, "0 " + clienit->second->get_realname()); // send for each client in channel
 		}
 	}
 	else // mask doesn't match a channel
 	{
-		for (it = this->_clients.begin(); it != this->_clients.end(); ++it) // iterate through all clients
+		for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 		{
+			if (!it->second.get_registered())
+				continue ;
 			if (mask != "*" && !same_nick(it->second.get_nick(), mask))
 				continue ; // mask doesn't match client nick
 			info = "* " + it->second.get_user() + " " + it->second.get_host_ip() + " " + this->_name + " " + it->second.get_nick() + " H";
