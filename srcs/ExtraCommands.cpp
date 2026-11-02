@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/02 17:56:23 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/02 18:22:56 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,21 +46,6 @@ int Server::handle_notice(Client &client, const std::vector<std::string> &params
 	{
 		if (clienit->first != client.get_client_fd())
 			this->send_cmd(client, *(clienit->second), "NOTICE " + target + " :" + msg);
-	}
-	return (0);
-}
-
-int Server::handle_away(Client &client, const std::vector<std::string> &params)
-{
-	if (params.empty() || params[0].empty()) // no away msg provided
-	{
-		client.set_away_msg("");
-		this->send_reply(client, RPL_UNAWAY, "", "");
-	}
-	else // away msg provided
-	{
-		client.set_away_msg(params[0]);
-		this->send_reply(client, RPL_NOWAWAY, "", "");
 	}
 	return (0);
 }
@@ -112,15 +97,6 @@ int Server::handle_who(Client &client, const std::vector<std::string> &params)
 		}
 	}
 	this->send_reply(client, RPL_ENDOFWHO, mask, "");
-	return (0);
-}
-
-// ping is used to check if connection between client and server is still active.
-int Server::handle_ping(Client &client, const std::vector<std::string> &params)
-{
-	if (params.empty() || params[0].empty())
-		return (ERR_NOORIGIN);
-	this->send_notice(client, PONGREPLY, params[0]);
 	return (0);
 }
 
@@ -220,6 +196,30 @@ int Server::handle_help(Client &client, const std::vector<std::string> &params)
 	this->send_reply(client, RPL_HELPSTART, cmd, "** " + cmd + " command **");
 	this->send_reply(client, RPL_HELPTXT, cmd, descripts[cmd]);
 	this->send_reply(client, RPL_ENDOFHELP, cmd, cmd + " " + parameters[cmd]);
+	return (0);
+}
+
+// ping is used to check if connection between client and server is still active.
+int Server::handle_ping(Client &client, const std::vector<std::string> &params)
+{
+	if (params.empty() || params[0].empty())
+		return (ERR_NOORIGIN);
+	this->send_notice(client, PONGREPLY, params[0]);
+	return (0);
+}
+
+int Server::handle_away(Client &client, const std::vector<std::string> &params)
+{
+	if (params.empty() || params[0].empty()) // no away msg provided
+	{
+		client.set_away_msg("");
+		this->send_reply(client, RPL_UNAWAY, "", "");
+	}
+	else // away msg provided
+	{
+		client.set_away_msg(params[0]);
+		this->send_reply(client, RPL_NOWAWAY, "", "");
+	}
 	return (0);
 }
 
