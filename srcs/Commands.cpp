@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/02 16:33:33 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/02 18:13:59 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -106,23 +106,23 @@ int Server::handle_nick(Client &client, const std::vector<std::string> &params)
 	}
 	if (client.get_registered())
 	{
-		this->send_cmd(client, client, "NICK :" + nick);
+		this->send_cmd(client, client, "NICK :" + nick); // if client is registered->send NICK to client
 		for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 		{
 			if (it->first == client.get_client_fd())
-				continue ;
+				continue ; // if client is the same as sender->skip
 			for (chanit = this->_channels.begin(); chanit != this->_channels.end(); ++chanit)
 			{
 				if (chanit->second.getClients().count(client.get_client_fd()) && chanit->second.getClients().count(it->first))
 				{
-					this->send_cmd(client, it->second, "NICK :" + nick);
+					this->send_cmd(client, it->second, "NICK :" + nick); // if clients are in same channel->send NICK to other client
 					break ;
 				}
 			}
 		}
 	}
 	else
-		this->send_notice(client, NICKSET, nick);
+		this->send_notice(client, NICKSET, nick); // if client isn't registered->send notice to client
 	client.set_nick(nick);
 	return (0);
 }

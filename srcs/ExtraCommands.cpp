@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/02 15:32:46 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/02 17:56:23 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -81,14 +81,16 @@ int Server::handle_who(Client &client, const std::vector<std::string> &params)
 	chanit = this->_channels.find(mask);
 	if (chanit != this->_channels.end()) // mask matches a channel
 	{
-		clients = chanit->second.getClients(); // get all clients in channel
+		clients = chanit->second.getClients();
 		for (clienit = clients.begin(); clienit != clients.end(); ++clienit)
 		{
 			if (!clienit->second->get_registered())
 				continue ;
 			flags = "H";
-			if (chanit->second.getChannops().count(clienit->second->get_client_fd())) // check client is channop
-				flags += "@";
+			if (clienit->second->is_away())
+				flags = "G";
+			if (chanit->second.getChannops().count(clienit->second->get_client_fd()))
+				flags += "@"; // if client is channop->add @
 			info = mask + " " + clienit->second->get_user() + " " + clienit->second->get_host_ip() + " " + this->_name + " " + clienit->second->get_nick() + " " + flags;
 			this->send_reply(client, RPL_WHOREPLY, info, "0 " + clienit->second->get_realname()); // send for each client in channel
 		}
@@ -102,7 +104,10 @@ int Server::handle_who(Client &client, const std::vector<std::string> &params)
 			if (!match_nick_mask(it->second.get_nick(), mask) && it->second.get_host_ip() != mask 
 				&& this->_name != mask && it->second.get_realname() != mask)
 				continue ; // skip clients that don't match mask format
-			info = "* " + it->second.get_user() + " " + it->second.get_host_ip() + " " + this->_name + " " + it->second.get_nick() + " H";
+			flags = "H";
+			if (it->second.is_away())
+				flags = "G";
+			info = "* " + it->second.get_user() + " " + it->second.get_host_ip() + " " + this->_name + " " + it->second.get_nick() + " " + flags;
 			this->send_reply(client, RPL_WHOREPLY, info, "0 " + it->second.get_realname()); // send for matching client
 		}
 	}
