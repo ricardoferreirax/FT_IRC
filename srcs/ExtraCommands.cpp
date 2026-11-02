@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/30 10:37:06 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/10/30 11:00:13 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,25 +24,25 @@ int Server::handle_notice(Client &client, const std::vector<std::string> &params
 	std::string 							 target;
 	std::string 							 msg;
 
-	if (params.size() < 2 || params[0].empty() || params[1].empty())
+	if (params.size() < 2 || params[0].empty() || params[1].empty()) // check target and msg are provided
 		return (0);
 	target = params[0];
 	msg = params[1];
 	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
-		if (same_nick(it->second.get_nick(), target))
+		if (same_nick(it->second.get_nick(), target)) // target matches a client nick
 		{
-			this->send_cmd(client, it->second, "NOTICE " + it->second.get_nick() + " :" + msg);
+			this->send_cmd(client, it->second, "NOTICE " + it->second.get_nick() + " :" + msg); // send notice to target client
 			return (0);
 		}
 	}
 	chanit = this->_channels.find(target);
-	if (chanit == this->_channels.end())
+	if (chanit == this->_channels.end()) // target isn't in channel
 		return (0);
 	chan_clients = chanit->second.getClients();
-	if (chan_clients.find(client.get_client_fd()) == chan_clients.end())
+	if (chan_clients.find(client.get_client_fd()) == chan_clients.end()) // client isn't part of channel
 		return (0);
-	for (clienit = chan_clients.begin(); clienit != chan_clients.end(); ++clienit)
+	for (clienit = chan_clients.begin(); clienit != chan_clients.end(); ++clienit) // iterate through all clients in channel
 	{
 		if (clienit->first != client.get_client_fd())
 			this->send_cmd(client, *(clienit->second), "NOTICE " + target + " :" + msg);
@@ -102,25 +102,25 @@ int Server::handle_quit(Client &client, const std::vector<std::string> &params)
 	std::string 							 reason;
 	epoll_event 							 event;
 
-	if (params.empty() || params[0].empty())
+	if (params.empty() || params[0].empty()) // no reason provided
 		reason = "Client quit";
 	else
 		reason = params[0];
 	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 	{
 		if (it->first == client.get_client_fd())
-			continue ;
-		for (chanit = this->_channels.begin(); chanit != this->_channels.end(); ++chanit)
+			continue ; // skip client who quit
+		for (chanit = this->_channels.begin(); chanit != this->_channels.end(); ++chanit) // iterate through all channels
 		{
 			if (chanit->second.getClients().count(client.get_client_fd()) && chanit->second.getClients().count(it->first))
 			{
-				this->send_cmd(client, it->second, "QUIT :" + reason);
+				this->send_cmd(client, it->second, "QUIT :" + reason); // if both clients are in same channel->send quit to other client
 				break ;
 			}
 		}
 	}
 	client.get_send_buffer() += "Closing connection: " + client.get_nick() + reason + "\r\n";
-	event.events = EPOLLOUT;
+	event.events = EPOLLOUT; // set EPOLLOUT to send quit msg before closing connection
 	event.data.fd = client.get_client_fd();
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client.get_client_fd(), &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
@@ -133,7 +133,7 @@ int Server::handle_help(Client &client, const std::vector<std::string> &params)
 	std::map<std::string, std::string>::iterator it;
 	std::map<std::string, std::string> 			 descripts;
 	std::map<std::string, std::string> 			 parameters;
-	std::string 								 topic;
+	std::string 								 cmd;
 
 	descripts["PASS"] = "Authenticate with server using a password before registering.";
 	parameters["PASS"] = "<password>";
@@ -161,34 +161,34 @@ int Server::handle_help(Client &client, const std::vector<std::string> &params)
 	parameters["PING"] = "<token>";
 	descripts["HELP"] = "Display available IRC commands, their descriptions and parameters required to use them.";
 	parameters["HELP"] = "[<command|USERCMDS>]";
-	if (params.empty())
-	topic = "";
+	if (params.empty()) 
+		cmd = "";
 	else
 	{
-		topic = params[0];
-		for (size_t i = 0; i < topic.size(); i++)
-			topic[i] = std::toupper(static_cast<unsigned char>(topic[i]));
+		cmd = params[0];
+		for (size_t i = 0; i < cmd.size(); i++)
+			cmd[i] = std::toupper(static_cast<unsigned char>(cmd[i]));
 	}
-	if (topic.empty())
+	if (cmd.empty()) // no cmd-> send general help
 	{
 		this->send_reply(client, RPL_HELPSTART, "*", "** Help System **");
 		this->send_reply(client, RPL_HELPTXT, "*", "Use HELP USERCMDS to list available commands.");
 		this->send_reply(client, RPL_ENDOFHELP, "*", "Use HELP <command> for specific command information.");
 		return (0);
 	}
-	if (topic == "USERCMDS")
+	if (cmd == "USERCMDS")
 	{
-		this->send_reply(client, RPL_HELPSTART, topic, "** Available IRC Commands **");
+		this->send_reply(client, RPL_HELPSTART, cmd, "** Available IRC Commands **");
 		for (it = parameters.begin(); it != parameters.end(); ++it)
-			this->send_reply(client, RPL_HELPTXT, topic, it->first + " " + it->second);
-		this->send_reply(client, RPL_ENDOFHELP, topic, "End of command list.");
+			this->send_reply(client, RPL_HELPTXT, cmd, it->first + " " + it->second); // send each cmd with its parameters
+		this->send_reply(client, RPL_ENDOFHELP, cmd, "End of command list.");
 		return (0);
 	}
-	if (descripts.find(topic) == descripts.end())
+	if (descripts.find(cmd) == descripts.end())
 		return (ERR_HELPNOTFOUND);
-	this->send_reply(client, RPL_HELPSTART, topic, "** " + topic + " command **");
-	this->send_reply(client, RPL_HELPTXT, topic, descripts[topic]);
-	this->send_reply(client, RPL_ENDOFHELP, topic, topic + " " + parameters[topic]);
+	this->send_reply(client, RPL_HELPSTART, cmd, "** " + cmd + " command **");
+	this->send_reply(client, RPL_HELPTXT, cmd, descripts[cmd]);
+	this->send_reply(client, RPL_ENDOFHELP, cmd, cmd + " " + parameters[cmd]);
 	return (0);
 }
 
