@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/29 14:15:04 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/02 14:24:46 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -208,4 +208,24 @@ void	log_tcp(log_type type, int fd, ssize_t bytes, const std::string &data)
 		started = true;
 	}
 	std::cout << " \033[90m(" << bytes << "B)\033[0m\n";
+}
+
+bool	match_nick_mask(const std::string &nick, const std::string &mask)
+{
+	size_t	pos;
+	size_t	length;
+
+	pos = mask.find('*');
+	if (pos == std::string::npos)
+		return (same_nick(nick, mask)); // no wildcard ->return true if nicks are equal
+	if (mask == "*")
+		return (true); // only wildcard matches any nick
+	length = mask.size() - 1;
+	if (nick.size() < length)
+		return (false); // nick is shorter than mask->can't match
+	if (pos == 0)
+		return (same_nick(nick.substr(nick.size() - length), mask.substr(1))); // wildcard at start->compare end of nick with rest of mask
+	if (pos == length)
+		return (same_nick(nick.substr(0, length), mask.substr(0, length))); // wildcard at end->compare start of nick with rest of mask
+	return (false);
 }

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/02 10:59:12 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/02 14:21:18 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -84,8 +84,9 @@ int Server::handle_who(Client &client, const std::vector<std::string> &params)
 		{
 			if (!it->second.get_registered())
 				continue ;
-			if (mask != "*" && !same_nick(it->second.get_nick(), mask))
-				continue ; // mask doesn't match client nick
+			if (!match_nick_mask(it->second.get_nick(), mask) && it->second.get_host_ip() != mask 
+				&& this->_name != mask && it->second.get_realname() != mask)
+				continue ; // skip clients that don't match mask format
 			info = "* " + it->second.get_user() + " " + it->second.get_host_ip() + " " + this->_name + " " + it->second.get_nick() + " H";
 			this->send_reply(client, RPL_WHOREPLY, info, "0 " + it->second.get_realname()); // send for matching client
 		}

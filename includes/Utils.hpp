@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/08 16:14:29 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/25 17:59:15 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/02 14:19:35 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,6 +37,7 @@ void	parse_params(std::string params, std::vector<std::string> &parsed);
 bool	is_valid_user_mode(const std::string &mode);
 void	parse_msg(const std::string &msg, std::string &cmd, std::vector<std::string> &params);
 void	log_tcp(log_type type, int fd, ssize_t bytes, const std::string &data);
+bool	match_nick_mask(const std::string &nick, const std::string &mask);
 
 std::string registration_reply(const Client &client, const std::string &server_name, const std::string &date);
 std::string generateRandomString(int length);
