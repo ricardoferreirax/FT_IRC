@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 15:45:36 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 15:56:27 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -132,9 +132,13 @@ class	Server
 		int		user_cmd(Client &client, const std::vector<std::string> &params);
 		int		fast_cmd(Client &client, const std::vector<std::string> &params);
 
+		void 	process_channels(Client &client, const std::string &cmd, const std::vector<std::string> &params);
+		int		join_cmd(Client &client, const std::vector<std::string> &params);
+		int 	invite_cmd(Client &client, const std::vector<std::string> &params);
+		int 	mode_cmd(Client &client, const std::vector<std::string> &params);
+		int 	part_cmd(Client &client, const std::vector<std::string> &params);
+		
 		int 	handle_privmsg(Client &client, const std::vector<std::string> &params);
-		int		handle_invite(Client &client, const std::vector<std::string> &params);
-		int 	handle_part(Client &client, const std::vector<std::string> &params);
 
 		int		handle_notice(Client &client, const std::vector<std::string> &params);
 		int 	handle_oper(Client &client, const std::vector<std::string> &params);
@@ -143,9 +147,7 @@ class	Server
 		int 	handle_who(Client &client, const std::vector<std::string> &params);
 		int 	handle_ping(Client &client, const std::vector<std::string> &params);
 		int 	handle_quit(Client &client, const std::vector<std::string> &params);
-		int 	handle_join(Client &client, const std::vector<std::string> &params);
 
-		int		handle_mode(Client &client, const std::vector<std::string> &params);
 		bool 	handle_imode(Client &client, std::string chan_name, t_modecmd flag);
 		bool 	handle_tmode(Client &client, std::string chan_name, t_modecmd flag);
 		bool 	handle_kmode(Client &client, std::string chan_name, t_modecmd flag);

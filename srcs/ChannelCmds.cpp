@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:21:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 13:42:27 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 15:58:13 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,51 @@
 # include "../includes/Client.hpp"
 # include "../includes/Utils.hpp"
 
-int	Server::handle_join(Client &client, const std::vector<std::string> &params)
+void Server::process_channels(Client &client, const std::string &cmd, const std::vector<std::string> &params)
+{
+	typedef int (Server::*ChanCmd)(Client &, const std::vector<std::string> &);
+	std::map<std::string, ChanCmd>::iterator it;
+	std::map<std::string, ChanCmd> 			 channels;
+	std::string 							 param;
+	int 							 		 ret;
+
+	channels["JOIN"] = &Server::join_cmd;
+	channels["INVITE"] = &Server::invite_cmd;
+	channels["MODE"] = &Server::mode_cmd;
+	channels["PART"] = &Server::part_cmd;
+	it = channels.find(cmd);
+	if (it == channels.end())
+	{
+		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
+		return ;
+	}
+	if (!client.get_registered())
+	{
+		this->send_error(client, ERR_NOTREGISTERED, cmd);
+		return ;
+	}
+	ret = (this->*(it->second))(client, params);
+	if (ret != 0)
+	{
+		param = cmd;
+		if (cmd == "INVITE" && params.size() >= 2)
+		{
+			if (ret == ERR_USERONCHANNEL)
+				param = params[0] + " " + params[1]; // send nick and channel error
+			else if (ret == ERR_NOSUCHCHANNEL || ret == ERR_NOTONCHANNEL || ret == ERR_CHANOPRIVSNEEDED)
+				param = params[1]; // send channel error
+			else if (ret == ERR_NOSUCHNICK)
+				param = params[0]; // send nick error
+		}
+		else if (cmd == "PART" && !params.empty() && (ret == ERR_NOSUCHCHANNEL || ret == ERR_NOTONCHANNEL))
+			param = params[0]; // send channel error
+		else if (cmd == "MODE" && !params.empty() && ret == ERR_NOSUCHCHANNEL)
+			param = params[0]; // send channel error
+		this->send_error(client, ret, param);
+	}
+}
+
+int	Server::join_cmd(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, Channel>::iterator it;
 	std::vector<std::string>				 c_names;
@@ -71,7 +115,7 @@ int	Server::handle_join(Client &client, const std::vector<std::string> &params)
 }
 
 // TODO: User invite is not consumed when used
-int Server::handle_invite(Client &client, const std::vector<std::string> &params)
+int Server::invite_cmd(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, Channel>::iterator chanit;
 	std::map<int, Client>::iterator 		 clienit;
@@ -102,7 +146,7 @@ int Server::handle_invite(Client &client, const std::vector<std::string> &params
 }
 
 // TODO: Users can use MODE in a channel they are not part of nor have channop
-int Server::handle_mode(Client &client, const std::vector<std::string> &params)
+int Server::mode_cmd(Client &client, const std::vector<std::string> &params)
 {
 	std::vector<t_modecmd> flags;
 	size_t 				   i;
@@ -150,7 +194,7 @@ int Server::handle_mode(Client &client, const std::vector<std::string> &params)
 	return (0);
 }
 
-int Server::handle_part(Client &client, const std::vector<std::string> &params)
+int Server::part_cmd(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, Channel>::iterator chanit;
 	std::vector<std::string>				 channels;

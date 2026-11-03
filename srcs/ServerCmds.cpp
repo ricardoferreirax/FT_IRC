@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:39:00 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 15:44:46 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 16:00:49 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,11 +26,12 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 		this->process_registration(client, cmd, params);
 		return ;
 	}
+	if (cmd == "JOIN" || cmd == "INVITE" || cmd == "MODE" || cmd == "PART")
+	{
+		this->process_channels(client, cmd, params);
+		return ;
+	}
 	cmds["PRIVMSG"] = &Server::handle_privmsg;
-	cmds["JOIN"] = &Server::handle_join;
-	cmds["INVITE"] = &Server::handle_invite;
-	cmds["MODE"] = &Server::handle_mode;
-	cmds["PART"] = &Server::handle_part;
 	cmds["NOTICE"] = &Server::handle_notice;
 	cmds["OPER"] = &Server::handle_oper;
 	cmds["WHO"] = &Server::handle_who;
@@ -54,13 +55,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	if (ret != 0)
 	{
 		param = cmd;
-		if (ret == ERR_USERONCHANNEL && cmd == "INVITE" && params.size() >= 2)
-			param = params[0] + " " + params[1];
-		else if (cmd == "INVITE" && params.size() >= 2 && (ret == ERR_NOSUCHCHANNEL || ret == ERR_NOTONCHANNEL || ret == ERR_CHANOPRIVSNEEDED))
-			param = params[1];
-		else if (cmd == "PART" && !params.empty() && (ret == ERR_NOSUCHCHANNEL || ret == ERR_NOTONCHANNEL))
-			param = params[0];
-		else if (!params.empty() && (ret == ERR_NOSUCHNICK || ret == ERR_ERRONEOUSNICKNAME || ret == ERR_NICKNAMEINUSE))
+		if (!params.empty() && ret == ERR_NOSUCHNICK)
 			param = params[0];
 		this->send_error(client, ret, param);
 	}
