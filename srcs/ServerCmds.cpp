@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:39:00 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 13:43:35 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 15:44:46 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,12 +18,14 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 {
 	typedef int (Server::*Cmd)(Client &, const std::vector<std::string> &);
 	std::map<std::string, Cmd> cmds;
-	std::string				   param;
-	int						   ret;
+	std::string 			   param;
+	int 					   ret;
 
-	cmds["PASS"] = &Server::handle_pass;
-	cmds["NICK"] = &Server::handle_nick;
-	cmds["USER"] = &Server::handle_user;
+	if (cmd == "PASS" || cmd == "NICK" || cmd == "USER" || cmd == "FAST")
+	{
+		this->process_registration(client, cmd, params);
+		return ;
+	}
 	cmds["PRIVMSG"] = &Server::handle_privmsg;
 	cmds["JOIN"] = &Server::handle_join;
 	cmds["INVITE"] = &Server::handle_invite;
@@ -35,41 +37,32 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["QUIT"] = &Server::handle_quit;
 	cmds["PING"] = &Server::handle_ping;
 	cmds["AWAY"] = &Server::handle_away;
-	cmds["FAST"] = &Server::handle_fast;
 	cmds["HELP"] = &Server::handle_help;
 	if (cmds.find(cmd) == cmds.end())
 	{
 		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
 		return ;
 	}
-	if ((cmd != "PASS" && cmd != "NICK" && cmd != "USER" && cmd != "FAST" && cmd != "HELP" 
-		&& cmd != "QUIT" && cmd != "PING") && !client.get_registered())
+	if (cmd != "HELP" && cmd != "QUIT" && cmd != "PING" && !client.get_registered())
 	{
-		this->send_error(client, 451, cmd); // not registered error
+		this->send_error(client, ERR_NOTREGISTERED, cmd);
 		return ;
 	}
 	ret = (this->*cmds[cmd])(client, params);
+	if (cmd == "QUIT")
+		return ;
 	if (ret != 0)
 	{
 		param = cmd;
 		if (ret == ERR_USERONCHANNEL && cmd == "INVITE" && params.size() >= 2)
-			param = params[0] + " " + params[1]; // error w/ channel and nick
+			param = params[0] + " " + params[1];
 		else if (cmd == "INVITE" && params.size() >= 2 && (ret == ERR_NOSUCHCHANNEL || ret == ERR_NOTONCHANNEL || ret == ERR_CHANOPRIVSNEEDED))
-			param = params[1]; // error w/ INVITE + nick
+			param = params[1];
 		else if (cmd == "PART" && !params.empty() && (ret == ERR_NOSUCHCHANNEL || ret == ERR_NOTONCHANNEL))
-			param = params[0]; // error w/ PART + channel
+			param = params[0];
 		else if (!params.empty() && (ret == ERR_NOSUCHNICK || ret == ERR_ERRONEOUSNICKNAME || ret == ERR_NICKNAMEINUSE))
-			param = params[0]; // error w/ nick
-		this->send_error(client, ret, param); // error w/ cmd
-		return ;
-	}
-	if (cmd == "QUIT")
-		return ;
-	if (!client.get_registered() && client.can_register())
-	{
-		client.set_registered(true);
-		std::cout << "\n\033[1;36m" << "✓ CLIENT " << client.get_client_fd() << " REGISTERED" << "\033[0m\n\n";
-		this->send_notice(client, REGISTRATION, "");
+			param = params[0];
+		this->send_error(client, ret, param);
 	}
 }
 
