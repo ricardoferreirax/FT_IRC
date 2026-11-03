@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/29 14:03:10 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 13:06:02 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,7 @@
 
 Server::Server(const std::string &port, const std::string &pass)
 {
-	time_t	now;
+	time_t now;
 
 	this->_port = validate_port(port);
 	if (pass.empty())
@@ -38,6 +38,7 @@ Server::Server(const std::string &port, const std::string &pass)
 	this->_date = ctime(&now);
 	if (!this->_date.empty())
 		this->_date.erase(this->_date.size() - 1);
+	this->_opers["admin"] = "1234";
 }
 
 // close all client connections

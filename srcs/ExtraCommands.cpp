@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 16:29:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/02 18:22:56 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 13:07:52 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,6 +47,22 @@ int Server::handle_notice(Client &client, const std::vector<std::string> &params
 		if (clienit->first != client.get_client_fd())
 			this->send_cmd(client, *(clienit->second), "NOTICE " + target + " :" + msg);
 	}
+	return (0);
+}
+
+int Server::handle_oper(Client &client, const std::vector<std::string> &params)
+{
+	std::map<std::string, std::string>::iterator it;
+
+	if (params.size() < 2 || params[0].empty() || params[1].empty())
+		return (ERR_NEEDMOREPARAMS);
+	it = this->_opers.find(params[0]);
+	if (it == this->_opers.end())
+		return (ERR_NOOPERHOST);
+	if (it->second != params[1])
+		return (ERR_PASSWDMISMATCH);
+	client.set_server_op(true);
+	this->send_reply(client, RPL_YOUREOPER, "", "");
 	return (0);
 }
 

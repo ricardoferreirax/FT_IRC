@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/05 20:08:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/02 18:13:59 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 13:09:48 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,10 +29,11 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["MODE"] = &Server::handle_mode;
 	cmds["PART"] = &Server::handle_part;
 	cmds["NOTICE"] = &Server::handle_notice;
-	cmds["AWAY"] = &Server::handle_away;
+	cmds["OPER"] = &Server::handle_oper;
 	cmds["WHO"] = &Server::handle_who;
-	cmds["PING"] = &Server::handle_ping;
 	cmds["QUIT"] = &Server::handle_quit;
+	cmds["PING"] = &Server::handle_ping;
+	cmds["AWAY"] = &Server::handle_away;
 	cmds["FAST"] = &Server::handle_fast;
 	cmds["HELP"] = &Server::handle_help;
 	if (cmds.find(cmd) == cmds.end())

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/02 15:37:37 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 13:04:27 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,6 +50,7 @@ enum	e_reply
 	RPL_WHOREPLY = 352,
 	RPL_NAMREPLY = 353,
 	RPL_ENDOFNAMES = 366,
+	RPL_YOUREOPER = 381,
 	RPL_HELPSTART = 704,
 	RPL_HELPTXT = 705,
 	RPL_ENDOFHELP = 706,
@@ -79,6 +80,7 @@ enum	e_irc_error
 	ERR_BADCHANNELKEY = 475,
 	ERR_BADCHANMASK = 476,
 	ERR_CHANOPRIVSNEEDED = 482,
+	ERR_NOOPERHOST = 491,
 	ERR_HELPNOTFOUND = 524,
 	ERR_PASSREQUIRED = 601,
 	ERR_INVALIDUSERMODE = 604,
@@ -107,8 +109,9 @@ class	Server
 		int			_epoll_fd;
 		Bot			_bot;
 		
-		std::map<std::string, Channel>	_channels;
-		std::map<int, Client>			_clients;
+		std::map<std::string, std::string> _opers;
+		std::map<std::string, Channel>	   _channels;
+		std::map<int, Client>			   _clients;
 
 		void	accept_client();
 		void	handle_client_data(int client_fd, int event);
@@ -130,6 +133,7 @@ class	Server
 		int 	handle_part(Client &client, const std::vector<std::string> &params);
 
 		int		handle_notice(Client &client, const std::vector<std::string> &params);
+		int 	handle_oper(Client &client, const std::vector<std::string> &params);
 		int		handle_help(Client &client, const std::vector<std::string> &params);
 		int		handle_away(Client &client, const std::vector<std::string> &params);
 		int 	handle_who(Client &client, const std::vector<std::string> &params);

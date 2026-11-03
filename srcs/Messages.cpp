@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/02 15:38:11 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 13:00:50 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -61,7 +61,8 @@ void Server::send_reply(Client &client, int reply, const std::string &param, con
 	replies[RPL_INVITING] = "341 " + nick + " " + param;
 	replies[RPL_WHOREPLY] = "352 " + nick + " " + param + " :" + text;
 	replies[RPL_NAMREPLY] = "353 " + nick + " " + param + " :" + text;
-	replies[RPL_ENDOFNAMES] = "366 " + nick + " " + param + " :End of /NAMES list ";
+	replies[RPL_ENDOFNAMES] = "366 " + nick + " " + param + " :End of NAMES list ";
+	replies[RPL_YOUREOPER] = "381 " + nick + " :You are now an IRC operator";
 	replies[RPL_HELPSTART] = "704 " + nick + " " + param + " :" + text;
 	replies[RPL_HELPTXT] = "705 " + nick + " " + param + " :" + text;
 	replies[RPL_ENDOFHELP] = "706 " + nick + " " + param + " :" + text;
@@ -108,6 +109,7 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	errors[ERR_BADCHANNELKEY] = "475 " + nick + " " + param + " :Cannot join channel (+k)";
 	errors[ERR_BADCHANMASK] = "476 " + nick + " " + param + " :Bad Channel Mask";
 	errors[ERR_CHANOPRIVSNEEDED] = "482 " + nick + " " + param + " :You're not channel operator";
+	errors[ERR_NOOPERHOST] = "491 " + nick + " :No O-lines for your host";
 	errors[ERR_HELPNOTFOUND] = "524 " + nick + " " + param + " :Help topic not found";
 	errors[ERR_PASSREQUIRED] = "601 " + nick + " :Password must be accepted before nickname";
 	errors[ERR_INVALIDUSERMODE] = "604 " + nick + " :Invalid USER mode: only numbers are allowed";

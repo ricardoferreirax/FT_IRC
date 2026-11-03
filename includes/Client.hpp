@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:28:03 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/02 14:39:39 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 10:33:37 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,8 +30,9 @@ class	Client
 		bool		_auth;
 		bool		_registered;
 		bool		_quit;
+		bool		_server_op;
 		int			_client_fd;
-
+				
 	public:
 		Client();
 		Client(int client_fd);
@@ -54,6 +55,7 @@ class	Client
 		void	set_host_ip(const std::string &host_ip);
 		void	set_realname(const std::string &realname);
 		void	set_away_msg(const std::string &msg);
+		void 	set_server_op(bool value);
 
 		void	clear_buffers();
 		void	set_auth(bool auth);
@@ -61,6 +63,7 @@ class	Client
 		void	set_quit(bool quit);
 		bool	can_register() const;
 		bool	is_away() const;
+		bool	is_server_op() const;
 };
 
 #endif
