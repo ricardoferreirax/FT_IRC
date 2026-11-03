@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 16:43:26 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 16:52:40 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -230,7 +230,7 @@ void	Server::handle_client_data(int client_fd, int event)
 			return ; // recv failed or would block ->ignore this event 
 		recv_buffer.append(buffer, bytes); // append bytes ->recv() may not receive all data at once 
 		log_tcp(TCP_RECEIVE, client_fd, bytes, std::string(buffer, bytes));
-		this->process_msg(client, recv_buffer);
+		this->process_cmds(client, recv_buffer);
 	}
 	else if (event == EPOLLOUT)
 	{
@@ -263,12 +263,12 @@ void	Server::handle_client_data(int client_fd, int event)
 
 // irc msgs end with \r\n, which separates one complete msg from the next one
 // incomplete msgs remain in client_buffer till more data is received with recv()
-void	Server::process_msg(Client &client, std::string &client_buffer)
+void Server::process_cmds(Client &client, std::string &client_buffer)
 {
 	std::vector<std::string> params;
-	std::string 			 msg;
-	std::string 			 cmd;
-	size_t					 pos;
+	std::string msg;
+	std::string cmd;
+	size_t pos;
 
 	pos = client_buffer.find("\r\n");
 	while (pos != std::string::npos)
@@ -277,27 +277,24 @@ void	Server::process_msg(Client &client, std::string &client_buffer)
 		client_buffer.erase(0, pos + 2);
 		if (!msg.empty())
 		{
+			cmd.clear();
+			params.clear();
 			parse_msg(msg, cmd, params);
-			this->execute_cmd(client, cmd, params);
+			if (cmd == "PASS" || cmd == "NICK" || cmd == "USER" || cmd == "FAST")
+				this->execute_registration(client, cmd, params);
+			else if (cmd == "JOIN" || cmd == "INVITE" || cmd == "MODE" || cmd == "PART")
+				this->execute_channels_cmds(client, cmd, params);
+			else if (cmd == "WHO" || cmd == "HELP" || cmd == "AWAY")
+				this->execute_info(client, cmd, params);
+			else if (cmd == "OPER" || cmd == "PING" || cmd == "QUIT")
+				this->execute_server_cmds(client, cmd, params);
+			else if (cmd == "PRIVMSG" || cmd == "NOTICE")
+				this->execute_msgs(client, cmd, params);
+			else if (!cmd.empty())
+				this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
 			if (client.get_quit())
 				return ;
 		}
 		pos = client_buffer.find("\r\n");
 	}
-}
-
-void Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
-{
-	if (cmd == "PASS" || cmd == "NICK" || cmd == "USER" || cmd == "FAST")
-		this->execute_registration(client, cmd, params);
-	else if (cmd == "JOIN" || cmd == "INVITE" || cmd == "MODE" || cmd == "PART")
-		this->execute_channels_cmds(client, cmd, params);
-	else if (cmd == "WHO" || cmd == "HELP" || cmd == "AWAY")
-		this->execute_info(client, cmd, params);
-	else if (cmd == "OPER" || cmd == "PING" || cmd == "QUIT")
-		this->execute_server_cmds(client, cmd, params);
-	else if (cmd == "PRIVMSG" || cmd == "NOTICE")
-		this->execute_msgs(client, cmd, params);
-	else
-		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
 }

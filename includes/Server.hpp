@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 16:42:37 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 16:53:11 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -115,7 +115,7 @@ class	Server
 
 		void	accept_client();
 		void	handle_client_data(int client_fd, int event);
-		void	process_msg(Client &client, std::string &client_buffer);
+		void	process_cmds(Client &client, std::string &client_buffer);
 		void	close_connections(close_type type, int fd);
 		
 		void 	send_msg(Client &client, const std::string &msg);
@@ -123,8 +123,6 @@ class	Server
 		void	send_reply(Client &client, int reply, const std::string &param, const std::string &text);
 		void	send_error(Client &client, int error, const std::string &cmd);
 		void	send_notice(Client &client, int notice, const std::string &param);
-
-		void	execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params);
 
 		void	execute_registration(Client &client, const std::string &cmd, const std::vector<std::string> &params);
 		int		pass_cmd(Client &client, const std::vector<std::string> &params);
