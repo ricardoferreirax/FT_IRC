@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   ServerCmds.cpp                                     :+:      :+:    :+:   */
+/*   ServerControl.cpp                                  :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:39:00 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 16:15:37 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 16:29:50 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,56 +14,35 @@
 # include "../includes/Client.hpp"
 # include "../includes/Utils.hpp"
 
-void Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
+void Server::process_server(Client &client, const std::string &cmd, const std::vector<std::string> &params)
 {
-	typedef int (Server::*Cmd)(Client &, const std::vector<std::string> &);
-	std::map<std::string, Cmd> cmds;
-	std::string param;
-	int ret;
+	typedef int (Server::*ServerCmd)(Client &, const std::vector<std::string> &);
+	std::map<std::string, ServerCmd>::iterator it;
+	std::map<std::string, ServerCmd> 		   cmds;
+	int 									   ret;
 
-	if (cmd == "PASS" || cmd == "NICK" || cmd == "USER" || cmd == "FAST")
-	{
-		this->process_registration(client, cmd, params);
-		return ;
-	}
-	if (cmd == "JOIN" || cmd == "INVITE" || cmd == "MODE" || cmd == "PART")
-	{
-		this->process_channels(client, cmd, params);
-		return ;
-	}
-	if (cmd == "WHO" || cmd == "HELP" || cmd == "AWAY")
-	{
-		this->process_info(client, cmd, params);
-		return ;
-	}
-	cmds["PRIVMSG"] = &Server::handle_privmsg;
-	cmds["NOTICE"] = &Server::handle_notice;
-	cmds["OPER"] = &Server::handle_oper;
-	cmds["QUIT"] = &Server::handle_quit;
-	cmds["PING"] = &Server::handle_ping;
-	if (cmds.find(cmd) == cmds.end())
+	cmds["OPER"] = &Server::oper_cmd;
+	cmds["PING"] = &Server::ping_cmd;
+	cmds["QUIT"] = &Server::quit_cmd;
+	it = cmds.find(cmd);
+	if (it == cmds.end())
 	{
 		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
 		return ;
 	}
-	if (cmd != "QUIT" && cmd != "PING" && !client.get_registered())
+	if (cmd == "OPER" && !client.get_registered())
 	{
 		this->send_error(client, ERR_NOTREGISTERED, cmd);
 		return ;
 	}
-	ret = (this->*cmds[cmd])(client, params);
+	ret = (this->*(it->second))(client, params);
 	if (cmd == "QUIT")
 		return ;
 	if (ret != 0)
-	{
-		param = cmd;
-		if (!params.empty() && ret == ERR_NOSUCHNICK)
-			param = params[0];
-		this->send_error(client, ret, param);
-	}
+		this->send_error(client, ret, cmd);
 }
 
-int Server::handle_oper(Client &client, const std::vector<std::string> &params)
+int Server::oper_cmd(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, std::string>::iterator it;
 
@@ -80,7 +59,7 @@ int Server::handle_oper(Client &client, const std::vector<std::string> &params)
 }
 
 // ping is used to check if connection between client and server is still active.
-int Server::handle_ping(Client &client, const std::vector<std::string> &params)
+int Server::ping_cmd(Client &client, const std::vector<std::string> &params)
 {
 	if (params.empty() || params[0].empty())
 		return (ERR_NOORIGIN);
@@ -88,7 +67,7 @@ int Server::handle_ping(Client &client, const std::vector<std::string> &params)
 	return (0);
 }
 
-int Server::handle_quit(Client &client, const std::vector<std::string> &params)
+int Server::quit_cmd(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, Channel>::iterator chanit;
 	std::map<int, Client>::iterator 		 it;

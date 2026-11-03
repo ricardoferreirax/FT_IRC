@@ -6,7 +6,7 @@
 #    By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/09/27 23:34:05 by rmedeiro          #+#    #+#              #
-#    Updated: 2026/11/03 16:13:52 by rmedeiro         ###   ########.fr        #
+#    Updated: 2026/11/03 16:24:29 by rmedeiro         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -25,7 +25,7 @@ DBG_DIR = .objs-debug
 SRCS = srcs/main.cpp \
        srcs/Server.cpp \
        srcs/Client.cpp \
-	   srcs/ServerCmds.cpp \
+	   srcs/ServerControl.cpp \
 	   srcs/Registration.cpp \
 	   srcs/Info.cpp \
 	   srcs/ChannelCmds.cpp \
