@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:39:00 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 16:29:50 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 16:41:30 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,7 @@
 # include "../includes/Client.hpp"
 # include "../includes/Utils.hpp"
 
-void Server::process_server(Client &client, const std::string &cmd, const std::vector<std::string> &params)
+void Server::execute_server_cmds(Client &client, const std::string &cmd, const std::vector<std::string> &params)
 {
 	typedef int (Server::*ServerCmd)(Client &, const std::vector<std::string> &);
 	std::map<std::string, ServerCmd>::iterator it;

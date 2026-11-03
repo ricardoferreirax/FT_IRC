@@ -6,7 +6,7 @@
 #    By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/09/27 23:34:05 by rmedeiro          #+#    #+#              #
-#    Updated: 2026/11/03 16:24:29 by rmedeiro         ###   ########.fr        #
+#    Updated: 2026/11/03 16:34:35 by rmedeiro         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -29,7 +29,7 @@ SRCS = srcs/main.cpp \
 	   srcs/Registration.cpp \
 	   srcs/Info.cpp \
 	   srcs/ChannelCmds.cpp \
-	   srcs/MsgCmds.cpp \
+	   srcs/Message.cpp \
 	   srcs/SendMsgs.cpp \
        srcs/Channels.cpp \
 	   srcs/Mode.cpp \

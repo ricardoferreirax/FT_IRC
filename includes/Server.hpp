@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 16:28:16 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 16:42:37 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -126,26 +126,27 @@ class	Server
 
 		void	execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params);
 
-		void	process_registration(Client &client, const std::string &cmd, const std::vector<std::string> &params);
+		void	execute_registration(Client &client, const std::string &cmd, const std::vector<std::string> &params);
 		int		pass_cmd(Client &client, const std::vector<std::string> &params);
 		int		nick_cmd(Client &client, const std::vector<std::string> &params);
 		int		user_cmd(Client &client, const std::vector<std::string> &params);
 		int		fast_cmd(Client &client, const std::vector<std::string> &params);
 
-		void 	process_server(Client &client, const std::string &cmd, const std::vector<std::string> &params);
+		void 	execute_server_cmds(Client &client, const std::string &cmd, const std::vector<std::string> &params);
 		int 	oper_cmd(Client &client, const std::vector<std::string> &params);
 		int 	ping_cmd(Client &client, const std::vector<std::string> &params);
 		int 	quit_cmd(Client &client, const std::vector<std::string> &params);
 
-		void 	process_info(Client &client, const std::string &cmd, const std::vector<std::string> &params);
+		void 	execute_msgs(Client &client, const std::string &cmd, const std::vector<std::string> &params);
+		int 	privmsg_cmd(Client &client, const std::vector<std::string> &params);
+		int 	notice_cmd(Client &client, const std::vector<std::string> &params);
+
+		void 	execute_info(Client &client, const std::string &cmd, const std::vector<std::string> &params);
 		int 	who_cmd(Client &client, const std::vector<std::string> &params);
 		int 	help_cmd(Client &client, const std::vector<std::string> &params);
 		int 	away_cmd(Client &client, const std::vector<std::string> &params);
 		
-		int 	handle_privmsg(Client &client, const std::vector<std::string> &params);
-		int		handle_notice(Client &client, const std::vector<std::string> &params);
-
-		void 	process_channels(Client &client, const std::string &cmd, const std::vector<std::string> &params);
+		void 	execute_channels_cmds(Client &client, const std::string &cmd, const std::vector<std::string> &params);
 		int		join_cmd(Client &client, const std::vector<std::string> &params);
 		int 	invite_cmd(Client &client, const std::vector<std::string> &params);
 		int 	mode_cmd(Client &client, const std::vector<std::string> &params);

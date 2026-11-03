@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:21:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 15:58:13 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 16:44:25 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,7 @@
 # include "../includes/Client.hpp"
 # include "../includes/Utils.hpp"
 
-void Server::process_channels(Client &client, const std::string &cmd, const std::vector<std::string> &params)
+void Server::execute_channels_cmds(Client &client, const std::string &cmd, const std::vector<std::string> &params)
 {
 	typedef int (Server::*ChanCmd)(Client &, const std::vector<std::string> &);
 	std::map<std::string, ChanCmd>::iterator it;
@@ -230,7 +230,7 @@ int Server::part_cmd(Client &client, const std::vector<std::string> &params)
 			notify_chan.push_back(client.get_nick() + " has left");
 			if (params.size() == 2)
 				notify_chan.push_back("Reason: " + params[1]);
-			this->handle_privmsg(client, notify_chan);
+			this->privmsg_cmd(client, notify_chan);
 		}
 		i++;
 	}

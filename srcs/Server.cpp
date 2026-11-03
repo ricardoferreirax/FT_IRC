@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 16:29:37 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 16:43:26 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -288,37 +288,16 @@ void	Server::process_msg(Client &client, std::string &client_buffer)
 
 void Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
 {
-    std::string param;
-    int         ret;
-
-    if (cmd == "PASS" || cmd == "NICK" || cmd == "USER" || cmd == "FAST")
-        this->process_registration(client, cmd, params);
-    else if (cmd == "JOIN" || cmd == "INVITE"
-        || cmd == "MODE" || cmd == "PART")
-        this->process_channels(client, cmd, params);
-    else if (cmd == "WHO" || cmd == "HELP" || cmd == "AWAY")
-        this->process_info(client, cmd, params);
-    else if (cmd == "OPER" || cmd == "PING" || cmd == "QUIT")
-        this->process_server(client, cmd, params);
-    else if (cmd == "PRIVMSG" || cmd == "NOTICE")
-    {
-        if (!client.get_registered())
-        {
-            this->send_error(client, ERR_NOTREGISTERED, cmd);
-            return ;
-        }
-        if (cmd == "PRIVMSG")
-            ret = this->handle_privmsg(client, params);
-        else
-            ret = this->handle_notice(client, params);
-        if (ret != 0)
-        {
-            param = cmd;
-            if (!params.empty() && ret == ERR_NOSUCHNICK)
-                param = params[0];
-            this->send_error(client, ret, param);
-        }
-    }
-    else
-        this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
+	if (cmd == "PASS" || cmd == "NICK" || cmd == "USER" || cmd == "FAST")
+		this->execute_registration(client, cmd, params);
+	else if (cmd == "JOIN" || cmd == "INVITE" || cmd == "MODE" || cmd == "PART")
+		this->execute_channels_cmds(client, cmd, params);
+	else if (cmd == "WHO" || cmd == "HELP" || cmd == "AWAY")
+		this->execute_info(client, cmd, params);
+	else if (cmd == "OPER" || cmd == "PING" || cmd == "QUIT")
+		this->execute_server_cmds(client, cmd, params);
+	else if (cmd == "PRIVMSG" || cmd == "NOTICE")
+		this->execute_msgs(client, cmd, params);
+	else
+		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
 }

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:19:59 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 15:41:35 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 16:41:09 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,8 +14,7 @@
 #include "../includes/Server.hpp"
 #include "../includes/Utils.hpp"
 
-// process registration cmds and complete client registration
-void Server::process_registration(Client &client, const std::string &cmd, const std::vector<std::string> &params)
+void Server::execute_registration(Client &client, const std::string &cmd, const std::vector<std::string> &params)
 {
 	typedef int (Server::*RegCmd)(Client &, const std::vector<std::string> &);
 	std::map<std::string, RegCmd>::iterator it;
@@ -50,7 +49,6 @@ void Server::process_registration(Client &client, const std::string &cmd, const 
 	}
 }
 
-// authenticate client using password
 int Server::pass_cmd(Client &client, const std::vector<std::string> &params)
 {
 	if (client.get_registered() || client.get_auth())
@@ -64,7 +62,6 @@ int Server::pass_cmd(Client &client, const std::vector<std::string> &params)
 	return (0);
 }
 
-// validate and update client's nickname
 int Server::nick_cmd(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, Channel>::iterator chanit;
@@ -108,7 +105,6 @@ int Server::nick_cmd(Client &client, const std::vector<std::string> &params)
 	return (0);
 }
 
-// set client's username and real name
 int Server::user_cmd(Client &client, const std::vector<std::string> &params)
 {
 	std::string 	username;
