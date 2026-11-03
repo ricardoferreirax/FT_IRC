@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:39:00 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 16:00:49 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 16:15:37 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,8 +18,8 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 {
 	typedef int (Server::*Cmd)(Client &, const std::vector<std::string> &);
 	std::map<std::string, Cmd> cmds;
-	std::string 			   param;
-	int 					   ret;
+	std::string param;
+	int ret;
 
 	if (cmd == "PASS" || cmd == "NICK" || cmd == "USER" || cmd == "FAST")
 	{
@@ -31,20 +31,22 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 		this->process_channels(client, cmd, params);
 		return ;
 	}
+	if (cmd == "WHO" || cmd == "HELP" || cmd == "AWAY")
+	{
+		this->process_info(client, cmd, params);
+		return ;
+	}
 	cmds["PRIVMSG"] = &Server::handle_privmsg;
 	cmds["NOTICE"] = &Server::handle_notice;
 	cmds["OPER"] = &Server::handle_oper;
-	cmds["WHO"] = &Server::handle_who;
 	cmds["QUIT"] = &Server::handle_quit;
 	cmds["PING"] = &Server::handle_ping;
-	cmds["AWAY"] = &Server::handle_away;
-	cmds["HELP"] = &Server::handle_help;
 	if (cmds.find(cmd) == cmds.end())
 	{
 		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
 		return ;
 	}
-	if (cmd != "HELP" && cmd != "QUIT" && cmd != "PING" && !client.get_registered())
+	if (cmd != "QUIT" && cmd != "PING" && !client.get_registered())
 	{
 		this->send_error(client, ERR_NOTREGISTERED, cmd);
 		return ;

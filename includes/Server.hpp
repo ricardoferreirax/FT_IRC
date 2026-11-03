@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 15:56:27 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/03 16:13:09 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -132,6 +132,11 @@ class	Server
 		int		user_cmd(Client &client, const std::vector<std::string> &params);
 		int		fast_cmd(Client &client, const std::vector<std::string> &params);
 
+		void 	process_info(Client &client, const std::string &cmd, const std::vector<std::string> &params);
+		int 	who_cmd(Client &client, const std::vector<std::string> &params);
+		int 	help_cmd(Client &client, const std::vector<std::string> &params);
+		int 	away_cmd(Client &client, const std::vector<std::string> &params);
+
 		void 	process_channels(Client &client, const std::string &cmd, const std::vector<std::string> &params);
 		int		join_cmd(Client &client, const std::vector<std::string> &params);
 		int 	invite_cmd(Client &client, const std::vector<std::string> &params);
@@ -142,9 +147,6 @@ class	Server
 
 		int		handle_notice(Client &client, const std::vector<std::string> &params);
 		int 	handle_oper(Client &client, const std::vector<std::string> &params);
-		int		handle_help(Client &client, const std::vector<std::string> &params);
-		int		handle_away(Client &client, const std::vector<std::string> &params);
-		int 	handle_who(Client &client, const std::vector<std::string> &params);
 		int 	handle_ping(Client &client, const std::vector<std::string> &params);
 		int 	handle_quit(Client &client, const std::vector<std::string> &params);
 
