@@ -14,12 +14,21 @@
 
 # include "../bonus/includes/Bot.hpp"
 # include "Client.hpp"
-# include <csignal>
-# include <ctime>
-# include <map>
+# include <arpa/inet.h>
 # include <bits/stdc++.h>
+# include <csignal>
+# include <cstring>
+# include <ctime>
+# include <fcntl.h>
+# include <iostream>
+# include <map>
+# include <netinet/in.h>
+# include <set>
+# include <stdexcept>
 # include <string>
 # include <sys/epoll.h>
+# include <sys/socket.h>
+# include <unistd.h>
 # include <vector>
 
 extern volatile sig_atomic_t	alive;
@@ -56,7 +65,17 @@ enum							e_irc_error
 	ERR_PASSREQUIRED = 602,
 	ERR_NICKREQUIRED = 603,
 	ERR_INVALIDUSERMODE = 604,
-	ERR_MIKUUNAVAILABLE = 605
+	ERR_MIKUUNAVAILABLE = 605,
+	ERR_BANNEDFROMCHAN = 474,
+	ERR_KEYSET = 467,
+	ERR_UNKNOWNMODE = 472,
+	ERR_NOPRIVILEGES = 481,
+	ERR_CHANOPRIVSNEEDED = 482,
+	ERR_NOSUCHCHANNEL = 403,
+	ERR_CANNOTSENDTOCHAN = 404,
+	ERR_USERNOTINCHANNEL = 441,
+	ERR_NOTONCHANNEL = 442,
+
 };
 
 class Server
@@ -83,8 +102,7 @@ class Server
 	void send_msg(Client &client, const std::string &msg);
 	void send_error(Client &client, int error, const std::string &cmd);
 
-	void execute_cmd(Client &client, const std::string &cmd,
-		const std::vector<std::string> &params);
+	void execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params);
 	int handle_pass(Client &client, const std::vector<std::string> &params);
 	int handle_nick(Client &client, const std::vector<std::string> &params);
 	int handle_user(Client &client, const std::vector<std::string> &params);
@@ -98,6 +116,7 @@ class Server
 	int handle_kick(Client &client, const std::vector<std::string> &params);
 	int handle_invite(Client &client, const std::vector<std::string> &params);
 	int handle_whois(Client &client, const std::vector<std::string> &params);
+	int handle_topic(Client &client, const std::vector<std::string> &params);
 	bool handle_imode(Client &client, std::string chan_name, t_modecmd flag);
 	bool handle_tmode(Client &client, std::string chan_name, t_modecmd flag);
 	bool handle_kmode(Client &client, std::string chan_name, t_modecmd flag);
@@ -105,14 +124,13 @@ class Server
 	bool handle_lmode(Client &client, std::string chan_name, t_modecmd flag);
 	bool handle_bmode(Client &client, std::string chan_name, t_modecmd flag);
 
-	//Helper
+	// Helper
 
-	void	leaveChans(Client client);
+	void leaveChans(Client client);
 	bool check_allchans(const std::vector<std::string> &chans, Client *client = NULL);
 	std::map<int, Client>::iterator reverseClientSearch(std::string nick);
 	// int handle_miku(Client &client, const std::vector<std::string> &params);
-	Channel *validate_channel_op(Client &client,
-		const std::string &channel_name);
+	Channel *validate_channel_op(Client &client, const std::string &channel_name);
 
   public:
 	Server(const std::string &port, const std::string &pass);
@@ -128,8 +146,5 @@ class Server
 void							handle_signal(int signal);
 void							setup_signals(void);
 
-bool							tokenize_mode_flags(const std::string &params,
-									std::vector<t_modecmd> &flags,
-									const std::vector<std::string> cmdargs,
-									size_t arg_idx);
+int							tokenize_mode_flags(const std::string &params, std::vector<t_modecmd> &flags, const std::vector<std::string> cmdargs, size_t arg_idx);
 #endif

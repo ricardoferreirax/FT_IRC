@@ -13,15 +13,7 @@
 #include "../bonus/includes/Bot.hpp"
 #include "../includes/Server.hpp"
 #include "../includes/Utils.hpp"
-#include <arpa/inet.h>
-#include <cstring>
-#include <fcntl.h>
-#include <iostream>
-#include <netinet/in.h>
-#include <stdexcept>
-#include <sys/epoll.h>
-#include <sys/socket.h>
-#include <unistd.h>
+#include "../includes/Channels.hpp"
 
 Server::Server(const std::string &port, const std::string &pass)
 {
@@ -343,6 +335,14 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	errors[ERR_NICKREQUIRED] = "603 " + nick + " :NICK must be set before USER";
 	errors[ERR_INVALIDUSERMODE] = "604 " + nick + " :Invalid USER mode: only numbers are allowed";
 	errors[ERR_MIKUUNAVAILABLE] = "605 " + nick + " :Miku is unavailable";
+	errors[ERR_BANNEDFROMCHAN] = "474 " + param + " :Cannot join channel (+b)";
+	errors[ERR_KEYSET] = "467 " + param + " :Channel key is alredy set";
+	errors[ERR_UNKNOWNMODE] = "472" + param + " :is unknown mode char to me for" + param;
+	errors[ERR_CHANOPRIVSNEEDED] = "481 " + param + " :You're not channel operator";
+	errors[ERR_NOSUCHCHANNEL] = "403 " + param + " :No such channel";
+	errors[ERR_CANNOTSENDTOCHAN] = "404 " + param + " :Cannot send to channel";
+	errors[ERR_USERNOTINCHANNEL] = "441 " + param + " " + param + "They aren't that channel";
+	errors[ERR_NOTONCHANNEL] = "442 " + param + " :You're not on that channel";
 	if (errors.find(error) == errors.end())
 		return ; // error code is not in map -> ignore it
 	this->send_msg(client, ":" + this->_name + " " + errors[error]);

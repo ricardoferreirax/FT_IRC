@@ -14,19 +14,6 @@
 #include "../includes/Server.hpp"
 #include "../includes/Utils.hpp"
 #include "../bonus/includes/Bot.hpp"
-#include <iostream>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <cstring>
-#include <fcntl.h>
-#include <iostream>
-#include <netinet/in.h>
-#include <stdexcept>
-#include <sys/epoll.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
 t_modecmd	create_modecmd(bool needs_param, bool is_add, char flag, std::string param = "")
 {
@@ -39,7 +26,7 @@ t_modecmd	create_modecmd(bool needs_param, bool is_add, char flag, std::string p
 	return (cmdmode);
 }
 
-bool	tokenize_mode_flags(const std::string &params,
+int	tokenize_mode_flags(const std::string &params,
 		std::vector<t_modecmd> &flags, const std::vector<std::string> cmdargs, size_t arg_idx)
 {
 	size_t	i;
@@ -49,7 +36,7 @@ bool	tokenize_mode_flags(const std::string &params,
 
 	i = 0;
 	if (params.empty() || (params[0] != '+' && params[0] != '-'))
-		return (false);
+		return (-1);
 	while (i < params.size())
 	{
 		{
@@ -58,14 +45,14 @@ bool	tokenize_mode_flags(const std::string &params,
 			{
 				if (i + 1 >= params.size() || params[i + 1] == '+' || params[i
 					+ 1] == '-')
-					return (false);
+					return (-1);
 				is_add = true;
 			}
 			else if (params[i] == '-')
 			{
 				if (i + 1 >= params.size() || params[i + 1] == '+' || params[i
 					+ 1] == '-')
-					return (false);
+					return (-1);
 				is_add = false;
 			}
 			else
@@ -77,7 +64,7 @@ bool	tokenize_mode_flags(const std::string &params,
 				{
 					needs_param = true;
 					if(arg_idx >= cmdargs.size())
-						return false;
+						return -2;
 					else
 						arg = cmdargs[arg_idx];
 					arg_idx++;
@@ -89,7 +76,7 @@ bool	tokenize_mode_flags(const std::string &params,
 		}
 		i++;
 	}
-	return (true);
+	return (0);
 }
 
 Channel *Server::validate_channel_op(Client &client, const std::string &channel_name)
@@ -97,12 +84,12 @@ Channel *Server::validate_channel_op(Client &client, const std::string &channel_
 	std::map<std::string, Channel>::iterator chanit = this->_channels.find(channel_name);
 	if(chanit == this->_channels.end())
 	{
-		this->send_error(client, 401, "No such channel");
+		this->send_error(client, ERR_NOSUCHCHANNEL, channel_name);
 		return NULL;
 	}
 	if(chanit->second.getChannops().find(client.get_client_fd()) == chanit->second.getChannops().end())
 	{
-		this->send_error(client, 401, "No perms, try using sudo");
+		this->send_error(client, ERR_CHANOPRIVSNEEDED, channel_name);
 		return NULL;
 	}
 	return &(chanit->second);
@@ -133,6 +120,11 @@ bool Server::handle_kmode(Client &client, std::string chan_name, t_modecmd flag)
 	Channel *channel = validate_channel_op(client, chan_name);
 	if(!channel)
 		return false;
+	if(flag.is_add && !channel->getMode().key.empty())
+	{
+		this->send_error(client, ERR_KEYSET, chan_name);
+		return false;
+	}
 	if(flag.is_add)
 		channel->setMode(channel->getMode().invite_only, channel->getMode().topic_restricted, channel->getMode().topic, channel->getMode().users, flag.param);
 	else
@@ -162,7 +154,7 @@ bool Server::handle_omode(Client &client, std::string chan_name, t_modecmd flag)
 	clienit = this->reverseClientSearch(flag.param);
 	if(clienit == this->_clients.end())
 	{
-		this->send_error(client, 401, "No such client");
+		this->send_error(client, ERR_NOSUCHNICK, flag.param);
 		return false;
 	}
 	if(flag.is_add)
@@ -192,9 +184,12 @@ bool Server::handle_lmode(Client &client, std::string chan_name, t_modecmd flag)
 
 bool Server::handle_bmode(Client &client, std::string chan_name, t_modecmd flag)
 {
-	(void) client;
-	(void) chan_name;
-	(void) flag;
-	//do something
+	Channel *channel = validate_channel_op(client, chan_name);
+	if(!channel)
+		return false;
+	if(flag.is_add)
+		channel->addBanMask(flag.param);
+	else
+		channel->removeBanMask(flag.param);
 	return true;
 }

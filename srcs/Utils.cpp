@@ -161,6 +161,98 @@ std::vector<std::string> ft_split(const std::string &s, char delim)
 	return (result);
 }
 
+bool match_ban(Client &client, t_banmask ban)
+{
+	if(!ban.valid)
+		return false;
+	return (match_wildcard(ban.host, client.get_host_ip())
+			&& match_wildcard(ban.user, client.get_user())
+			&& match_wildcard(ban.nick, client.get_nick()));
+}
+
+t_banmask	parseBanMask(std::string banmask)
+{
+	// Pedro's Anti-Cheat ban 😆
+	t_banmask	PAC_ban;
+
+	std::string::size_type exclamationPoint;
+	std::string::size_type arrobaPos;
+	std::string nick = "*";
+	std::string user = "*";
+	std::string host = "*";
+	exclamationPoint = banmask.find("!");
+	if (exclamationPoint != banmask.npos)
+	{
+		std::string remainer;
+		nick = banmask.substr(0, exclamationPoint);
+		remainer = banmask.substr(exclamationPoint + 1);
+		if (nick.empty())
+		{
+			PAC_ban.valid = false;
+			return (PAC_ban);
+		}
+		arrobaPos = remainer.find("@");
+		if (arrobaPos == remainer.npos)
+		{
+			PAC_ban.valid = false;
+			return (PAC_ban);
+		}
+		user = remainer.substr(0, arrobaPos);
+		host = remainer.substr(arrobaPos + 1);
+		if (user.empty() || host.empty())
+		{
+			PAC_ban.valid = false;
+			return (PAC_ban);
+		}
+	}
+	else
+	{
+		arrobaPos = banmask.find("@");
+		if (arrobaPos != banmask.npos)
+		{
+			user = banmask.substr(0, arrobaPos);
+			host = banmask.substr(arrobaPos + 1);
+			if (user.empty() || host.empty())
+			{
+				PAC_ban.valid = false;
+				return (PAC_ban);
+			}
+		}
+		else
+		{
+			if(banmask.empty())
+			{
+				PAC_ban.valid = false;
+				return (PAC_ban);
+			}
+			host = banmask;
+		}
+	}
+	PAC_ban.nick = nick;
+	PAC_ban.user = user;
+	PAC_ban.host = host;
+	PAC_ban.valid = true;
+	return (PAC_ban);
+}
+bool match_wildcard(std::string pattern, std::string match, size_t pi, size_t mi)
+{
+	if(pattern[pi] == '\0')
+		return match[mi] == '\0';
+	if(pattern[pi] == '*')
+	{
+		if(match_wildcard(pattern , match, pi + 1, mi))
+			return true;
+		if(match[mi] != '\0' && match_wildcard(pattern, match, pi, mi + 1))
+			return true;
+		return false;
+	}
+	if(match[mi] == '\0')
+		return false;
+	if(match[mi] == pattern[pi])
+		return(match_wildcard(pattern,  match, pi + 1, mi + 1));
+	return false;
+}
+
 std::string generateRandomString(int length)
 {
 	int	index;
@@ -175,3 +267,4 @@ std::string generateRandomString(int length)
 	}
 	return (random_string);
 }
+

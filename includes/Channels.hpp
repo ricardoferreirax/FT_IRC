@@ -15,43 +15,19 @@
 
 # include "Client.hpp"
 # include "Server.hpp"
-# include <iostream>
-# include <map>
-# include <set>
-
-typedef struct s_ulimit
-{
-	size_t	u_limit;
-	size_t	u_count;
-}	t_ulimit;
-
-typedef struct s_mode
-{
-	std::string topic;
-	std::string key;
-	t_ulimit	users;
-	bool		invite_only;
-	bool		topic_restricted;
-}	t_cmode;
-
-typedef struct s_modecmd
-{
-	bool needs_param;
-	std::string param;
-	bool is_add;
-	char flag;
-} t_modecmd;
-
+#include "Utils.hpp"
 
 class Channel
 {
 	private:
 		std::string _name;
 		t_cmode	_mode;
+		// Pedro's Anti-Cheat (PAC)
 		std::set<int> _chanops;
 		std::map<int, Client*> _clients;
 		std::set <int> _invites;
 		Channel(void);
+		std::vector<t_banmask> _bans;
 
 	public:
 		Channel(std::string name, t_cmode mode, Client &chanop);
@@ -65,6 +41,11 @@ class Channel
 		std::set<int> &getInvites(void);
 		t_cmode getMode(void) const;
 		void setMode(bool invite, bool topic_restricted, std::string topic, t_ulimit users, std::string key);
+		std::vector<t_banmask> getBanmask(void);
+		bool addBanMask(std::string banmask);
+		void removeBanMask(std::string banmask);
+
+		int PAC_check(Client &guest);
 };
 
 #endif // !CHANNELS_HPP

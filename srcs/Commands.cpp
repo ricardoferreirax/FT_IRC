@@ -36,6 +36,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["INVITE"] = &Server::handle_invite;
 	cmds["KICK"] = &Server::handle_kick;
 	cmds["WHOIS"] = &Server::handle_whois;
+	cmds["TOPIC"] = &Server::handle_topic;
 	if (cmds.find(cmd) == cmds.end()) // check if cmd is in the map
 	{
 		this->send_error(client, 421, cmd); // unknown command error
@@ -67,6 +68,15 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	}
 }
 
+
+//TODO: Handle Topic
+int Server::handle_topic(Client &client, const std::vector<std::string> &params)
+{
+	(void) client;
+	(void) params;
+	return 0;
+}
+
 int Server::handle_whois(Client &client, const std::vector<std::string> &params)
 {
 	size_t	i;
@@ -83,7 +93,7 @@ int Server::handle_whois(Client &client, const std::vector<std::string> &params)
 		std::map<int, Client>::iterator clienit = this->reverseClientSearch(users[i]);
 		if (clienit == this->_clients.end())
 		{
-			this->send_error(client, 401, "No such client " + users[i]);
+			this->send_error(client, ERR_NOSUCHNICK, users[i]);
 			i++;
 			continue ;
 		}
@@ -119,26 +129,26 @@ int Server::handle_invite(Client &client, const std::vector<std::string> &params
 {
 	if (params.empty() || params.size() < 2)
 	{
-		this->send_error(client, 401, "Too Few Args");
+		this->send_error(client, ERR_NEEDMOREPARAMS, "");
 		return (-1);
 	}
 	std::map<int, Client>::iterator clienit = this->reverseClientSearch(params[0]);
 	if (clienit == this->_clients.end())
 	{
-		this->send_error(client, 401, "No such client");
+		this->send_error(client, ERR_NOSUCHNICK, params[0]);
 		return (-1);
 	}
 	std::map<std::string, Channel>::iterator chanit = this->_channels.find(params[1]);
 	if (chanit == this->_channels.end())
 	{
-		this->send_error(client, 401, "No such channel");
+		this->send_error(client, ERR_NOSUCHCHANNEL, params[1]);
 		return (-1);
 	}
 	if (chanit->second.getMode().invite_only)
 	{
 		if (chanit->second.getChannops().find(client.get_client_fd()) == chanit->second.getChannops().end())
 		{
-			this->send_error(client, 401, "You lack sudo");
+			this->send_error(client, ERR_CHANOPRIVSNEEDED, chanit->first);
 			return (-1);
 		}
 	}
@@ -154,7 +164,7 @@ int Server::handle_kick(Client &client, const std::vector<std::string> &params)
 
 	if (params.size() < 2)
 	{
-		this->send_error(client, 401, "wrongs args");
+		this->send_error(client, ERR_NEEDMOREPARAMS, "");
 		return (-1);
 	}
 	std::vector<std::string> channels = ft_split(params[0], ',');
@@ -171,13 +181,13 @@ int Server::handle_kick(Client &client, const std::vector<std::string> &params)
 			std::map<int, Client>::iterator clienit = this->reverseClientSearch(clients[j]);
 			if (clienit == this->_clients.end())
 			{
-				this->send_error(client, 401, "No such client");
+				this->send_error(client, ERR_NOSUCHNICK, clients[j] + ", no action was taken");
 				j++;
 				continue ;
 			}
 			if (chanit->second.getChannops().find(client.get_client_fd()) == chanit->second.getChannops().end())
 			{
-				this->send_error(client, 401, "No perms, try with sudo");
+				this->send_error(client, ERR_CHANOPRIVSNEEDED, chanit->first);
 				return (-1);
 			}
 			std::vector<std::string> args;
@@ -209,7 +219,7 @@ bool Server::check_allchans(const std::vector<std::string> &chans, Client *clien
 		if (this->_channels.find(chans[i]) == this->_channels.end())
 		{
 			if (client != NULL)
-				this->send_error(*client, 401, "No such channel " + chans[i] + ", no action was taken");
+				this->send_error(*client, ERR_NOSUCHCHANNEL, chans[i] + ", no action was taken");
 			return (false);
 		}
 		i++;
@@ -224,7 +234,10 @@ int Server::handle_part(Client &client, const std::vector<std::string> &params)
 
 	if (params.empty() || params.size() > 3)
 	{
-		this->send_error(client, 401, "TOO many args");
+		if(params.empty())
+			this->send_error(client, ERR_NEEDMOREPARAMS, "");
+		else
+			this->send_error(client, ERR_UNKNOWNCOMMAND, params[2]);
 		return (-1);
 	}
 	std::vector<std::string> channels = ft_split(params[0], ',');
@@ -351,7 +364,7 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 		std::map<int, Client *> chan_clients = chanit->second.getClients();
 		if (chan_clients.find(client.get_client_fd()) == chan_clients.end())
 		{
-			this->send_error(client, 401, "YoU ain't part of this channel");
+			this->send_error(client, ERR_NOTONCHANNEL, chanit->first);
 			return (-1);
 		}
 		std::map<int, Client *>::iterator clienit = chan_clients.begin();
@@ -364,7 +377,7 @@ int Server::handle_privmsg(Client &client, const std::vector<std::string> &param
 		}
 		return (0);
 	}
-	this->send_error(client, 401, target); // no such nick/channel error
+	this->send_error(client, ERR_NOSUCHCHANNEL, target); // no such nick/channel error
 	return (0);
 }
 
@@ -456,6 +469,8 @@ int Server::handle_join(Client &client, const std::vector<std::string> &params)
 				this->send_error(client, ERR_INVITEONLYCHAN, chan_name);
 			else if (ret == 4)
 				this->send_error(client, ERR_BADCHANNELKEY, chan_name);
+			else if(ret == 5)
+				this->send_error(client, ERR_BANNEDFROMCHAN, chan_name);
 			else
 				this->send_msg(client, "You joined " + chan_name);
 		}
@@ -490,12 +505,15 @@ int Server::handle_mode(Client &client, const std::vector<std::string> &params)
 	std::vector<t_modecmd> flags;
 	if (params.empty() || params.size() < 2)
 	{
-		this->send_error(client, 461, "FUck, im scawred");
+		this->send_error(client, ERR_NEEDMOREPARAMS, "");
 		return (-1);
 	}
-	if (!tokenize_mode_flags(params[1], flags, params, 2))
+	if (int err = tokenize_mode_flags(params[1], flags, params, 2))
 	{
-		this->send_error(client, 401, "You're doing the same shit");
+		if(err == -1)
+			this->send_error(client, ERR_UNKNOWNCOMMAND, params[1]);
+		else if(err == -2)
+			this->send_error(client, ERR_NEEDMOREPARAMS, params[1]);
 		return (-1);
 	}
 	i = 0;
