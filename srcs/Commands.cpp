@@ -69,7 +69,6 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 }
 
 
-//TODO: Handle Topic
 int Server::handle_topic(Client &client, const std::vector<std::string> &params)
 {
 	if(params.empty())

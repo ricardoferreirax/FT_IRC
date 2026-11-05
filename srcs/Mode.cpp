@@ -60,7 +60,7 @@ int	tokenize_mode_flags(const std::string &params,
 				if (!is_add && params[i] == 'l')
 					needs_param = false;
 				else if (params[i] == 'k' || params[i] == 'o'
-					|| params[i] == 'l' || params[i] == 'b')
+					|| params[i] == 'l')
 				{
 					needs_param = true;
 					if(arg_idx >= cmdargs.size())
@@ -182,14 +182,33 @@ bool Server::handle_lmode(Client &client, std::string chan_name, t_modecmd flag)
 	return true;
 }
 
+std::string ban_list(std::vector<t_banmask> banlist)
+{
+	std::string flist;
+	std::vector<t_banmask>::iterator banlistit = banlist.begin();
+	while(banlistit != banlist.end())
+	{
+		flist += banlistit->nick + "!" + banlistit->user + "@" + banlistit->host;
+		flist += "\n";
+		banlistit++;
+	}
+	return flist;
+}
+
 bool Server::handle_bmode(Client &client, std::string chan_name, t_modecmd flag)
 {
 	Channel *channel = validate_channel_op(client, chan_name);
 	if(!channel)
 		return false;
+	// if(flag.param.empty())
+	// {
+	// 	this->send_msg(client, "Ban Mask are as follows:\n" + ban_list(channel->getBanmask()));
+	// 	return true;
+	// }
 	if(flag.is_add)
 		channel->addBanMask(flag.param);
 	else
 		channel->removeBanMask(flag.param);
+	std::cout << "Channel " << chan_name << " now has " << flag.is_add << " b" << std::endl;
 	return true;
 }
