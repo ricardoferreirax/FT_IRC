@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/29 14:29:09 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 18:39:53 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -80,6 +80,16 @@ void	Bot::cleanup(clear_type type, int fd, Server *server)
 	}
 }
 
+t_request *Bot::get_request(int fd)
+{
+	std::map<int, t_request>::iterator it;
+	
+	it = this->_requests.find(fd);
+	if (it == this->_requests.end())
+		return (NULL);
+	return (&it->second);
+}
+
 std::string Bot::create_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question)
 {
 	std::string content;
@@ -141,7 +151,6 @@ bool Bot::start_request(int client_fd, const std::string &nick, const std::strin
 	req.client_fd = client_fd;
 	req.nick = nick;
 	req.channel = channel;
-	req.bytes_sent = 0;
 	req.response_complete = false;
 	req.question = question;
 	req.send_buffer = this->create_request(client_fd, nick, channel, question); // create http request with client nick and channel
@@ -154,50 +163,6 @@ bool Bot::start_request(int client_fd, const std::string &nick, const std::strin
 		return (false);
 	}
 	this->_requests[bot_fd] = req; // store request in map
-	return (true);
-}
-
-// send() - send remaining request data TO ollama through bot socket.
-// recv() - receive response data FROM ollama through bot socket.
-// req.send_buffer.c_str() + req.bytes_sent ->pointer to first byte of remaining data to send 
-bool Bot::handle_request_data(int bot_fd, int event)
-{
-    t_request 	&req = this->_requests[bot_fd];
-	epoll_event	epoll_event;
-    char        buffer[4096];
-    ssize_t     bytes;
-    size_t      remaining;
-
-	if (event == EPOLLOUT) // socket is ready for writing
-	{
-		remaining = req.send_buffer.size() - req.bytes_sent; // how many bytes still need to be sent
-		if (remaining > 0)
-		{
-			bytes = send(bot_fd, req.send_buffer.c_str() + req.bytes_sent, remaining, MSG_NOSIGNAL);
-			if (bytes <= 0)
-				return (false);
-			req.bytes_sent += bytes; // update sent bytes
-		}
-		if (req.bytes_sent == req.send_buffer.size())
-		{
-			epoll_event.events = EPOLLIN; // all request data sent ->monitor socket for reading
-			epoll_event.data.fd = bot_fd;
-			if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, bot_fd, &epoll_event) < 0)
-				return (false);
-		}
-	}
-	else if (event == EPOLLIN) // socket is ready for reading
-	{
-		bytes = recv(bot_fd, buffer, sizeof(buffer), 0);
-		if (bytes < 0)
-			return (false);
-		if (bytes == 0)
-		{
-			req.response_complete = true; // connection closed
-			return (true);
-		}
-		req.recv_buffer.append(buffer, bytes);
-	}
 	return (true);
 }
 
@@ -242,27 +207,38 @@ bool Bot::handle_bot_event(Server &server, int bot_fd, int events)
 {
 	try
 	{
-		std::map<int, t_request>::iterator it; // each bot fd has a corresponding request
+		std::map<int, t_request>::iterator it;
+		int 							   status;
 
 		it = this->_requests.find(bot_fd);
 		if (it == this->_requests.end())
 			return (false);
-		if ((events & EPOLLERR) 
-			|| ((events & EPOLLOUT) && !this->handle_request_data(bot_fd, EPOLLOUT))
-			|| ((events & EPOLLIN) && !this->handle_request_data(bot_fd, EPOLLIN)))
+		if (events & EPOLLERR)
 			throw std::runtime_error("Ollama socket error :/");
+		if (events & EPOLLOUT)
+		{
+			status = server.handle_socket_data(bot_fd, EPOLLOUT, BOT_SOCKET); // send http request when socket is ready for writing
+			if (status == SOCKET_ERROR)
+				throw std::runtime_error("Ollama send error :/");
+		}
+		if (events & EPOLLIN)
+		{
+			status = server.handle_socket_data(bot_fd, EPOLLIN, BOT_SOCKET); // receive http response when socket is ready for reading
+			if (status == SOCKET_ERROR)
+				throw std::runtime_error("Ollama recv error :/");
+		}
 		if (!it->second.response_complete)
-			return (true); // response is not complete ->wait for more data
+			return (true); // wait until entire http response has been received
 		this->process_bot_response(it->second, server);
-		this->cleanup(REQUEST_COMPLETED, bot_fd, &server);
-		return (true);
+		this->cleanup(REQUEST_COMPLETED, bot_fd, &server); // rmv request from map and close bot socket
+		return (true); // response is complete and processed successfully
 	}
 	catch (const std::exception &e)
 	{
 		std::cerr << "Miku: " << e.what() << std::endl;
 		try
 		{
-			this->cleanup(REQUEST_FAILED, bot_fd, &server);
+			this->cleanup(REQUEST_FAILED, bot_fd, &server); // rmv failed request and notify client.
 		}
 		catch (const std::exception &error)
 		{

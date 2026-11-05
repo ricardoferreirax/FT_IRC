@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 15:45:31 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 18:35:39 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -126,17 +126,18 @@ void	Server::start_socket()
 // EPOLLIN on listening socket -> a new client connection is waiting -> accept it
 // EPOLLIN on client socket -> has incoming data ready to be received -> read data FROM client
 // EPOLLOUT on client socket -> is ready to send pending data -> write data TO client
-void	Server::monitor_epoll_events()
+void Server::monitor_epoll_events()
 {
-	epoll_event	event;
-	epoll_event	events[10];
-	int			ready;
-	int			fd;
+	epoll_event event;
+	epoll_event events[10];
+	int 		ready;
+	int 		fd;
+	int 		status;
 
 	this->_epoll_fd = epoll_create1(0);
 	if (this->_epoll_fd < 0)
 		throw std::runtime_error("IRC: epoll_create1() failed.");
-	this->_bot.set_epoll_fd(this->_epoll_fd); // share epoll with ollama bot
+	this->_bot.set_epoll_fd(this->_epoll_fd); // set bot epoll fd to same epoll fd used by server
 	event.events = EPOLLIN;
 	event.data.fd = this->_listen_fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0)
@@ -163,14 +164,24 @@ void	Server::monitor_epoll_events()
 			else if (this->_clients.find(fd) != this->_clients.end())
 			{
 				if (events[i].events & (EPOLLERR | EPOLLHUP))
-					this->close_connections(CLIENT_DISCONNECT, fd); // disconnect client if socket has error
+					this->close_connections(CLIENT_DISCONNECT, fd); // disconnect client if socket has an error
 				else
 				{
-					if (events[i].events & EPOLLIN)
-						this->handle_client_data(fd, EPOLLIN);
-					if ((events[i].events & EPOLLOUT)
-						&& this->_clients.find(fd) != this->_clients.end())
-						this->handle_client_data(fd, EPOLLOUT);
+					if (events[i].events & EPOLLIN) // client has pending data to read
+					{
+						status = this->handle_socket_data(fd, EPOLLIN, CLIENT_SOCKET);
+						if (status == SOCKET_ERROR)
+						{
+							this->close_connections(CLIENT_DISCONNECT, fd);
+							continue ; // skip to next event if client disconnected
+						}
+					}
+					if ((events[i].events & EPOLLOUT) && this->_clients.find(fd) != this->_clients.end()) // client didn't disconnect after EPOLLIN and has pending data to send
+					{
+						status = this->handle_socket_data(fd, EPOLLOUT, CLIENT_SOCKET);
+						if (status == SOCKET_ERROR)
+							this->close_connections(CLIENT_DISCONNECT, fd);
+					}
 				}
 			}
 		}
@@ -206,59 +217,6 @@ void	Server::accept_client()
 	this->_clients[client_fd] = Client(client_fd);
 	this->_clients[client_fd].set_host_ip(inet_ntoa(client_addr.sin_addr));
 	std::cout << "\n\033[1;32m" << "+ CLIENT " << client_fd << " CONNECTED" << "\033[0m\n";
-}
-
-// recv() - receive data FROM client through client socket
-// send() - send pending data TO client through client socket
-void Server::handle_client_data(int client_fd, int event)
-{
-	epoll_event ev;
-	Client 	    &client = this->_clients[client_fd];
-	ssize_t 	bytes;
-	char 		buffer[1024];
-
-	if (event == EPOLLIN)
-	{
-		std::string &recv_buffer = client.get_recv_buffer();
-		bytes = recv(client_fd, buffer, sizeof(buffer), 0);
-		if (bytes == 0)
-		{
-			this->close_connections(CLIENT_DISCONNECT, client_fd);
-			return ;
-		}
-		if (bytes < 0)
-			return ; // recv failed or would block ->ignore this event
-		recv_buffer.append(buffer, bytes); // append bytes ->recv() may not receive all data at once
-		log_tcp(TCP_RECEIVE, client_fd, bytes, std::string(buffer, bytes));
-		this->process_msgs(client, recv_buffer);
-	}
-	else if (event == EPOLLOUT)
-	{
-		std::string &send_buffer = client.get_send_buffer();
-		if (!send_buffer.empty()) // there is pending data to send
-		{
-			bytes = send(client_fd, send_buffer.c_str(), send_buffer.size(), MSG_NOSIGNAL);
-			if (bytes <= 0)
-				return ; // send failed or would block -> keep pending data
-			log_tcp(TCP_SEND, client_fd, bytes, send_buffer.substr(0, bytes));
-			send_buffer.erase(0, bytes); // rmv only bytes successfully sent
-		}
-		if (send_buffer.empty()) // all pending data sent ->stop monitoring EPOLLOUT
-		{
-			if (client.get_quit())
-			{
-				this->close_connections(CLIENT_DISCONNECT, client_fd); // client requested to quit ->close connection
-				return ;
-			}
-			ev.events = EPOLLIN;
-			ev.data.fd = client_fd;
-			if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &ev) < 0) // monitoring now only for incoming data because all pending data has been sent
-			{
-				this->close_connections(CLIENT_DISCONNECT, client_fd);
-				return ;
-			}
-		}
-	}
 }
 
 // irc msgs end with \r\n, which separates one complete msg from the next one

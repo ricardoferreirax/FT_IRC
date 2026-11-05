@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 15:06:45 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 18:19:08 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,19 @@ enum	close_type
 {
 	CLIENT_DISCONNECT,
 	SERVER_SHUTDOWN
+};
+
+enum	e_socket_type
+{
+	CLIENT_SOCKET,
+	BOT_SOCKET
+};
+
+enum	e_socket_status
+{
+	SOCKET_ERROR = -1,
+	SOCKET_PENDING = 0,
+	SOCKET_SUCCESS = 1
 };
 
 enum	e_reply
@@ -114,10 +127,10 @@ class	Server
 		std::map<int, Client>			   _clients;
 
 		void	accept_client();
-		void	handle_client_data(int client_fd, int event);
-		void	process_cmds(Client &client, std::string &client_buffer);
 		void	process_msgs(Client &client, std::string &client_buffer);
 		void	close_connections(close_type type, int fd);
+		int 	handle_socket_read(int fd, e_socket_type type, std::string &buffer);
+		int 	handle_socket_write(int fd, e_socket_type type, std::string &buffer);
 		
 		void 	send_msg(Client &client, const std::string &msg);
 		void	send_cmd(Client &sender, Client &receiver, const std::string &message);
@@ -152,8 +165,6 @@ class	Server
 		Channel *validate_channel_op(Client &client, const std::string &channel_name, bool needs_sudo);
 
 	public:
-
-	public:
 		Server(const std::string &port, const std::string &pass);
 		~Server();
 		
@@ -161,6 +172,7 @@ class	Server
 		
 		void	start_socket();
 		void	monitor_epoll_events();
+		int		handle_socket_data(int fd, int event, e_socket_type type);
 		void	send_response(int client_fd, const std::string &msg);
 
 };

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/24 22:43:12 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 17:08:47 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,7 +36,6 @@ typedef struct	s_request
 	std::string	question;
 	std::string	nick;
 	std::string channel;
-	size_t		bytes_sent;
 	bool		response_complete;
 	int			client_fd;
 }	t_request;
@@ -71,6 +70,8 @@ class	Bot
 		bool	handle_bot_event(Server &server, int bot_fd, int events);
 		void 	cleanup(clear_type type, int fd, Server *server);
 		void	clear_channel(const std::string &channel);
-};
+		
+		t_request	*get_request(int fd);
+	};
 
 #endif
