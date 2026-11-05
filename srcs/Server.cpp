@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 21:56:23 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 22:51:13 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -123,22 +123,17 @@ void	Server::start_socket()
 
 // give bot same epoll fd used by server, bot registers its sockets w/out creating other epoll
 // epoll_wait wait till at least one registered socket have events -> return nb of ready events
-// EPOLLIN on listening socket -> a new client connection is waiting -> accept it
-// EPOLLIN on client socket -> has incoming data ready to be received -> read data FROM client
-// EPOLLOUT on client socket -> is ready to send pending data -> write data TO client
 void Server::monitor_epoll_events()
 {
 	epoll_event event;
 	epoll_event events[10];
 	int 		ready;
-	int 		fd;
-	int 		ret;
 
 	this->_epoll_fd = epoll_create1(0);
 	if (this->_epoll_fd < 0)
 		throw std::runtime_error("IRC: epoll_create1() failed.");
-	this->_bot.set_epoll_fd(this->_epoll_fd); // set bot epoll fd to same epoll fd used by server
-	event.events = EPOLLIN;
+	this->_bot.set_epoll_fd(this->_epoll_fd);
+	event.events = EPOLLIN; // monitor listening socket for new connections
 	event.data.fd = this->_listen_fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
@@ -152,40 +147,54 @@ void Server::monitor_epoll_events()
 			throw std::runtime_error("IRC: epoll_wait() failed.");
 		}
 		for (int i = 0; i < ready; i++)
+			this->handle_epoll_event(events[i].data.fd, events[i].events);
+	}
+}
+
+// EPOLLIN on listening socket -> a new client connection is waiting -> accept it
+// EPOLLIN on client socket -> has incoming data ready to be received -> read data FROM client
+// EPOLLOUT on client socket -> is ready to send pending data -> write data TO client
+int Server::handle_epoll_event(int fd, int events)
+{
+	int ret;
+
+	if (fd == this->_listen_fd)
+	{
+		if (events & EPOLLIN)
+			this->accept_client(); // socket has pending data->accept new connection and add to epoll
+		return (SOCKET_SUCCESS);
+	}
+	if (this->_bot.has_request(fd))
+	{
+		this->_bot.handle_bot_event(*this, fd, events); // handle ollama bot socket events
+		return (SOCKET_SUCCESS);
+	}
+	if (this->_clients.find(fd) == this->_clients.end())
+		return (SOCKET_ERROR); // ignore sockets dont belong to clients or bot
+	if (events & (EPOLLERR | EPOLLHUP))
+	{
+		this->close_connections(CLIENT_DISCONNECT, fd); // disconnect clients with epoll error or hangup
+		return (SOCKET_ERROR);
+	}
+	if (events & EPOLLIN)
+	{
+		ret = this->handle_socket_data(fd, EPOLLIN, CLIENT_SOCKET); // receive data from clients
+		if (ret == SOCKET_ERROR)
 		{
-			fd = events[i].data.fd;
-			if (fd == this->_listen_fd)
-			{
-				if (events[i].events & EPOLLIN)
-					this->accept_client(); // accept new client connection and add to epoll
-			}
-			else if (this->_bot.has_request(fd))
-				this->_bot.handle_bot_event(*this, fd, events[i].events); // handle ollama bot event
-			else if (this->_clients.find(fd) != this->_clients.end())
-			{
-				if (events[i].events & (EPOLLERR | EPOLLHUP))
-					this->close_connections(CLIENT_DISCONNECT, fd); // disconnect client if socket has an error
-				else
-				{
-					if (events[i].events & EPOLLIN) // client has pending data to read
-					{
-						ret = this->handle_socket_data(fd, EPOLLIN, CLIENT_SOCKET);
-						if (ret == SOCKET_ERROR)
-						{
-							this->close_connections(CLIENT_DISCONNECT, fd);
-							continue ; // skip to next event if client disconnected
-						}
-					}
-					if ((events[i].events & EPOLLOUT) && this->_clients.find(fd) != this->_clients.end()) // client didn't disconnect after EPOLLIN and has pending data to send
-					{
-						ret = this->handle_socket_data(fd, EPOLLOUT, CLIENT_SOCKET);
-						if (ret == SOCKET_ERROR)
-							this->close_connections(CLIENT_DISCONNECT, fd);
-					}
-				}
-			}
+			this->close_connections(CLIENT_DISCONNECT, fd);
+			return (SOCKET_ERROR);
 		}
 	}
+	if ((events & EPOLLOUT) && this->_clients.find(fd) != this->_clients.end())
+	{
+		ret = this->handle_socket_data(fd, EPOLLOUT, CLIENT_SOCKET); // send data if client is still connected
+		if (ret == SOCKET_ERROR)
+		{
+			this->close_connections(CLIENT_DISCONNECT, fd);
+			return (SOCKET_ERROR);
+		}
+	}
+	return (SOCKET_SUCCESS);
 }
 
 // accept() return a new fd for that client and store its address in client_addr

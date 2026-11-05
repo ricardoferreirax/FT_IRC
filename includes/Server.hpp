@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 21:45:36 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 22:37:58 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -126,8 +126,9 @@ class	Server
 		std::map<std::string, Channel>	   _channels;
 		std::map<int, Client>			   _clients;
 
-		void	accept_client();
 		void	close_connections(close_type type, int fd);
+		void	accept_client();
+		int		handle_epoll_event(int fd, int events);
 		int 	handle_socket_read(int fd, e_socket_type type, std::string &buffer);
 		int 	handle_socket_write(int fd, e_socket_type type, std::string &buffer);
 		
