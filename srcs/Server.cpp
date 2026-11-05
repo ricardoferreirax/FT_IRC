@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 14:57:34 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 15:13:55 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -292,9 +292,9 @@ void Server::process_msgs(Client &client, std::string &client_buffer)
 void Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
 {
 	typedef int (Server::*Cmd)(Client &, const std::vector<std::string> &);
-	std::map<std::string, Cmd> cmds;
-	std::string 			   param;
-	int 					   ret;
+	std::map<std::string, Cmd>::iterator it;
+	std::map<std::string, Cmd> 			 cmds;
+	int 								 ret;
 
 	cmds["PASS"] = &Server::pass_cmd;
 	cmds["NICK"] = &Server::nick_cmd;
@@ -312,28 +312,27 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["OPER"] = &Server::oper_cmd;
 	cmds["PING"] = &Server::ping_cmd;
 	cmds["QUIT"] = &Server::quit_cmd;
-	if (cmds.find(cmd) == cmds.end())
+	it = cmds.find(cmd);
+	if (it == cmds.end())
 	{
 		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
 		return ;
 	}
-	if (cmd != "PASS" && cmd != "NICK" && cmd != "USER" && cmd != "FAST" && cmd != "HELP" 
-		&& cmd != "PING" && cmd != "QUIT" && !client.get_registered())
+	if (!client.get_registered() && cmd != "PASS" && cmd != "NICK" && cmd != "USER" 
+		&& cmd != "FAST" && cmd != "HELP" && cmd != "PING" && cmd != "QUIT")
 	{
-		this->send_error(client, ERR_NOTREGISTERED, cmd);
+		if (cmd != "NOTICE")
+			this->send_error(client, ERR_NOTREGISTERED, cmd);
 		return ;
 	}
-	ret = (this->*cmds[cmd])(client, params);
+	ret = (this->*(it->second))(client, params);
 	if (cmd == "QUIT")
 		return ;
 	if (ret != 0)
 	{
 		if (cmd == "NOTICE")
 			return ;
-		param = cmd;
-		if (!params.empty() && (ret == ERR_NOSUCHNICK || ret == ERR_NICKNAMEINUSE || ret == ERR_ERRONEOUSNICKNAME))
-			param = params[0];
-		this->send_error(client, ret, param);
+		this->send_error(client, ret, get_error_param(cmd, ret, params));
 		return ;
 	}
 	if (!client.get_registered() && client.can_register())

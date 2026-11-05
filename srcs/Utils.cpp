@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/02 14:24:46 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 15:13:28 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -174,6 +174,30 @@ std::string generateRandomString(int length)
 		random_string += chars[index];
 	}
 	return (random_string);
+}
+
+std::string get_error_param(const std::string &cmd, int error, const std::vector<std::string> &params)
+{
+	if (params.empty())
+		return (cmd); // if no params->return cmd as param
+	if (cmd == "INVITE" && params.size() >= 2)
+	{
+		if (error == ERR_USERONCHANNEL)
+			return (params[0] + " " + params[1]); // send error w/ target and channel as param
+		if (error == ERR_NOSUCHCHANNEL || error == ERR_NOTONCHANNEL || error == ERR_CHANOPRIVSNEEDED)
+			return (params[1]); // send error w/ channel as param
+	}
+	if (error == ERR_NOSUCHNICK || error == ERR_NICKNAMEINUSE || error == ERR_ERRONEOUSNICKNAME)
+		return (params[0]); // send error w/ target as param
+	if (cmd == "JOIN" || cmd == "MODE" || cmd == "PART")
+	{
+		if (error == ERR_NOSUCHCHANNEL || error == ERR_NOTONCHANNEL || error == ERR_CHANOPRIVSNEEDED 
+			|| error == ERR_INVITEONLYCHAN || error == ERR_BADCHANNELKEY || error == ERR_CHANNELISFULL)
+			return (params[0]); // send error w/ channel as param
+	}
+	if (cmd == "HELP" && error == ERR_HELPNOTFOUND)
+		return (params[0]); // send error w/ help topic as param
+	return (cmd); // send cmd as param
 }
 
 void	log_tcp(log_type type, int fd, ssize_t bytes, const std::string &data)

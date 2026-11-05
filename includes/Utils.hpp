@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/08 16:14:29 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/02 14:19:35 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 15:12:21 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,6 +40,7 @@ void	log_tcp(log_type type, int fd, ssize_t bytes, const std::string &data);
 bool	match_nick_mask(const std::string &nick, const std::string &mask);
 
 std::string registration_reply(const Client &client, const std::string &server_name, const std::string &date);
+std::string get_error_param(const std::string &cmd, int error, const std::vector<std::string> &params);
 std::string generateRandomString(int length);
 std::vector<std::string> ft_split(const std::string &s, char delim);
 
