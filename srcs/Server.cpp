@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 16:52:40 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 14:57:34 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -230,7 +230,7 @@ void	Server::handle_client_data(int client_fd, int event)
 			return ; // recv failed or would block ->ignore this event 
 		recv_buffer.append(buffer, bytes); // append bytes ->recv() may not receive all data at once 
 		log_tcp(TCP_RECEIVE, client_fd, bytes, std::string(buffer, bytes));
-		this->process_cmds(client, recv_buffer);
+		this->process_msgs(client, recv_buffer);
 	}
 	else if (event == EPOLLOUT)
 	{
@@ -263,12 +263,12 @@ void	Server::handle_client_data(int client_fd, int event)
 
 // irc msgs end with \r\n, which separates one complete msg from the next one
 // incomplete msgs remain in client_buffer till more data is received with recv()
-void Server::process_cmds(Client &client, std::string &client_buffer)
+void Server::process_msgs(Client &client, std::string &client_buffer)
 {
 	std::vector<std::string> params;
-	std::string msg;
-	std::string cmd;
-	size_t pos;
+	std::string 			 msg;
+	std::string 			 cmd;
+	size_t 					 pos;
 
 	pos = client_buffer.find("\r\n");
 	while (pos != std::string::npos)
@@ -280,21 +280,66 @@ void Server::process_cmds(Client &client, std::string &client_buffer)
 			cmd.clear();
 			params.clear();
 			parse_msg(msg, cmd, params);
-			if (cmd == "PASS" || cmd == "NICK" || cmd == "USER" || cmd == "FAST")
-				this->execute_registration(client, cmd, params);
-			else if (cmd == "JOIN" || cmd == "INVITE" || cmd == "MODE" || cmd == "PART")
-				this->execute_channels_cmds(client, cmd, params);
-			else if (cmd == "WHO" || cmd == "HELP" || cmd == "AWAY")
-				this->execute_info(client, cmd, params);
-			else if (cmd == "OPER" || cmd == "PING" || cmd == "QUIT")
-				this->execute_server_cmds(client, cmd, params);
-			else if (cmd == "PRIVMSG" || cmd == "NOTICE")
-				this->execute_msgs(client, cmd, params);
-			else if (!cmd.empty())
-				this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
+			if (!cmd.empty())
+				this->execute_cmd(client, cmd, params);
 			if (client.get_quit())
 				return ;
 		}
 		pos = client_buffer.find("\r\n");
+	}
+}
+
+void Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
+{
+	typedef int (Server::*Cmd)(Client &, const std::vector<std::string> &);
+	std::map<std::string, Cmd> cmds;
+	std::string 			   param;
+	int 					   ret;
+
+	cmds["PASS"] = &Server::pass_cmd;
+	cmds["NICK"] = &Server::nick_cmd;
+	cmds["USER"] = &Server::user_cmd;
+	cmds["FAST"] = &Server::fast_cmd;
+	cmds["JOIN"] = &Server::join_cmd;
+	cmds["INVITE"] = &Server::invite_cmd;
+	cmds["MODE"] = &Server::mode_cmd;
+	cmds["PART"] = &Server::part_cmd;
+	cmds["PRIVMSG"] = &Server::privmsg_cmd;
+	cmds["NOTICE"] = &Server::notice_cmd;
+	cmds["WHO"] = &Server::who_cmd;
+	cmds["HELP"] = &Server::help_cmd;
+	cmds["AWAY"] = &Server::away_cmd;
+	cmds["OPER"] = &Server::oper_cmd;
+	cmds["PING"] = &Server::ping_cmd;
+	cmds["QUIT"] = &Server::quit_cmd;
+	if (cmds.find(cmd) == cmds.end())
+	{
+		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
+		return ;
+	}
+	if (cmd != "PASS" && cmd != "NICK" && cmd != "USER" && cmd != "FAST" && cmd != "HELP" 
+		&& cmd != "PING" && cmd != "QUIT" && !client.get_registered())
+	{
+		this->send_error(client, ERR_NOTREGISTERED, cmd);
+		return ;
+	}
+	ret = (this->*cmds[cmd])(client, params);
+	if (cmd == "QUIT")
+		return ;
+	if (ret != 0)
+	{
+		if (cmd == "NOTICE")
+			return ;
+		param = cmd;
+		if (!params.empty() && (ret == ERR_NOSUCHNICK || ret == ERR_NICKNAMEINUSE || ret == ERR_ERRONEOUSNICKNAME))
+			param = params[0];
+		this->send_error(client, ret, param);
+		return ;
+	}
+	if (!client.get_registered() && client.can_register())
+	{
+		client.set_registered(true);
+		std::cout << "\n\033[1;36m" << "✓ CLIENT " << client.get_client_fd() << " REGISTERED" << "\033[0m\n\n";
+		this->send_notice(client, REGISTRATION, "");
 	}
 }

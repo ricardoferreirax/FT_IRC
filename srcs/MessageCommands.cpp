@@ -1,52 +1,18 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Message.cpp                                        :+:      :+:    :+:   */
+/*   MessageCommands.cpp                                :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:41:14 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 16:40:55 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 14:56:05 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-# include "../includes/Server.hpp"
-# include "../includes/Client.hpp"
-# include "../includes/Utils.hpp"
-
-void Server::execute_msgs(Client &client, const std::string &cmd, const std::vector<std::string> &params)
-{
-	typedef int (Server::*MsgCmd)(Client &, const std::vector<std::string> &);
-	std::map<std::string, MsgCmd>::iterator it;
-	std::map<std::string, MsgCmd> 			msgs;
-	std::string 							param;
-	int 									ret;
-
-	msgs["PRIVMSG"] = &Server::privmsg_cmd;
-	msgs["NOTICE"] = &Server::notice_cmd;
-	it = msgs.find(cmd);
-	if (it == msgs.end())
-	{
-		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
-		return ;
-	}
-	if (!client.get_registered())
-	{
-		if (cmd != "NOTICE")
-			this->send_error(client, ERR_NOTREGISTERED, cmd);
-		return ;
-	}
-	ret = (this->*(it->second))(client, params);
-	if (ret != 0)
-	{
-		if (cmd == "NOTICE")
-			return ;
-		param = cmd;
-		if (!params.empty() && ret == ERR_NOSUCHNICK)
-			param = params[0];
-		this->send_error(client, ret, param);
-	}
-}
+#include "../includes/Server.hpp"
+#include "../includes/Client.hpp"
+#include "../includes/Utils.hpp"
 
 int Server::privmsg_cmd(Client &client, const std::vector<std::string> &params)
 {

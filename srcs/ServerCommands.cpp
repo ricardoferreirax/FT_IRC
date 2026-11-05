@@ -1,46 +1,18 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   ServerControl.cpp                                  :+:      :+:    :+:   */
+/*   ServerCommands.cpp                                 :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:39:00 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 16:41:30 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 14:55:56 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-# include "../includes/Server.hpp"
-# include "../includes/Client.hpp"
-# include "../includes/Utils.hpp"
-
-void Server::execute_server_cmds(Client &client, const std::string &cmd, const std::vector<std::string> &params)
-{
-	typedef int (Server::*ServerCmd)(Client &, const std::vector<std::string> &);
-	std::map<std::string, ServerCmd>::iterator it;
-	std::map<std::string, ServerCmd> 		   cmds;
-	int 									   ret;
-
-	cmds["OPER"] = &Server::oper_cmd;
-	cmds["PING"] = &Server::ping_cmd;
-	cmds["QUIT"] = &Server::quit_cmd;
-	it = cmds.find(cmd);
-	if (it == cmds.end())
-	{
-		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
-		return ;
-	}
-	if (cmd == "OPER" && !client.get_registered())
-	{
-		this->send_error(client, ERR_NOTREGISTERED, cmd);
-		return ;
-	}
-	ret = (this->*(it->second))(client, params);
-	if (cmd == "QUIT")
-		return ;
-	if (ret != 0)
-		this->send_error(client, ret, cmd);
-}
+#include "../includes/Server.hpp"
+#include "../includes/Client.hpp"
+#include "../includes/Utils.hpp"
 
 int Server::oper_cmd(Client &client, const std::vector<std::string> &params)
 {

@@ -1,62 +1,18 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   ChannelCmds.cpp                                    :+:      :+:    :+:   */
+/*   ChannelCommands.cpp                                :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:21:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 16:44:25 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 14:54:37 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-# include "../includes/Server.hpp"
-# include "../includes/Client.hpp"
-# include "../includes/Utils.hpp"
-
-void Server::execute_channels_cmds(Client &client, const std::string &cmd, const std::vector<std::string> &params)
-{
-	typedef int (Server::*ChanCmd)(Client &, const std::vector<std::string> &);
-	std::map<std::string, ChanCmd>::iterator it;
-	std::map<std::string, ChanCmd> 			 channels;
-	std::string 							 param;
-	int 							 		 ret;
-
-	channels["JOIN"] = &Server::join_cmd;
-	channels["INVITE"] = &Server::invite_cmd;
-	channels["MODE"] = &Server::mode_cmd;
-	channels["PART"] = &Server::part_cmd;
-	it = channels.find(cmd);
-	if (it == channels.end())
-	{
-		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
-		return ;
-	}
-	if (!client.get_registered())
-	{
-		this->send_error(client, ERR_NOTREGISTERED, cmd);
-		return ;
-	}
-	ret = (this->*(it->second))(client, params);
-	if (ret != 0)
-	{
-		param = cmd;
-		if (cmd == "INVITE" && params.size() >= 2)
-		{
-			if (ret == ERR_USERONCHANNEL)
-				param = params[0] + " " + params[1]; // send nick and channel error
-			else if (ret == ERR_NOSUCHCHANNEL || ret == ERR_NOTONCHANNEL || ret == ERR_CHANOPRIVSNEEDED)
-				param = params[1]; // send channel error
-			else if (ret == ERR_NOSUCHNICK)
-				param = params[0]; // send nick error
-		}
-		else if (cmd == "PART" && !params.empty() && (ret == ERR_NOSUCHCHANNEL || ret == ERR_NOTONCHANNEL))
-			param = params[0]; // send channel error
-		else if (cmd == "MODE" && !params.empty() && ret == ERR_NOSUCHCHANNEL)
-			param = params[0]; // send channel error
-		this->send_error(client, ret, param);
-	}
-}
+#include "../includes/Server.hpp"
+#include "../includes/Client.hpp"
+#include "../includes/Utils.hpp"
 
 int	Server::join_cmd(Client &client, const std::vector<std::string> &params)
 {

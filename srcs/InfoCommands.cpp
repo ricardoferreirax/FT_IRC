@@ -1,50 +1,18 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Info.cpp                                           :+:      :+:    :+:   */
+/*   InfoCommands.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:25:22 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 16:42:48 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 14:55:04 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-# include "../includes/Server.hpp"
-# include "../includes/Client.hpp"
-# include "../includes/Utils.hpp"
-
-void Server::execute_info(Client &client, const std::string &cmd, const std::vector<std::string> &params)
-{
-	typedef int (Server::*InfoCmd)(Client &, const std::vector<std::string> &);
-	std::map<std::string, InfoCmd>::iterator it;
-	std::map<std::string, InfoCmd> 			 info;
-	std::string 							 param;
-	int 									 ret;
-
-	info["WHO"] = &Server::who_cmd;
-	info["HELP"] = &Server::help_cmd;
-	info["AWAY"] = &Server::away_cmd;
-	it = info.find(cmd);
-	if (it == info.end())
-	{
-		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
-		return ;
-	}
-	if (cmd != "HELP" && !client.get_registered())
-	{
-		this->send_error(client, ERR_NOTREGISTERED, cmd);
-		return ;
-	}
-	ret = (this->*(it->second))(client, params);
-	if (ret != 0)
-	{
-		param = cmd;
-		if (cmd == "HELP" && ret == ERR_HELPNOTFOUND && !params.empty())
-			param = params[0];
-		this->send_error(client, ret, param);
-	}
-}
+#include "../includes/Server.hpp"
+#include "../includes/Client.hpp"
+#include "../includes/Utils.hpp"
 
 int Server::who_cmd(Client &client, const std::vector<std::string> &params)
 {

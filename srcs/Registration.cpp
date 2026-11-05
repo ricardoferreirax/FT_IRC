@@ -6,48 +6,13 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:19:59 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 16:41:09 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 14:55:42 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Client.hpp"
 #include "../includes/Server.hpp"
 #include "../includes/Utils.hpp"
-
-void Server::execute_registration(Client &client, const std::string &cmd, const std::vector<std::string> &params)
-{
-	typedef int (Server::*RegCmd)(Client &, const std::vector<std::string> &);
-	std::map<std::string, RegCmd>::iterator it;
-	std::map<std::string, RegCmd> 			regist;
-	std::string 							param;
-	int 									ret;
-
-	regist["PASS"] = &Server::pass_cmd;
-	regist["NICK"] = &Server::nick_cmd;
-	regist["USER"] = &Server::user_cmd;
-	regist["FAST"] = &Server::fast_cmd;
-	it = regist.find(cmd);
-	if (it == regist.end())
-	{
-		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
-		return ;
-	}
-	ret = (this->*(it->second))(client, params);
-	if (ret != 0)
-	{
-		param = cmd;
-		if (!params.empty() && (ret == ERR_ERRONEOUSNICKNAME || ret == ERR_NICKNAMEINUSE))
-			param = params[0];
-		this->send_error(client, ret, param);
-		return ;
-	}
-	if (!client.get_registered() && client.can_register())
-	{
-		client.set_registered(true);
-		std::cout << "\n\033[1;36m" << "✓ CLIENT " << client.get_client_fd() << " REGISTERED" << "\033[0m\n\n";
-		this->send_notice(client, REGISTRATION, "");
-	}
-}
 
 int Server::pass_cmd(Client &client, const std::vector<std::string> &params)
 {
