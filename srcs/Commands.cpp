@@ -72,8 +72,37 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 //TODO: Handle Topic
 int Server::handle_topic(Client &client, const std::vector<std::string> &params)
 {
-	(void) client;
-	(void) params;
+	if(params.empty())
+		return(ERR_NEEDMOREPARAMS);
+	std::map<std::string, Channel>::iterator chanit = this->_channels.find(params[0]);
+	if(chanit == this->_channels.end())
+	{
+		this->send_error(client, ERR_NOSUCHCHANNEL, params[0]);
+		return -1;
+	}
+	if(chanit->second.getMode().topic_restricted)
+	{
+		if(chanit->second.getChannops().find(client.get_client_fd()) == chanit->second.getChannops().end())
+		{
+			this->send_error(client, ERR_CHANOPRIVSNEEDED, chanit->second.getName());
+			return -1;
+		}
+	}
+	if(params.size() < 2)
+		chanit->second.setMode(chanit->second.getMode().invite_only, chanit->second.getMode().topic_restricted, "", chanit->second.getMode().users, chanit->second.getMode().key);
+	else
+		chanit->second.setMode(chanit->second.getMode().invite_only, chanit->second.getMode().topic_restricted, params[1], chanit->second.getMode().users, chanit->second.getMode().key);
+	if(chanit->second.getMode().topic.empty())
+		this->send_msg(client, "Topic unset");
+	else
+		this->send_msg(client, "Topic set to: " + chanit->second.getMode().topic);
+	std::vector<std::string> notice;
+	notice.push_back(chanit->first);
+	if(chanit->second.getMode().topic.empty())
+		notice.push_back(client.get_nick() + " has unset the channel's topic");
+	else
+		notice.push_back(client.get_nick() + " has set the channel's topic to: " + chanit->second.getMode().topic);
+	this->handle_privmsg(client, notice);
 	return 0;
 }
 
@@ -427,7 +456,7 @@ int Server::handle_join(Client &client, const std::vector<std::string> &params)
 	size_t	i;
 	int		ret;
 
-	std::map<std::string, Channel>::iterator it;
+	std::map<std::string, Channel>::iterator chanit;
 	std::vector<std::string> c_names;
 	std::vector<std::string> keys;
 	std::string chan_name;
@@ -451,8 +480,8 @@ int Server::handle_join(Client &client, const std::vector<std::string> &params)
 			key = keys[i];
 		else
 			key = "";
-		it = this->_channels.find(chan_name);
-		if (it == this->_channels.end())
+		chanit = this->_channels.find(chan_name);
+		if (chanit == this->_channels.end())
 		{
 			Channel ch(chan_name, default_mode(), client);
 			this->_channels.insert(std::pair<std::string, Channel>(chan_name, ch));
@@ -460,7 +489,7 @@ int Server::handle_join(Client &client, const std::vector<std::string> &params)
 		}
 		else
 		{
-			ret = it->second.joinChannel(client, key);
+			ret = chanit->second.joinChannel(client, key);
 			if (ret == 1)
 				this->send_error(client, ERR_USERONCHANNEL, chan_name);
 			else if (ret == 2)
@@ -472,7 +501,11 @@ int Server::handle_join(Client &client, const std::vector<std::string> &params)
 			else if(ret == 5)
 				this->send_error(client, ERR_BANNEDFROMCHAN, chan_name);
 			else
+			{
 				this->send_msg(client, "You joined " + chan_name);
+				if(!chanit->second.getMode().topic.empty())
+					this->send_msg(client, "Topic is: " + chanit->second.getMode().topic);
+			}
 		}
 		i++;
 	}
