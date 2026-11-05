@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 21:38:44 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 21:56:23 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,29 +56,29 @@ void Server::close_connections(close_type type, int fd)
 {
 	std::map<std::string, Channel>::iterator chanit;
 	std::map<int, Client>::iterator 		 it;
-	
+
 	if (type == CLIENT_DISCONNECT)
 	{
-		this->_bot.cleanup(CLIENT_DISCONNECTED, fd, NULL);
 		it = this->_clients.find(fd);
 		if (it == this->_clients.end())
 			return ;
+		this->_bot.cleanup(CLIENT_DISCONNECTED, fd, NULL); // rmv client's pending bot requests
 		for (chanit = this->_channels.begin(); chanit != this->_channels.end(); ++chanit)
 		{
 			if (chanit->second.getClients().count(fd))
-				chanit->second.leaveChannel(it->second);
+				chanit->second.leaveChannel(it->second); // rmv client from all channels
 		}
 		if (this->_epoll_fd != -1)
-			epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+			epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL); // rmv socket from epoll and close it
 		close(fd);
 		this->_clients.erase(it);
 		std::cout << "\n\033[1;31m- Client " << fd << " disconnected\033[0m\n\n";
 	}
-	else if (type == SERVER_SHUTDOWN)
+	else if (type == SERVER_SHUTDOWN) // close entire server and all client connections
 	{
-		this->_bot.cleanup(BOT_SHUTDOWN, -1, NULL);
+		this->_bot.cleanup(BOT_SHUTDOWN, -1, NULL); // close all bot requests
 		for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
-			close(it->first);
+			close(it->first); // close all client sockets
 		this->_clients.clear();
 		this->_channels.clear();
 		if (this->_listen_fd != -1)

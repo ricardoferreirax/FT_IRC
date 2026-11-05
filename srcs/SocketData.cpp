@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/05 17:17:06 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 21:47:02 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 22:06:10 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,7 +63,7 @@ int Server::handle_socket_read(int fd, e_socket_type type, std::string &buffer)
 	if (bytes == 0) // peer closed connection
 	{
 		if (type == CLIENT_SOCKET)
-			this->close_connections(CLIENT_DISCONNECT, fd);
+			return (SOCKET_ERROR); // client disconnected ->close connection
 		else if (type == BOT_SOCKET)
 			this->_bot.get_request(fd)->response_complete = true;
 		return (SOCKET_SUCCESS);
@@ -97,8 +97,9 @@ int Server::handle_socket_read(int fd, e_socket_type type, std::string &buffer)
 // send() - send remaining request data TO ollama through bot socket.
 int Server::handle_socket_write(int fd, e_socket_type type, std::string &buffer)
 {
-	epoll_event ev;
-	ssize_t 	bytes;
+	std::map<int, Client>::iterator it;
+	epoll_event 					ev;
+	ssize_t 						bytes;
 
 	if (!buffer.empty()) // there is pending data to send
 	{
@@ -111,10 +112,16 @@ int Server::handle_socket_write(int fd, e_socket_type type, std::string &buffer)
 	}
 	if (!buffer.empty())
 		return (SOCKET_PENDING); // wait for another EPOLLOUT if there is still data to send
-	if (type == CLIENT_SOCKET && this->_clients[fd].get_quit())
+	if (type == CLIENT_SOCKET)
 	{
-		this->close_connections(CLIENT_DISCONNECT, fd); // client sent quit ->close connection
-		return (SOCKET_SUCCESS);
+		it = this->_clients.find(fd);
+		if (it == this->_clients.end())
+			return (SOCKET_ERROR);
+		if (it->second.get_quit())
+		{
+			this->close_connections(CLIENT_DISCONNECT, fd);
+			return (SOCKET_SUCCESS);
+		}
 	}
 	ev.events = EPOLLIN;
 	ev.data.fd = fd;

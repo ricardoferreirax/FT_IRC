@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 18:39:53 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 22:12:06 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,11 +46,11 @@ void Bot::clear_channel(const std::string &channel)
     this->_chan_memory.erase(channel);
 }
 
-void	Bot::cleanup(clear_type type, int fd, Server *server)
+void Bot::cleanup(clear_type type, int fd, Server *server)
 {
 	std::map<int, t_request>::iterator it;
-	int								   bot_fd;
-	int								   client_fd;
+	int 							   bot_fd;
+	int 							   client_fd;
 
 	if (type == CLIENT_DISCONNECTED)
 		this->_user_memory.erase(fd);
@@ -59,24 +59,23 @@ void	Bot::cleanup(clear_type type, int fd, Server *server)
 		this->_user_memory.clear();
 		this->_chan_memory.clear();
 	}
-	it = this->_requests.begin();
+	it = this->_requests.begin(); // check all active bot requests
 	while (it != this->_requests.end())
 	{
-		bot_fd = it->first; // bot fd associated with request
-		client_fd = it->second.client_fd; // client fd associated with bot request
-		if (type == BOT_SHUTDOWN || ((type == REQUEST_COMPLETED || type == REQUEST_FAILED) && bot_fd == fd) // if request completed or failed
-			|| (type == CLIENT_DISCONNECTED && client_fd == fd)) // if client disconnected
+		bot_fd = it->first;
+		client_fd = it->second.client_fd;
+		if (type != BOT_SHUTDOWN && !(type == CLIENT_DISCONNECTED && client_fd == fd) 
+			&& !((type == REQUEST_COMPLETED || type == REQUEST_FAILED) && bot_fd == fd))
 		{
 			++it;
-			if (this->_epoll_fd != -1)
-				epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, bot_fd, NULL);
-			close(bot_fd);
-			this->_requests.erase(bot_fd);
-			if (type == REQUEST_FAILED && server != NULL)
-				server->send_response(client_fd, "Miku is unavailable.");
+			continue ; // skip requests dont need cleanup
 		}
-		else
-			++it;
+		if (this->_epoll_fd != -1)
+			epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, bot_fd, NULL); // rmv bot socket from epoll
+		close(bot_fd);
+		this->_requests.erase(it++); // rmv request from map and move to next request
+		if (type == REQUEST_FAILED && server != NULL)
+			server->send_response(client_fd, "Miku is unavailable."); // notify client if request failed
 	}
 }
 
