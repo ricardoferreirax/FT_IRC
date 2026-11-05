@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/05 17:17:06 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 18:38:25 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 21:47:02 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,64 +16,79 @@
 
 int Server::handle_socket_data(int fd, int event, e_socket_type type)
 {
-	std::map<int, Client>::iterator it;
-	std::string 				   *buffer;
-	t_request					   *req;
+	std::string *recv_buffer;
+	std::string *send_buffer;
+	t_request 	*req;
 
 	if (type == CLIENT_SOCKET)
 	{
-		it = this->_clients.find(fd);
-		if (it == this->_clients.end())
+		if (this->_clients.find(fd) == this->_clients.end())
 			return (SOCKET_ERROR);
-		if (event == EPOLLIN)
-			buffer = &it->second.get_recv_buffer();
-		else if (event == EPOLLOUT)
-			buffer = &it->second.get_send_buffer();
-		else
-			return (SOCKET_ERROR);
+		recv_buffer = &this->_clients[fd].get_recv_buffer();
+		send_buffer = &this->_clients[fd].get_send_buffer();
 	}
 	else if (type == BOT_SOCKET)
 	{
 		req = this->_bot.get_request(fd);
 		if (!req)
 			return (SOCKET_ERROR);
-		if (event == EPOLLIN)
-			buffer = &req->recv_buffer;
-		else if (event == EPOLLOUT)
-			buffer = &req->send_buffer;
-		else
-			return (SOCKET_ERROR);
+		recv_buffer = &req->recv_buffer;
+		send_buffer = &req->send_buffer;
 	}
 	else
 		return (SOCKET_ERROR);
-	if (event == EPOLLIN)
-		return (this->handle_socket_read(fd, type, *buffer));
-	return (this->handle_socket_write(fd, type, *buffer));
+	if (event == EPOLLIN) // EPOLLIN->socket is ready to receive data.
+		return (this->handle_socket_read(fd, type, *recv_buffer));
+	if (event == EPOLLOUT) // EPOLLOUT->socket is ready to send data.
+		return (this->handle_socket_write(fd, type, *send_buffer));
+	return (SOCKET_ERROR);
 }
 
 // recv() - receive data FROM client through client socket
 // recv() - receive response data FROM ollama through bot socket.
+// irc msgs end with \r\n, which separates one complete msg from the next one
+// incomplete msgs remain in client_buffer till more data is received with recv()
 int Server::handle_socket_read(int fd, e_socket_type type, std::string &buffer)
 {
-	char	data[1024];
-	ssize_t	bytes;
+	std::vector<std::string> 		params;
+	std::string 					msg;
+	std::string 					cmd;
+	ssize_t							bytes;
+	size_t							pos;
+	char							data[1024];
 
 	bytes = recv(fd, data, sizeof(data), 0);
+	if (bytes < 0)
+		return (SOCKET_PENDING); // recv() fails ->keep connection and wait for another event
 	if (bytes == 0) // peer closed connection
 	{
 		if (type == CLIENT_SOCKET)
 			this->close_connections(CLIENT_DISCONNECT, fd);
-		else
-			this->_bot.get_request(fd)->response_complete = true; // request completed
+		else if (type == BOT_SOCKET)
+			this->_bot.get_request(fd)->response_complete = true;
 		return (SOCKET_SUCCESS);
 	}
-	if (bytes < 0)
-		return (SOCKET_PENDING); // recv() fails ->keep connection and wait for another event
 	buffer.append(data, bytes); // append received data->tcp may deliver msgs in parts
-	if (type == CLIENT_SOCKET)
+	if (type == BOT_SOCKET)
+		return (SOCKET_SUCCESS); // bot responses are processed separately so don't parse bot response here
+	log_tcp(TCP_RECEIVE, fd, bytes, std::string(data, bytes));
+	Client &client = this->_clients.find(fd)->second;
+	pos = buffer.find("\r\n");
+	while (pos != std::string::npos)
 	{
-		log_tcp(TCP_RECEIVE, fd, bytes, std::string(data, bytes));
-		this->process_msgs(this->_clients[fd], buffer);
+		msg = buffer.substr(0, pos); // extract one complete msg from buffer
+		buffer.erase(0, pos + 2); // rmv processed msg + \r\n
+		if (!msg.empty())
+		{
+			cmd.clear();
+			params.clear();
+			parse_msg(msg, cmd, params);
+			if (!cmd.empty())
+				this->execute_cmd(client, cmd, params);
+			if (client.get_quit())
+    			return (SOCKET_SUCCESS);
+		}
+		pos = buffer.find("\r\n");
 	}
 	return (SOCKET_SUCCESS);
 }
@@ -83,7 +98,7 @@ int Server::handle_socket_read(int fd, e_socket_type type, std::string &buffer)
 int Server::handle_socket_write(int fd, e_socket_type type, std::string &buffer)
 {
 	epoll_event ev;
-	ssize_t bytes;
+	ssize_t 	bytes;
 
 	if (!buffer.empty()) // there is pending data to send
 	{
@@ -104,10 +119,6 @@ int Server::handle_socket_write(int fd, e_socket_type type, std::string &buffer)
 	ev.events = EPOLLIN;
 	ev.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &ev) < 0) // all data was sent->monitor only incoming data
-	{
-		if (type == CLIENT_SOCKET)
-			this->close_connections(CLIENT_DISCONNECT, fd);
 		return (SOCKET_ERROR);
-	}
 	return (SOCKET_SUCCESS);
 }

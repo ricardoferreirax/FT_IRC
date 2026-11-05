@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 18:35:39 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/05 21:38:44 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -132,7 +132,7 @@ void Server::monitor_epoll_events()
 	epoll_event events[10];
 	int 		ready;
 	int 		fd;
-	int 		status;
+	int 		ret;
 
 	this->_epoll_fd = epoll_create1(0);
 	if (this->_epoll_fd < 0)
@@ -169,8 +169,8 @@ void Server::monitor_epoll_events()
 				{
 					if (events[i].events & EPOLLIN) // client has pending data to read
 					{
-						status = this->handle_socket_data(fd, EPOLLIN, CLIENT_SOCKET);
-						if (status == SOCKET_ERROR)
+						ret = this->handle_socket_data(fd, EPOLLIN, CLIENT_SOCKET);
+						if (ret == SOCKET_ERROR)
 						{
 							this->close_connections(CLIENT_DISCONNECT, fd);
 							continue ; // skip to next event if client disconnected
@@ -178,8 +178,8 @@ void Server::monitor_epoll_events()
 					}
 					if ((events[i].events & EPOLLOUT) && this->_clients.find(fd) != this->_clients.end()) // client didn't disconnect after EPOLLIN and has pending data to send
 					{
-						status = this->handle_socket_data(fd, EPOLLOUT, CLIENT_SOCKET);
-						if (status == SOCKET_ERROR)
+						ret = this->handle_socket_data(fd, EPOLLOUT, CLIENT_SOCKET);
+						if (ret == SOCKET_ERROR)
 							this->close_connections(CLIENT_DISCONNECT, fd);
 					}
 				}
@@ -217,34 +217,6 @@ void	Server::accept_client()
 	this->_clients[client_fd] = Client(client_fd);
 	this->_clients[client_fd].set_host_ip(inet_ntoa(client_addr.sin_addr));
 	std::cout << "\n\033[1;32m" << "+ CLIENT " << client_fd << " CONNECTED" << "\033[0m\n";
-}
-
-// irc msgs end with \r\n, which separates one complete msg from the next one
-// incomplete msgs remain in client_buffer till more data is received with recv()
-void Server::process_msgs(Client &client, std::string &client_buffer)
-{
-	std::vector<std::string> params;
-	std::string 			 msg;
-	std::string 			 cmd;
-	size_t 					 pos;
-
-	pos = client_buffer.find("\r\n");
-	while (pos != std::string::npos)
-	{
-		msg = client_buffer.substr(0, pos);
-		client_buffer.erase(0, pos + 2);
-		if (!msg.empty())
-		{
-			cmd.clear();
-			params.clear();
-			parse_msg(msg, cmd, params);
-			if (!cmd.empty())
-				this->execute_cmd(client, cmd, params);
-			if (client.get_quit())
-				return ;
-		}
-		pos = client_buffer.find("\r\n");
-	}
 }
 
 void Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
