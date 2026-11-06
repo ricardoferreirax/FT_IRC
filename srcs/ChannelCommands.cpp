@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:21:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/06 21:16:16 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/06 21:53:22 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,34 +70,94 @@ int	Server::join_cmd(Client &client, const std::vector<std::string> &params)
 	return (0);
 }
 
-// TODO: User invite is not consumed when used
 int Server::invite_cmd(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, Channel>::iterator chanit;
 	std::map<int, Client>::iterator 		 clienit;
 	
-	if (params.empty() || params.size() < 2)
-		return (ERR_NEEDMOREPARAMS);
+	if (params.size() < 2 || params[0].empty() || params[1].empty())
+	{
+		this->send_error(client, ERR_NEEDMOREPARAMS, "INVITE");
+		return (-1);
+	}
+	clienit = this->reverseClientSearch(params[0]);
+	if (clienit == this->_clients.end())
+	{
+		this->send_error(client, ERR_NOSUCHNICK, params[0]);
+		return (-1);
+	}
 	chanit = this->_channels.find(params[1]);
 	if (chanit == this->_channels.end())
-		return (ERR_NOSUCHCHANNEL);
-	clienit = this->_clients.begin();
-	while (clienit != this->_clients.end())
 	{
-		if (clienit->second.get_nick() == params[0]) // target nick matches a client nick
-			break ;
-		clienit++;
+		this->send_error(client, ERR_NOSUCHCHANNEL, params[1]);
+		return (-1);
 	}
-	if (clienit == this->_clients.end())
-		return (ERR_NOSUCHNICK);
-	if (chanit->second.getMode().invite_only)
+	if (!chanit->second.getClients().count(client.get_client_fd()))
 	{
-		if (chanit->second.getChannops().find(client.get_client_fd()) == chanit->second.getChannops().end()) // client isn't channel operator
-			return (ERR_CHANOPRIVSNEEDED);
+		this->send_error(client, ERR_NOTONCHANNEL, params[1]);
+		return (-1);
+	}
+	if (chanit->second.getClients().count(clienit->first))
+	{
+		this->send_error(client, ERR_USERONCHANNEL, params[0] + " " + params[1]);
+		return (-1);
+	}
+	if (chanit->second.getMode().invite_only && !chanit->second.getChannops().count(client.get_client_fd()))
+	{
+		this->send_error(client, ERR_CHANOPRIVSNEEDED, params[1]);
+		return (-1);
 	}
 	chanit->second.inviteUser(clienit->second);
-	this->send_reply(client, RPL_INVITING, params[0] + " " + params[1], ""); // confirmation msg to inviter
 	this->send_cmd(client, clienit->second, "INVITE " + params[0] + " :" + params[1]);
+	return (0);
+}
+
+int Server::topic_cmd(Client &client, const std::vector<std::string> &params)
+{
+	std::map<std::string, Channel>::iterator chanit;
+	std::map<int, Client *>::iterator 		 it;
+	std::string 							 msg;
+	
+	if (params.empty() || params[0].empty())
+	{
+		this->send_error(client, ERR_NEEDMOREPARAMS, "TOPIC");
+		return (-1);
+	}
+	chanit = this->_channels.find(params[0]);
+	if (chanit == this->_channels.end())
+	{
+		this->send_error(client, ERR_NOSUCHCHANNEL, params[0]);
+		return (-1);
+	}
+	if (!chanit->second.getClients().count(client.get_client_fd()))
+	{
+		this->send_error(client, ERR_NOTONCHANNEL, params[0]);
+		return (-1);
+	}
+	if (params.size() < 2)
+	{
+		if (chanit->second.getMode().topic.empty())
+			this->send_reply(client, RPL_NOTOPIC, params[0], "");
+		else
+			this->send_reply(client, RPL_TOPIC, params[0], chanit->second.getMode().topic);
+		return (0);
+	}
+	if (chanit->second.getMode().topic_restricted)
+	{
+		if (!chanit->second.getChannops().count(client.get_client_fd()))
+		{
+			this->send_error(client, ERR_CHANOPRIVSNEEDED, params[0]);
+			return (-1);
+		}
+	}
+	chanit->second.setMode(chanit->second.getMode().invite_only, chanit->second.getMode().topic_restricted, params[1], chanit->second.getMode().users, chanit->second.getMode().key);
+	msg = "TOPIC " + params[0] + " :" + chanit->second.getMode().topic;
+	it = chanit->second.getClients().begin();
+	while (it != chanit->second.getClients().end())
+	{
+		this->send_cmd(client, *it->second, msg);
+		it++;
+	}
 	return (0);
 }
 
@@ -220,7 +280,6 @@ int Server::kick_cmd(Client &client, const std::vector<std::string> &params)
 	std::vector<std::string> 				 channels;
 	std::vector<std::string> 				 clients;
 	std::vector<std::string> 				 args;
-	std::string 							 victim_msg;
 	size_t									 i;
 	size_t									 j;
 
@@ -248,7 +307,7 @@ int Server::kick_cmd(Client &client, const std::vector<std::string> &params)
 			if (!chanit->second.getChannops().count(client.get_client_fd()))
 			{
 				this->send_error(client, ERR_CHANOPRIVSNEEDED, channels[i]);
-				break ;
+				return (-1);
 			}
 			clienit = this->reverseClientSearch(clients[j]);
 			if (clienit == this->_clients.end())
@@ -270,11 +329,10 @@ int Server::kick_cmd(Client &client, const std::vector<std::string> &params)
 				args.push_back(params[2]);
 			else
 				args.push_back("No reason provided");
-			victim_msg = "KICK " + args[0] + " " + args[1] + " :" + args[2];
 			it = chanit->second.getClients().begin();
 			while (it != chanit->second.getClients().end())
 			{
-				this->send_cmd(client, *it->second, victim_msg);
+				this->send_cmd(client, *it->second, "KICK " + args[0] + " " + args[1] + " :" + args[2]);
 				it++;
 			}
 			if (chanit->second.leaveChannel(clienit->second) == -1)

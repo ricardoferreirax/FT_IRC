@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/06 17:35:00 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/06 21:52:01 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -159,6 +159,7 @@ class	Server
 		int 	mode_cmd(Client &client, const std::vector<std::string> &params);
 		int 	part_cmd(Client &client, const std::vector<std::string> &params);
 		int 	kick_cmd(Client &client, const std::vector<std::string> &params);
+		int 	topic_cmd(Client &client, const std::vector<std::string> &params);
 
 		bool 	handle_imode(Client &client, std::string chan_name, t_modecmd flag);
 		bool 	handle_tmode(Client &client, std::string chan_name, t_modecmd flag);
