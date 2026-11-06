@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:39:00 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 22:48:37 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/06 13:25:44 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,9 +83,9 @@ int Server::who_cmd(Client &client, const std::vector<std::string> &params)
 		{
 			if (!it->second.get_registered())
 				continue ;
-			if (!match_nick_mask(it->second.get_nick(), mask) && it->second.get_host_ip() != mask 
-				&& this->_name != mask && it->second.get_realname() != mask)
-				continue ; // skip clients that don't match mask format
+			if (!match_wildcard(mask, it->second.get_nick(), 0, 0) && !match_wildcard(mask, it->second.get_host_ip(), 0, 0)
+				&& !match_wildcard(mask, this->_name, 0, 0) && !match_wildcard(mask, it->second.get_realname(), 0, 0))
+				continue ; // skip clients that don't match mask
 			flags = "H";
 			if (it->second.is_away())
 				flags = "G";

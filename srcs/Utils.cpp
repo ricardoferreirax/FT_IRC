@@ -6,11 +6,12 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 15:13:28 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/06 13:29:43 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Utils.hpp"
+#include "../includes/Server.hpp"
 
 t_cmode	default_mode(void)
 {
@@ -176,6 +177,82 @@ std::string generateRandomString(int length)
 	return (random_string);
 }
 
+bool match_ban(Client &client, t_banmask ban)
+{
+	if(!ban.valid)
+		return false;
+	return (match_wildcard(ban.host, client.get_host_ip()) && match_wildcard(ban.user, client.get_user()) && match_wildcard(ban.nick, client.get_nick()));
+}
+
+t_banmask	parseBanMask(std::string banmask)
+{
+	// Pedro's Anti-Cheat ban 😆
+	t_banmask	PAC_ban;
+
+	std::string::size_type exclamationPoint;
+	std::string::size_type arrobaPos;
+	std::string 		   remainer;
+	std::string 		   nick;
+	std::string 		   user;
+	std::string 		   host;
+	
+	nick = "*";
+	user = "*";
+	host = "*";
+	exclamationPoint = banmask.find("!");
+	if (exclamationPoint != banmask.npos)
+	{
+		nick = banmask.substr(0, exclamationPoint);
+		remainer = banmask.substr(exclamationPoint + 1);
+		if (nick.empty())
+		{
+			PAC_ban.valid = false;
+			return (PAC_ban);
+		}
+		arrobaPos = remainer.find("@");
+		if (arrobaPos == remainer.npos)
+		{
+			PAC_ban.valid = false;
+			return (PAC_ban);
+		}
+		user = remainer.substr(0, arrobaPos);
+		host = remainer.substr(arrobaPos + 1);
+		if (user.empty() || host.empty())
+		{
+			PAC_ban.valid = false;
+			return (PAC_ban);
+		}
+	}
+	else
+	{
+		arrobaPos = banmask.find("@");
+		if (arrobaPos != banmask.npos)
+		{
+			user = banmask.substr(0, arrobaPos);
+			host = banmask.substr(arrobaPos + 1);
+			if (user.empty() || host.empty())
+			{
+				PAC_ban.valid = false;
+				return (PAC_ban);
+			}
+		}
+		else
+		{
+			if(banmask.empty())
+			{
+				PAC_ban.valid = false;
+				return (PAC_ban);
+			}
+			host = banmask;
+		}
+	}
+	PAC_ban.nick = nick;
+	PAC_ban.user = user;
+	PAC_ban.host = host;
+	PAC_ban.valid = true;
+	return (PAC_ban);
+}
+
 std::string get_error_param(const std::string &cmd, int error, const std::vector<std::string> &params)
 {
 	if (params.empty())
@@ -234,22 +311,21 @@ void	log_tcp(log_type type, int fd, ssize_t bytes, const std::string &data)
 	std::cout << " \033[90m(" << bytes << "B)\033[0m\n";
 }
 
-bool	match_nick_mask(const std::string &nick, const std::string &mask)
+bool match_wildcard(std::string pattern, std::string match, size_t pi, size_t mi)
 {
-	size_t	pos;
-	size_t	length;
-
-	pos = mask.find('*');
-	if (pos == std::string::npos)
-		return (same_nick(nick, mask)); // no wildcard ->return true if nicks are equal
-	if (mask == "*")
-		return (true); // only wildcard matches any nick
-	length = mask.size() - 1;
-	if (nick.size() < length)
-		return (false); // nick is shorter than mask->can't match
-	if (pos == 0)
-		return (same_nick(nick.substr(nick.size() - length), mask.substr(1))); // wildcard at start->compare end of nick with rest of mask
-	if (pos == length)
-		return (same_nick(nick.substr(0, length), mask.substr(0, length))); // wildcard at end->compare start of nick with rest of mask
-	return (false);
+	if(pattern[pi] == '\0')
+		return match[mi] == '\0';
+	if(pattern[pi] == '*')
+	{
+		if(match_wildcard(pattern , match, pi + 1, mi))
+			return (true);
+		if(match[mi] != '\0' && match_wildcard(pattern, match, pi, mi + 1))
+			return (true);
+		return (false);
+	}
+	if(match[mi] == '\0')
+		return (false);
+	if(match[mi] == pattern[pi])
+		return(match_wildcard(pattern,  match, pi + 1, mi + 1));
+	return false;
 }

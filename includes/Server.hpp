@@ -6,21 +6,22 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 22:37:58 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/06 10:25:05 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
-# define SERVER_HPP
+#define SERVER_HPP
 
-# include "../bonus/includes/Bot.hpp"
-# include "Client.hpp"
-# include <csignal>
-# include <ctime>
-# include <map>
-# include <string>
-# include <sys/epoll.h>
-# include <vector>
+#include "Client.hpp"
+#include "Channels.hpp"
+#include "../bonus/includes/Bot.hpp"
+#include <csignal>
+#include <ctime>
+#include <map>
+#include <string>
+#include <sys/epoll.h>
+#include <vector>
 
 extern volatile sig_atomic_t	alive;
 

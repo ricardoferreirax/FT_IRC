@@ -6,13 +6,14 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 22:51:13 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/06 10:24:06 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../bonus/includes/Bot.hpp"
 #include "../includes/Server.hpp"
+#include "../includes/Channels.hpp"
 #include "../includes/Utils.hpp"
+#include "../bonus/includes/Bot.hpp"
 #include <arpa/inet.h>
 #include <cstring>
 #include <fcntl.h>

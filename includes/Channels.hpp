@@ -6,41 +6,19 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 14:11:26 by pedro             #+#    #+#             */
-/*   Updated: 2026/10/26 17:29:58 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/06 10:37:41 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef CHANNELS_HPP
-# define CHANNELS_HPP
+#define CHANNELS_HPP
 
-# include "Client.hpp"
-# include "Server.hpp"
-# include <iostream>
-# include <map>
-# include <set>
-
-typedef struct	s_ulimit
-{
-	size_t	u_limit;
-	size_t	u_count;
-}	t_ulimit;
-
-typedef struct	s_mode
-{
-	std::string	topic;
-	std::string	key;
-	t_ulimit	users;
-	bool		invite_only;
-	bool		topic_restricted;
-}	t_cmode;
-
-typedef struct	s_modecmd
-{
-	std::string param;
-	bool		needs_param;
-	bool		is_add;
-	char		flag;
-}	t_modecmd;
+#include "Utils.hpp"
+#include "Client.hpp"
+#include "Server.hpp"
+#include <iostream>
+#include <map>
+#include <set>
 
 class	Channel
 {
@@ -50,20 +28,26 @@ class	Channel
 		std::map<int, Client *> _clients;
 		std::set<int> 			_chanops;
 		std::set<int> 			_invites;
+		std::vector<t_banmask>  _bans;
 		Channel(void);
 
 	public:
 		Channel(std::string name, t_cmode mode, Client &chanop);
 		~Channel(void);
 		
-		int joinChannel(Client &guest, std::string key);
-		int leaveChannel(Client guest);
-		bool inviteUser(Client guest);
-		std::string getName(void) const;
-		std::set<int> getChannops(void) const;
-		std::map<int, Client *> getClients(void) const;
-		std::set<int> getInvites(void) const;
-		t_cmode getMode(void) const;
+		std::map<int, Client *> &getClients(void);
+		std::set<int> 			&getChannops(void);
+		std::set<int> 			&getInvites(void);
+		std::string   			getName(void) const;
+		std::vector<t_banmask>  getBanmask(void);
+		t_cmode 				getMode(void) const;
+				
+		int	 joinChannel(Client &guest, std::string key);
+		int  leaveChannel(Client &guest);
+		int  PAC_check(Client &guest);
+		bool addBanMask(std::string banmask);
+		bool inviteUser(Client &guest);
+		void removeBanMask(std::string banmask);
 		void setMode(bool invite, bool topic_restricted, std::string topic, t_ulimit users, std::string key);
 };
 
