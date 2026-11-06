@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:21:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 14:54:37 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/06 18:05:52 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -187,6 +187,83 @@ int Server::part_cmd(Client &client, const std::vector<std::string> &params)
 			if (params.size() == 2)
 				notify_chan.push_back("Reason: " + params[1]);
 			this->privmsg_cmd(client, notify_chan);
+		}
+		i++;
+	}
+	return (0);
+}
+
+int Server::kick_cmd(Client &client, const std::vector<std::string> &params)
+{
+	std::map<std::string, Channel>::iterator chanit;
+	std::map<int, Client>::iterator 		 clienit;
+	std::map<int, Client *>::iterator 		 it;
+	std::vector<std::string> 				 channels;
+	std::vector<std::string> 				 clients;
+	std::vector<std::string> 				 args;
+	std::string 							 victim_msg;
+	size_t									 i;
+	size_t									 j;
+
+	if (params.size() < 2)
+	{
+		this->send_error(client, ERR_NEEDMOREPARAMS, "KICK");
+		return (-1);
+	}
+	channels = ft_split(params[0], ',');
+	clients = ft_split(params[1], ',');
+	if (channels.empty() || clients.empty())
+	{
+		this->send_error(client, ERR_NEEDMOREPARAMS, "KICK");
+		return (-1);
+	}
+	if (!check_allchans(channels, &client))
+		return (-1);
+	i = 0;
+	while (i < channels.size())
+	{
+		chanit = this->_channels.find(channels[i]);
+		j = 0;
+		while (j < clients.size())
+		{
+			if (!chanit->second.getChannops().count(client.get_client_fd()))
+			{
+				this->send_error(client, ERR_CHANOPRIVSNEEDED, channels[i]);
+				break ;
+			}
+			clienit = this->reverseClientSearch(clients[j]);
+			if (clienit == this->_clients.end())
+			{
+				this->send_error(client, ERR_NOSUCHNICK, clients[j]);
+				j++;
+				continue ;
+			}
+			if (!chanit->second.getClients().count(clienit->first))
+			{
+				this->send_error(client, ERR_USERNOTINCHANNEL, clients[j] + " " + channels[i]);
+				j++;
+				continue ;
+			}
+			args.clear();
+			args.push_back(channels[i]);
+			args.push_back(clients[j]);
+			if (params.size() > 2 && !params[2].empty())
+				args.push_back(params[2]);
+			else
+				args.push_back("No reason provided");
+			victim_msg = "KICK " + args[0] + " " + args[1] + " :" + args[2];
+			it = chanit->second.getClients().begin();
+			while (it != chanit->second.getClients().end())
+			{
+				this->send_cmd(client, *it->second, victim_msg);
+				it++;
+			}
+			if (chanit->second.leaveChannel(clienit->second) == -1)
+			{
+				this->_channels.erase(chanit);
+				break ;
+			}
+			j++;
 		}
 		i++;
 	}

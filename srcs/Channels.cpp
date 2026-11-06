@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:50:09 by pedro             #+#    #+#             */
-/*   Updated: 2026/11/06 13:28:30 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/06 15:14:07 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,6 +58,24 @@ t_cmode Channel::getMode(void) const
 std::vector<t_banmask> Channel::getBanmask(void)
 {
 	return (this->_bans);
+}
+
+bool Server::check_allchans(const std::vector<std::string> &chans, Client *client)
+{
+	size_t	i;
+
+	i = 0;
+	while (i < chans.size())
+	{
+		if (this->_channels.find(chans[i]) == this->_channels.end())
+		{
+			if (client != NULL)
+				this->send_error(*client, ERR_NOSUCHCHANNEL, chans[i] + ", no action was taken");
+			return (false);
+		}
+		i++;
+	}
+	return (true);
 }
 
 bool Channel::addBanMask(std::string banmask)

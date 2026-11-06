@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:41:14 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 22:47:56 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/06 18:06:29 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -126,6 +126,8 @@ int Server::help_cmd(Client &client, const std::vector<std::string> &params)
 	parameters["MODE"] = "<nickname|channel> [<+|-modes> [<modeparams>]]";
 	descripts["PART"] = "Leave one or more channels without disconnecting from server. Other members will be notified, and may include an parting message.";
 	parameters["PART"] = "<channel>{,<channel>} [:<part message>]";
+	descripts["KICK"] = "Remove users from a channel. Only channops can use this command. An optional reason can be provided for the kick.";
+	parameters["KICK"] = "<channel>{,<channel>} <user>{,<user>} [<comment>]";
 	descripts["NOTICE"] = "Send info message to user/channel. Unlike PRIVMSG, NOTICE shouldn't create automatic error replies, it's useful for automated messages.";
 	parameters["NOTICE"] = "<nickname|channel>{,<nickname|channel>} :<message>";
 	descripts["WHO"] = "Display info about users matching a nickname/channel/search mask. Use * to search for multiple users or omit mask to list users.";
