@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/06 10:25:05 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/06 14:00:49 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -82,12 +82,14 @@ enum	e_irc_error
 	ERR_NONICKNAMEGIVEN = 431,
 	ERR_ERRONEOUSNICKNAME = 432,
 	ERR_NICKNAMEINUSE = 433,
+	ERR_USERNOTINCHANNEL = 441,
 	ERR_NOTONCHANNEL = 442,
 	ERR_USERONCHANNEL = 443,
 	ERR_NOTREGISTERED = 451,
 	ERR_NEEDMOREPARAMS = 461,
 	ERR_ALREADYREGISTRED = 462,
 	ERR_PASSWDMISMATCH = 464,
+	ERR_KEYSET = 467,
 	ERR_CHANNELISFULL = 471,
 	ERR_UNKNOWNMODE = 472,
 	ERR_INVITEONLYCHAN = 473,
@@ -162,8 +164,12 @@ class	Server
 		bool 	handle_kmode(Client &client, std::string chan_name, t_modecmd flag);
 		bool 	handle_omode(Client &client, std::string chan_name, t_modecmd flag);
 		bool 	handle_lmode(Client &client, std::string chan_name, t_modecmd flag);
+		bool 	handle_bmode(Client &client, std::string chan_name, t_modecmd flag);
 		
-		Channel *validate_channel_op(Client &client, const std::string &channel_name, bool needs_sudo);
+		void 	leaveChans(Client client);
+		bool 	check_allchans(const std::vector<std::string> &chans, Client *client = NULL);
+		std::map<int, Client>::iterator reverseClientSearch(std::string nick);
+		Channel *validate_channel_op(Client &client, const std::string &channel_name);
 
 	public:
 		Server(const std::string &port, const std::string &pass);
@@ -181,6 +187,6 @@ class	Server
 void	handle_signal(int signal);
 void	setup_signals(void);
 
-bool	tokenize_mode_flags(const std::string &params, std::vector<t_modecmd> &flags, const std::vector<std::string> cmdargs, size_t arg_idx);
+int 	tokenize_mode_flags(const std::string &params, std::vector<t_modecmd> &flags, const std::vector<std::string> cmdargs, size_t arg_idx);
 
 #endif

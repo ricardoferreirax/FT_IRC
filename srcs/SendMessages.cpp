@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Messages.cpp                                       :+:      :+:    :+:   */
+/*   SendMessages.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/03 13:00:50 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/06 14:01:05 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -97,12 +97,14 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	errors[ERR_NONICKNAMEGIVEN] = "431 " + nick + " :No nickname given";
 	errors[ERR_ERRONEOUSNICKNAME] = "432 " + nick + " " + param + " :Erroneous nickname";
 	errors[ERR_NICKNAMEINUSE] = "433 " + nick + " " + param + " :Nickname is already in use";
+	errors[ERR_USERNOTINCHANNEL] = "441 " + nick + " " + param + " :They aren't on that channel";
 	errors[ERR_NOTONCHANNEL] = "442 " + nick + " " + param + " :You're not on that channel";
 	errors[ERR_USERONCHANNEL] = "443 " + nick + " " + param + " :is already on channel";
 	errors[ERR_NOTREGISTERED] = "451 " + nick + " :You have not registered";
 	errors[ERR_NEEDMOREPARAMS] = "461 " + nick + " " + param + " :Not enough parameters";
 	errors[ERR_ALREADYREGISTRED] = "462 " + nick + " :You may not reregister";
 	errors[ERR_PASSWDMISMATCH] = "464 " + nick + " :Password incorrect";
+	errors[ERR_KEYSET] = "467 " + nick + " " + param + " :Channel key already set";
 	errors[ERR_CHANNELISFULL] = "471 " + nick + " " + param + " :Cannot join channel (+l)";
 	errors[ERR_UNKNOWNMODE] = "472 " + nick + " " + param + " :is unknown mode char to me";
 	errors[ERR_INVITEONLYCHAN] = "473 " + nick + " " + param + " :Cannot join channel (+i)";
