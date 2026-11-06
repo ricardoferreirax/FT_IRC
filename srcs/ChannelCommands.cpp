@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:21:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/06 18:05:52 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/06 21:16:16 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -153,41 +153,60 @@ int Server::mode_cmd(Client &client, const std::vector<std::string> &params)
 int Server::part_cmd(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, Channel>::iterator chanit;
-	std::vector<std::string>				 channels;
-	std::vector<std::string>				 notify_chan;
-	size_t 									 i;
+	std::map<int, Client *>::iterator 		 it;
+	std::vector<std::string> 				 channels;
+	std::vector<std::string> 				 notify_chan;
+	std::string 							 msg;
+	size_t									 i;
+	int										 newchannopFD;
 
 	if (params.empty() || params[0].empty())
-		return (ERR_NEEDMOREPARAMS);
-	i = 0;
-	while (i < channels.size())
 	{
-		chanit = this->_channels.find(channels[i]);
-		if (chanit == this->_channels.end())
-		{
-			this->send_error(client, ERR_NOSUCHCHANNEL, channels[i]);
-			return (0);
-		}
-		i++;
+		this->send_error(client, ERR_NEEDMOREPARAMS, "PART");
+		return (-1);
 	}
+	channels = ft_split(params[0], ',');
+	if (channels.empty() || !check_allchans(channels, &client))
+		return (-1);
 	i = 0;
 	while (i < channels.size())
 	{
 		chanit = this->_channels.find(channels[i]);
-		chanit->second.leaveChannel(client);
-		chanit->second.getInvites().erase(client.get_client_fd());
-		std::cout << client.get_client_fd() << " has left " << chanit->second.getName() << std::endl;
-		if (chanit->second.getClients().size() <= 0)
-			this->_channels.erase(chanit);
-		else
+		if (!chanit->second.getClients().count(client.get_client_fd()))
 		{
-			notify_chan.clear();
-			notify_chan.push_back(channels[i]);
-			notify_chan.push_back(client.get_nick() + " has left");
-			if (params.size() == 2)
-				notify_chan.push_back("Reason: " + params[1]);
-			this->privmsg_cmd(client, notify_chan);
+			this->send_error(client, ERR_NOTONCHANNEL, channels[i]);
+			i++;
+			continue ;
 		}
+		notify_chan.clear();
+		// std::cout << client.get_client_fd() << " has left " << chanit->second.getName() << std::endl;
+		notify_chan.push_back(channels[i]);
+		notify_chan.push_back(client.get_nick() + " has left");
+		if (params.size() == 2)
+		    notify_chan.push_back("Reason: " + params[1]);
+		msg = "PART " + notify_chan[0];
+		if (params.size() == 2)
+		    msg += " :" + params[1];
+		it = chanit->second.getClients().begin();
+		while (it != chanit->second.getClients().end())
+		{
+			this->send_cmd(client, *it->second, msg);
+			it++;
+		}
+		newchannopFD = chanit->second.leaveChannel(client);
+		if (newchannopFD > 0)
+		{
+			msg = "NOTICE " + channels[i] + " :" + this->_clients.find(newchannopFD)->second.get_nick() + " is the new channel operator";
+			it = chanit->second.getClients().begin();
+			while (it != chanit->second.getClients().end())
+			{
+				this->send_cmd(client, *it->second, msg);
+				this->send_cmd(client, *it->second, "MODE " + channels[i] + " +o " + this->_clients.find(newchannopFD)->second.get_nick());
+				it++;
+			}
+		}
+		if (newchannopFD == -1)
+			this->_channels.erase(chanit);
 		i++;
 	}
 	return (0);
