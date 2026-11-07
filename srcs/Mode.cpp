@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 17:31:45 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/06 14:27:44 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/07 21:59:19 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -128,7 +128,7 @@ bool Server::handle_imode(Client &client, std::string chan_name, t_modecmd flag)
 	if(!channel)
 		return (false);
 	channel->setMode(flag.is_add, channel->getMode().topic_restricted, channel->getMode().topic, channel->getMode().users, channel->getMode().key);
-	std::cout << "Channel " << chan_name << " now has " << flag.is_add << " i" << std::endl;
+	// std::cout << "Channel " << chan_name << " now has " << flag.is_add << " i" << std::endl;
 	return (true);
 }
 
@@ -140,7 +140,7 @@ bool Server::handle_tmode(Client &client, std::string chan_name, t_modecmd flag)
 	if(!channel)
 		return (false);
 	channel->setMode(channel->getMode().invite_only, flag.is_add, channel->getMode().topic, channel->getMode().users, channel->getMode().key);
-	std::cout << "Channel " << chan_name << " now has " << flag.is_add << " t" << std::endl;
+	// std::cout << "Channel " << chan_name << " now has " << flag.is_add << " t" << std::endl;
 	return (true);
 }
 
@@ -165,16 +165,17 @@ bool Server::handle_kmode(Client &client, std::string chan_name, t_modecmd flag)
 		channel->setMode(channel->getMode().invite_only, channel->getMode().topic_restricted, channel->getMode().topic, channel->getMode().users, flag.param);
 	else
 		channel->setMode(channel->getMode().invite_only, channel->getMode().topic_restricted, channel->getMode().topic, channel->getMode().users, "");
-	std::cout << "Channel " << chan_name << " now has " << flag.is_add << " k" << std::endl;
+	// std::cout << "Channel " << chan_name << " now has " << flag.is_add << " k" << std::endl;
 	return (true);
 }
 
 bool Server::handle_omode(Client &client, std::string chan_name, t_modecmd flag)
 {
-	std::map<int, Client>::iterator clienit;
-	Channel 					   *channel;
+	std::map<int, Client *>::iterator it;
+	std::map<int, Client>::iterator   clienit;
+	Channel							 *channel;
 
-	channel = validate_channel_op(client, chan_name);
+	channel = this->validate_channel_op(client, chan_name);
 	if (!channel)
 		return (false);
 	clienit = this->reverseClientSearch(flag.param);
@@ -192,9 +193,14 @@ bool Server::handle_omode(Client &client, std::string chan_name, t_modecmd flag)
 		channel->getChannops().insert(clienit->second.get_client_fd());
 	else
 		channel->getChannops().erase(clienit->second.get_client_fd());
-	if (channel->getChannops().size() <= 0 && !channel->getClients().empty())
-		channel->getChannops().insert(channel->getClients().begin()->first);
-	std::cout << "Channel " << chan_name << " now has " << flag.is_add << " o" << std::endl;
+	if (channel->getChannops().empty() && !channel->getClients().empty())
+	{
+		it = channel->getClients().begin();
+		if (it->first == clienit->first && channel->getClients().size() > 1)
+			it++;
+		channel->getChannops().insert(it->first);
+	}
+	// std::cout << "Channel " << chan_name << " now has " << flag.is_add << " o" << std::endl;
 	return (true);
 }
 
@@ -212,7 +218,7 @@ bool Server::handle_lmode(Client &client, std::string chan_name, t_modecmd flag)
 	else
 		users.u_limit = 0;
 	channel->setMode(channel->getMode().invite_only, channel->getMode().topic_restricted, channel->getMode().topic, users, channel->getMode().key);
-	std::cout << "Channel " << chan_name << " now has " << flag.is_add << " l" << std::endl;
+	// std::cout << "Channel " << chan_name << " now has " << flag.is_add << " l" << std::endl;
 	return (true);
 }
 
@@ -232,6 +238,6 @@ bool Server::handle_bmode(Client &client, std::string chan_name, t_modecmd flag)
 	}
 	else
 		channel->removeBanMask(flag.param);
-	std::cout << "Channel " << chan_name << " now has " << flag.is_add << " b" << std::endl;
+	// std::cout << "Channel " << chan_name << " now has " << flag.is_add << " b" << std::endl;
 	return (true);
 }

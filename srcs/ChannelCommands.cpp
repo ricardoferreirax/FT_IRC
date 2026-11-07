@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:21:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/07 21:13:33 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/07 22:51:14 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -78,6 +78,7 @@ int Server::join_cmd(Client &client, const std::vector<std::string> &params)
 		}
 		if (!chanit->second.getMode().topic.empty())
 			this->send_reply(client, RPL_TOPIC, chan_name, chanit->second.getMode().topic);
+		this->send_channel_names(client, chanit->second);
 		i++;
 	}
 	return (0);
@@ -148,6 +149,7 @@ int Server::mode_cmd(Client &client, const std::vector<std::string> &params)
 	std::vector<t_modecmd> 					 flags;
 	size_t									 i;
 	int										 ret;
+	int										 newopFD;
 	bool									 res;
 
 	if (params.empty() || params[0].empty())
@@ -173,6 +175,9 @@ int Server::mode_cmd(Client &client, const std::vector<std::string> &params)
 	while (i < flags.size())
 	{
 		res = false;
+		newopFD = -1;
+		if (flags[i].flag == 'o' && !flags[i].is_add && chanit->second.getChannops().size() == 1)
+			newopFD = *chanit->second.getChannops().begin();
 		switch (flags[i].flag)
 		{
 		case 'i':
@@ -196,6 +201,9 @@ int Server::mode_cmd(Client &client, const std::vector<std::string> &params)
 		}
 		if (!res)
 			return (0);
+		this->notify_mode_change(client, chanit->second, flags[i]);
+		if (newopFD > 0 && !chanit->second.getChannops().count(newopFD))
+			this->notify_new_op(chanit->second, *chanit->second.getChannops().begin());
 		i++;
 	}
 	return (0);

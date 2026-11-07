@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/07 21:14:18 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/07 22:55:32 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -190,6 +190,27 @@ void Server::notify_new_op(Channel &channel, int fd)
 	}
 }
 
+void Server::notify_mode_change(Client &client, Channel &channel, t_modecmd flag)
+{
+	std::map<int, Client *>::iterator it;
+	std::string 					  msg;
+	
+	msg = "MODE " + channel.getName() + " ";
+	if (flag.is_add)
+		msg += "+";
+	else
+		msg += "-";
+	msg += flag.flag;
+	if (!flag.param.empty())
+		msg += " " + flag.param;
+	it = channel.getClients().begin();
+	while (it != channel.getClients().end())
+	{
+		this->send_cmd(client, *it->second, msg);
+		it++;
+	}
+}
+
 void Server::send_channel_modes(Client &client, Channel &channel)
 {
 	std::ostringstream limit;
@@ -213,4 +234,21 @@ void Server::send_channel_modes(Client &client, Channel &channel)
 		args += " " + limit.str();
 	}
 	this->send_reply(client, RPL_CHANNELMODEIS, channel.getName() + " " + modes + args, "");
+}
+
+void Server::send_channel_names(Client &client, Channel &channel)
+{
+	std::map<int, Client *>::iterator it;
+	std::string 					  names;
+
+	it = channel.getClients().begin();
+	while (it != channel.getClients().end())
+	{
+		if (channel.getChannops().count(it->first))
+			names += "@";
+		names += it->second->get_nick() + " ";
+		it++;
+	}
+	this->send_reply(client, RPL_NAMREPLY, "= " + channel.getName(), names);
+	this->send_reply(client, RPL_ENDOFNAMES, channel.getName(), "End of NAMES list.");
 }
