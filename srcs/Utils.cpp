@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/06 13:29:43 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/07 12:24:52 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -256,20 +256,27 @@ t_banmask	parseBanMask(std::string banmask)
 std::string get_error_param(const std::string &cmd, int error, const std::vector<std::string> &params)
 {
 	if (params.empty())
-		return (cmd); // if no params->return cmd as param
-	if (cmd == "INVITE" && params.size() >= 2)
+		return (cmd);
+	if (cmd == "INVITE")
 	{
-		if (error == ERR_USERONCHANNEL)
+		if (error == ERR_USERONCHANNEL && params.size() > 1)
 			return (params[0] + " " + params[1]); // send error w/ target and channel as param
-		if (error == ERR_NOSUCHCHANNEL || error == ERR_NOTONCHANNEL || error == ERR_CHANOPRIVSNEEDED)
+		if ((error == ERR_NOSUCHCHANNEL || error == ERR_NOTONCHANNEL || error == ERR_CHANOPRIVSNEEDED) && params.size() > 1)
 			return (params[1]); // send error w/ channel as param
 	}
-	if (error == ERR_NOSUCHNICK || error == ERR_NICKNAMEINUSE || error == ERR_ERRONEOUSNICKNAME)
-		return (params[0]); // send error w/ target as param
-	if (cmd == "JOIN" || cmd == "MODE" || cmd == "PART")
+	if (cmd == "KICK")
 	{
-		if (error == ERR_NOSUCHCHANNEL || error == ERR_NOTONCHANNEL || error == ERR_CHANOPRIVSNEEDED 
-			|| error == ERR_INVITEONLYCHAN || error == ERR_BADCHANNELKEY || error == ERR_CHANNELISFULL)
+		if (error == ERR_NOSUCHNICK && params.size() > 1)
+			return (params[1]); // send error w/ nick as param
+		if (error == ERR_USERNOTINCHANNEL && params.size() > 1)
+			return (params[1] + " " + params[0]); // send error w/ target and channel as param
+	}
+	if (error == ERR_NOSUCHNICK || error == ERR_NICKNAMEINUSE || error == ERR_ERRONEOUSNICKNAME)
+		return (params[0]); // send error w/ nick as param
+	if (cmd == "JOIN" || cmd == "MODE" || cmd == "PART" || cmd == "TOPIC" || cmd == "KICK")
+	{
+		if (error == ERR_NOSUCHCHANNEL || error == ERR_NOTONCHANNEL || error == ERR_CHANOPRIVSNEEDED || error == ERR_INVITEONLYCHAN
+			|| error == ERR_BADCHANNELKEY || error == ERR_CHANNELISFULL || error == ERR_BADCHANMASK || error == ERR_BANNEDFROMCHAN)
 			return (params[0]); // send error w/ channel as param
 	}
 	if (cmd == "HELP" && error == ERR_HELPNOTFOUND)
