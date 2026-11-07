@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:21:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/07 13:20:05 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/07 21:13:33 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -147,7 +147,7 @@ int Server::mode_cmd(Client &client, const std::vector<std::string> &params)
 	std::map<std::string, Channel>::iterator chanit;
 	std::vector<t_modecmd> 					 flags;
 	size_t									 i;
-	int										 err;
+	int										 ret;
 	bool									 res;
 
 	if (params.empty() || params[0].empty())
@@ -157,18 +157,18 @@ int Server::mode_cmd(Client &client, const std::vector<std::string> &params)
 		return (ERR_NOSUCHCHANNEL);
 	if (params.size() < 2)
 	{
-		this->send_reply(client, RPL_CHANNELMODEIS, params[0], "");
+		this->send_channel_modes(client, chanit->second);
 		return (0);
 	}
 	if (!chanit->second.getChannops().count(client.get_client_fd()))
 		return (ERR_CHANOPRIVSNEEDED);
-	err = tokenize_mode_flags(params[1], flags, params, 2);
-	if (err == -1)
+	ret = tokenize_mode_flags(params[1], flags, params, 2);
+	if (ret == -1)
 		return (ERR_UNKNOWNMODE);
-	if (err == -2)
+	if (ret == -2)
 		return (ERR_NEEDMOREPARAMS);
-	if (err != 0)
-		return (-1);
+	if (ret != 0)
+		return (0);
 	i = 0;
 	while (i < flags.size())
 	{
@@ -204,14 +204,12 @@ int Server::mode_cmd(Client &client, const std::vector<std::string> &params)
 int Server::part_cmd(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, Channel>::iterator chanit;
+	std::vector<std::string> channels, 		 notify_chan;
 	std::map<int, Client *>::iterator 		 it;
-	std::vector<std::string> 				 channels;
-	std::vector<std::string> 				 notify_chan;
 	std::string 							 msg;
-	std::string 							 newchannop;
-	int										 newchannopFD;
 	size_t									 i;
-	
+	int										 newchannopFD;
+
 	if (params.empty() || params[0].empty())
 		return (ERR_NEEDMOREPARAMS);
 	channels = ft_split(params[0], ',');
@@ -222,46 +220,31 @@ int Server::part_cmd(Client &client, const std::vector<std::string> &params)
 	{
 		chanit = this->_channels.find(channels[i]);
 		if (chanit == this->_channels.end())
-		{
 			this->send_error(client, ERR_NOSUCHCHANNEL, channels[i]);
-			i++;
-			continue ;
-		}
-		if (!chanit->second.getClients().count(client.get_client_fd()))
-		{
+		else if (!chanit->second.getClients().count(client.get_client_fd()))
 			this->send_error(client, ERR_NOTONCHANNEL, channels[i]);
-			i++;
-			continue ;
-		}
-		notify_chan.clear();
-		notify_chan.push_back(channels[i]);
-		notify_chan.push_back(client.get_nick() + " has left");
-		if (params.size() > 1)
-			notify_chan.push_back("Reason: " + params[1]);
-		msg = "PART " + notify_chan[0];
-		if (params.size() > 1)
-			msg += " :" + params[1];
-		it = chanit->second.getClients().begin();
-		while (it != chanit->second.getClients().end())
+		else
 		{
-			this->send_cmd(client, *it->second, msg);
-			it++;
-		}
-		newchannopFD = chanit->second.leaveChannel(client);
-		if (newchannopFD > 0)
-		{
-			newchannop = this->_clients.find(newchannopFD)->second.get_nick();
-			msg = "NOTICE " + channels[i] + " :" + newchannop + " is the new channel operator";
+			notify_chan.clear();
+			notify_chan.push_back(channels[i]);
+			notify_chan.push_back(client.get_nick() + " has left");
+			if (params.size() > 1)
+				notify_chan.push_back("Reason: " + params[1]);
+			msg = "PART " + notify_chan[0];
+			if (params.size() > 1)
+				msg += " :" + params[1];
 			it = chanit->second.getClients().begin();
 			while (it != chanit->second.getClients().end())
 			{
 				this->send_cmd(client, *it->second, msg);
-				this->send_cmd(client, *it->second, "MODE " + channels[i] + " +o " + newchannop);
 				it++;
 			}
+			newchannopFD = chanit->second.leaveChannel(client);
+			if (newchannopFD > 0)
+				this->notify_new_op(chanit->second, newchannopFD);
+			else if (newchannopFD == -1)
+				this->_channels.erase(chanit);
 		}
-		if (newchannopFD == -1)
-			this->_channels.erase(chanit);
 		i++;
 	}
 	return (0);
@@ -292,42 +275,43 @@ int Server::kick_cmd(Client &client, const std::vector<std::string> &params)
 	{
 		chanit = this->_channels.find(channels[i]);
 		if (!chanit->second.getChannops().count(client.get_client_fd()))
-		{
 			this->send_error(client, ERR_CHANOPRIVSNEEDED, channels[i]);
-			i++;
-			continue ;
-		}
-		j = 0;
-		while (j < clients.size())
+		else
 		{
-			clienit = this->reverseClientSearch(clients[j]);
-			if (clienit == this->_clients.end())
-				this->send_error(client, ERR_NOSUCHNICK, clients[j++]);
-			else if (!chanit->second.getClients().count(clienit->first))
-				this->send_error(client, ERR_USERNOTINCHANNEL, clients[j++] + " " + channels[i]);
-			else
+			j = 0;
+			while (j < clients.size())
 			{
-				args.clear();
-				args.push_back(channels[i]);
-				args.push_back(clients[j]);
-				if (params.size() > 2 && !params[2].empty())
-					args.push_back(params[2]);
+				clienit = this->reverseClientSearch(clients[j]);
+				if (clienit == this->_clients.end())
+					this->send_error(client, ERR_NOSUCHNICK, clients[j]);
+				else if (!chanit->second.getClients().count(clienit->first))
+					this->send_error(client, ERR_USERNOTINCHANNEL, clients[j] + " " + channels[i]);
 				else
-					args.push_back("No reason provided");
-				it = chanit->second.getClients().begin();
-				while (it != chanit->second.getClients().end())
 				{
-					this->send_cmd(client, *it->second, "KICK " + args[0] + " " + args[1] + " :" + args[2]);
-					it++;
+					args.clear();
+					args.push_back(channels[i]);
+					args.push_back(clients[j]);
+					if (params.size() > 2 && !params[2].empty())
+						args.push_back(params[2]);
+					else
+						args.push_back("No reason provided");
+					it = chanit->second.getClients().begin();
+					while (it != chanit->second.getClients().end())
+					{
+						this->send_cmd(client, *it->second, "KICK " + args[0] + " " + args[1] + " :" + args[2]);
+						it++;
+					}
+					ret = chanit->second.leaveChannel(clienit->second);
+					if (ret == -1)
+					{
+						this->_channels.erase(chanit);
+						break ;
+					}
+					if (ret > 0)
+						this->notify_new_op(chanit->second, ret);
+					if (!chanit->second.getChannops().count(client.get_client_fd()))
+						break ;
 				}
-				ret = chanit->second.leaveChannel(clienit->second);
-				if (ret == -1)
-				{
-					this->_channels.erase(chanit);
-					break ;
-				}
-				if (!chanit->second.getChannops().count(client.get_client_fd()))
-					break ;
 				j++;
 			}
 		}

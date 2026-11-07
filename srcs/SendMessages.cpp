@@ -6,12 +6,13 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/07 12:06:29 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/07 21:14:18 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-# include "../includes/Server.hpp"
-# include "../includes/Utils.hpp"
+#include "../includes/Server.hpp"
+#include "../includes/Client.hpp"
+#include "../includes/Utils.hpp"
 
 void Server::send_cmd(Client &sender, Client &receiver, const std::string &msg)
 {
@@ -164,4 +165,52 @@ void Server::send_notice(Client &client, int notice, const std::string &param)
 	event.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
+}
+
+void Server::notify_new_op(Channel &channel, int fd)
+{
+	std::map<int, Client *>::iterator it;
+	std::map<int, Client>::iterator   newop;
+	epoll_event						  event;
+	std::string 					  msg;
+
+	newop = this->_clients.find(fd);
+	if (newop == this->_clients.end())
+		return ;
+	msg = ":" + this->_name + " MODE " + channel.getName() + " +o " + newop->second.get_nick() + "\r\n";
+	it = channel.getClients().begin();
+	while (it != channel.getClients().end())
+	{
+		it->second->get_send_buffer() += msg;
+		event.events = EPOLLIN | EPOLLOUT;
+		event.data.fd = it->first;
+		if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, it->first, &event) == -1)
+			std::cerr << "IRC: epoll_ctl() failed." << std::endl;
+		it++;
+	}
+}
+
+void Server::send_channel_modes(Client &client, Channel &channel)
+{
+	std::ostringstream limit;
+	std::string 	   modes;
+	std::string 	   args;
+	
+	modes = "+";
+	if (channel.getMode().invite_only)
+		modes += "i";
+	if (channel.getMode().topic_restricted)
+		modes += "t";
+	if (!channel.getMode().key.empty())
+	{
+		modes += "k";
+		args += " " + channel.getMode().key;
+	}
+	if (channel.getMode().users.u_limit > 0)
+	{
+		modes += "l";
+		limit << channel.getMode().users.u_limit;
+		args += " " + limit.str();
+	}
+	this->send_reply(client, RPL_CHANNELMODEIS, channel.getName() + " " + modes + args, "");
 }
