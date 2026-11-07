@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:21:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/06 21:53:22 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/07 12:04:24 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,18 +14,22 @@
 #include "../includes/Client.hpp"
 #include "../includes/Utils.hpp"
 
-int	Server::join_cmd(Client &client, const std::vector<std::string> &params)
+int Server::join_cmd(Client &client, const std::vector<std::string> &params)
 {
-	std::map<std::string, Channel>::iterator it;
-	std::vector<std::string>				 c_names;
-	std::vector<std::string>				 keys;
+	std::map<std::string, Channel>::iterator chanit;
+	std::map<int, Client *>::iterator 		 it;
+	std::vector<std::string> 				 c_names;
+	std::vector<std::string> 				 keys;
 	std::string 							 chan_name;
 	std::string 							 key;
-	size_t 									 i;
-	int 									 ret;
+	size_t									 i;
+	int										 ret;
 
-	if (params.empty() || params[0].empty() || params.size() > 2)
-		return (ERR_NEEDMOREPARAMS);
+	if (params.empty() || params[0].empty())
+	{
+		this->send_error(client, ERR_NEEDMOREPARAMS, "JOIN");
+		return (-1);
+	}
 	c_names = ft_split(params[0], ',');
 	if (params.size() > 1)
 		keys = ft_split(params[1], ',');
@@ -43,28 +47,41 @@ int	Server::join_cmd(Client &client, const std::vector<std::string> &params)
 			key = keys[i];
 		else
 			key = "";
-		it = this->_channels.find(chan_name);
-		if (it == this->_channels.end())
+		chanit = this->_channels.find(chan_name);
+		if (chanit == this->_channels.end())
 		{
 			Channel ch(chan_name, default_mode(), client);
-			
 			this->_channels.insert(std::pair<std::string, Channel>(chan_name, ch));
-			this->send_notice(client, CHANNELCREATED, chan_name);
+			chanit = this->_channels.find(chan_name);
+			this->send_cmd(client, client, "NOTICE " + client.get_nick() + " :You created Channel " + chan_name);
 		}
 		else
 		{
-			ret = it->second.joinChannel(client, key);
-			if (ret == 1)
-				this->send_error(client, ERR_USERONCHANNEL, chan_name);
-			else if (ret == 2)
-				this->send_error(client, ERR_CHANNELISFULL, chan_name);
-			else if (ret == 3)
-				this->send_error(client, ERR_INVITEONLYCHAN, chan_name);
-			else if (ret == 4)
-				this->send_error(client, ERR_BADCHANNELKEY, chan_name);
-			else
-				this->send_notice(client, CHANNELJOINED, chan_name);
+			ret = chanit->second.joinChannel(client, key);
+			if (ret != 0)
+			{
+				if (ret == 1)
+					this->send_error(client, ERR_USERONCHANNEL, chan_name);
+				else if (ret == 2)
+					this->send_error(client, ERR_CHANNELISFULL, chan_name);
+				else if (ret == 3)
+					this->send_error(client, ERR_INVITEONLYCHAN, chan_name);
+				else if (ret == 4)
+					this->send_error(client, ERR_BADCHANNELKEY, chan_name);
+				else if (ret == 5)
+					this->send_error(client, ERR_BANNEDFROMCHAN, chan_name);
+				i++;
+				continue ;
+			}
 		}
+		it = chanit->second.getClients().begin();
+		while (it != chanit->second.getClients().end())
+		{
+			this->send_cmd(client, *it->second, "JOIN :" + chan_name);
+			it++;
+		}
+		if (!chanit->second.getMode().topic.empty())
+			this->send_reply(client, RPL_TOPIC, chan_name, chanit->second.getMode().topic);
 		i++;
 	}
 	return (0);
@@ -161,24 +178,44 @@ int Server::topic_cmd(Client &client, const std::vector<std::string> &params)
 	return (0);
 }
 
-// TODO: Users can use MODE in a channel they are not part of nor have channop
 int Server::mode_cmd(Client &client, const std::vector<std::string> &params)
 {
-	std::vector<t_modecmd> flags;
-	size_t 				   i;
-	bool				   res;
+	std::map<std::string, Channel>::iterator chanit;
+	std::vector<t_modecmd> 					 flags;
+	size_t									 i;
+	int										 err;
+	bool									 res;
 
 	if (params.empty() || params[0].empty())
-		return (ERR_NEEDMOREPARAMS);
-	if (this->_channels.find(params[0]) == this->_channels.end())
-		return (ERR_NOSUCHCHANNEL);
+	{
+		this->send_error(client, ERR_NEEDMOREPARAMS, "MODE");
+		return (-1);
+	}
+	chanit = this->_channels.find(params[0]);
+	if (chanit == this->_channels.end())
+	{
+		this->send_error(client, ERR_NOSUCHCHANNEL, params[0]);
+		return (-1);
+	}
 	if (params.size() < 2)
 	{
-		// send RPL_CHANNELMODEIS 
+		this->send_reply(client, RPL_CHANNELMODEIS, params[0], "");
 		return (0);
 	}
-	if (!tokenize_mode_flags(params[1], flags, params, 2))
-		return (ERR_UNKNOWNMODE);
+	if (!chanit->second.getChannops().count(client.get_client_fd()))
+	{
+		this->send_error(client, ERR_CHANOPRIVSNEEDED, params[0]);
+		return (-1);
+	}
+	err = tokenize_mode_flags(params[1], flags, params, 2);
+	if (err)
+	{
+		if (err == -1)
+			this->send_error(client, ERR_UNKNOWNCOMMAND, params[1]);
+		else if (err == -2)
+			this->send_error(client, ERR_NEEDMOREPARAMS, "MODE");
+		return (-1);
+	}
 	i = 0;
 	while (i < flags.size())
 	{
@@ -200,11 +237,12 @@ int Server::mode_cmd(Client &client, const std::vector<std::string> &params)
 			case 'l':
 				res = handle_lmode(client, params[0], flags[i]);
 				break ;
-			default:
-				return (ERR_UNKNOWNMODE);
+			case 'b':
+				res = handle_bmode(client, params[0], flags[i]);
+				break ;
 		}
 		if (!res)
-			return (0);
+			return (-1);
 		i++;
 	}
 	return (0);

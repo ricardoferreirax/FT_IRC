@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/06 21:52:01 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/07 12:05:43 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -93,6 +93,7 @@ enum	e_irc_error
 	ERR_CHANNELISFULL = 471,
 	ERR_UNKNOWNMODE = 472,
 	ERR_INVITEONLYCHAN = 473,
+	ERR_BANNEDFROMCHAN = 474,
 	ERR_BADCHANNELKEY = 475,
 	ERR_BADCHANMASK = 476,
 	ERR_CHANOPRIVSNEEDED = 482,

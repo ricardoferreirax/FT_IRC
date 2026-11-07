@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:41:14 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/06 18:06:29 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/07 12:14:23 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -123,17 +123,21 @@ int Server::help_cmd(Client &client, const std::vector<std::string> &params)
 	descripts["INVITE"] = "Invite another user to join a specific channel. It's useful for invite only channels, where users need invitation before they can join.";
 	parameters["INVITE"] = "<nickname> <channel>";
 	descripts["MODE"] = "View/modify user and channel modes. Can control invite (+i), pass (+k), user limits (+l), topics (+t) and operators (+o). Use + to enable a mode or - to disable it.";
-	parameters["MODE"] = "<nickname|channel> [<+|-modes> [<modeparams>]]";
+	parameters["MODE"] = "<channel> [<+|-modes> [<modeparams>]]";
 	descripts["PART"] = "Leave one or more channels without disconnecting from server. Other members will be notified, and may include an parting message.";
 	parameters["PART"] = "<channel>{,<channel>} [:<part message>]";
 	descripts["KICK"] = "Remove users from a channel. Only channops can use this command. An optional reason can be provided for the kick.";
 	parameters["KICK"] = "<channel>{,<channel>} <user>{,<user>} [<comment>]";
+	descripts["TOPIC"] = "View/modify the topic of a channel. If no topic is set, server will notify the user. Only channops can change the topic if the channel is restricted.";
+	parameters["TOPIC"] = "<channel> [<topic>]";
 	descripts["NOTICE"] = "Send info message to user/channel. Unlike PRIVMSG, NOTICE shouldn't create automatic error replies, it's useful for automated messages.";
 	parameters["NOTICE"] = "<nickname|channel>{,<nickname|channel>} :<message>";
 	descripts["WHO"] = "Display info about users matching a nickname/channel/search mask. Use * to search for multiple users or omit mask to list users.";
 	parameters["WHO"] = "[<mask> [o]]";
 	descripts["AWAY"] = "Mark as away from server by setting an absence message. Use AWAY w/out message to remove away status.";
 	parameters["AWAY"] = "[:<message>]";
+	descripts["OPER"] = "Authenticate as an IRC operator. Operators have special privileges to manage users and channels.";
+	parameters["OPER"] = "<user> <password>";
 	descripts["PING"] = "Check if client-server connection is still active. Server responds with PONG containing same token.";
 	parameters["PING"] = "<token>";
 	descripts["HELP"] = "Display info about IRC commands. Specify command to view its description or use without params to list available commands.";

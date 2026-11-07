@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/06 14:01:05 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/07 12:06:29 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -108,6 +108,7 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	errors[ERR_CHANNELISFULL] = "471 " + nick + " " + param + " :Cannot join channel (+l)";
 	errors[ERR_UNKNOWNMODE] = "472 " + nick + " " + param + " :is unknown mode char to me";
 	errors[ERR_INVITEONLYCHAN] = "473 " + nick + " " + param + " :Cannot join channel (+i)";
+	errors[ERR_BANNEDFROMCHAN] = "474 " + nick + " " + param + " :Cannot join channel (+b)";
 	errors[ERR_BADCHANNELKEY] = "475 " + nick + " " + param + " :Cannot join channel (+k)";
 	errors[ERR_BADCHANMASK] = "476 " + nick + " " + param + " :Bad Channel Mask";
 	errors[ERR_CHANOPRIVSNEEDED] = "482 " + nick + " " + param + " :You're not channel operator";
