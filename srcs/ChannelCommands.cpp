@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:21:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/07 22:51:14 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/08 18:58:50 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,11 +73,13 @@ int Server::join_cmd(Client &client, const std::vector<std::string> &params)
 		it = chanit->second.getClients().begin();
 		while (it != chanit->second.getClients().end())
 		{
-			this->send_cmd(client, *it->second, "JOIN :" + chan_name);
+			this->send_cmd(client, *it->second, "JOIN " + chan_name);
 			it++;
 		}
 		if (!chanit->second.getMode().topic.empty())
 			this->send_reply(client, RPL_TOPIC, chan_name, chanit->second.getMode().topic);
+		else
+			this->send_reply(client, RPL_NOTOPIC, chan_name, "No topic is set");
 		this->send_channel_names(client, chanit->second);
 		i++;
 	}

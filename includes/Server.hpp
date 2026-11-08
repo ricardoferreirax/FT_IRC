@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/07 22:49:47 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/08 19:13:27 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -140,7 +140,6 @@ class	Server
 		void	send_cmd(Client &sender, Client &receiver, const std::string &message);
 		void	send_reply(Client &client, int reply, const std::string &param, const std::string &text);
 		void	send_error(Client &client, int error, const std::string &cmd);
-		void	send_notice(Client &client, int notice, const std::string &param);
 		void    send_channel_modes(Client &client, Channel &channel);
 		void	send_channel_names(Client &client, Channel &channel);
 		void 	notify_new_op(Channel &channel, int fd);
@@ -155,7 +154,6 @@ class	Server
 		int 	ping_cmd(Client &client, const std::vector<std::string> &params);
 		int 	quit_cmd(Client &client, const std::vector<std::string> &params);
 		int 	privmsg_cmd(Client &client, const std::vector<std::string> &params);
-		int 	notice_cmd(Client &client, const std::vector<std::string> &params);
 		int 	who_cmd(Client &client, const std::vector<std::string> &params);
 		int 	help_cmd(Client &client, const std::vector<std::string> &params);
 		int 	away_cmd(Client &client, const std::vector<std::string> &params);
@@ -182,12 +180,13 @@ class	Server
 		Server(const std::string &port, const std::string &pass);
 		~Server();
 		
+		std::map<int, Client> &getClients(void);
 		std::string	getName(void) const;
 		
 		void	start_socket();
 		void	monitor_epoll_events();
 		int		handle_socket_data(int fd, int event, e_socket_type type);
-		void	send_response(int client_fd, const std::string &msg);
+		void	send_notice(Client &client, int notice, const std::string &param);
 
 };
 

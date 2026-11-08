@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 22:12:06 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/08 19:20:02 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,6 +49,7 @@ void Bot::clear_channel(const std::string &channel)
 void Bot::cleanup(clear_type type, int fd, Server *server)
 {
 	std::map<int, t_request>::iterator it;
+	std::map<int, Client>::iterator    client_it;
 	int 							   bot_fd;
 	int 							   client_fd;
 
@@ -59,8 +60,8 @@ void Bot::cleanup(clear_type type, int fd, Server *server)
 		this->_user_memory.clear();
 		this->_chan_memory.clear();
 	}
-	it = this->_requests.begin(); // check all active bot requests
-	while (it != this->_requests.end())
+	it = this->_requests.begin();
+	while (it != this->_requests.end()) // check all active bot requests
 	{
 		bot_fd = it->first;
 		client_fd = it->second.client_fd;
@@ -68,14 +69,18 @@ void Bot::cleanup(clear_type type, int fd, Server *server)
 			&& !((type == REQUEST_COMPLETED || type == REQUEST_FAILED) && bot_fd == fd))
 		{
 			++it;
-			continue ; // skip requests dont need cleanup
+			continue ; // skip requests don't need cleanup
 		}
 		if (this->_epoll_fd != -1)
 			epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, bot_fd, NULL); // rmv bot socket from epoll
 		close(bot_fd);
 		this->_requests.erase(it++); // rmv request from map and move to next request
 		if (type == REQUEST_FAILED && server != NULL)
-			server->send_response(client_fd, "Miku is unavailable."); // notify client if request failed
+		{
+			client_it = server->getClients().find(client_fd);
+			if (client_it != server->getClients().end())
+				server->send_notice(client_it->second, MIKURESPONSE, "Miku is unavailable."); // notify client if request failed
+		}
 	}
 }
 
@@ -167,10 +172,11 @@ bool Bot::start_request(int client_fd, const std::string &nick, const std::strin
 
 void Bot::process_bot_response(t_request &req, Server &server)
 {
-	std::string *memory;
-	std::string answer;
-	size_t start;
-	size_t end;
+	std::map<int, Client>::iterator client_it;
+	std::string 				   *memory;
+	std::string 					answer;
+	size_t 							start;
+	size_t 							end;
 
 	if (req.recv_buffer.find("HTTP/1.1 200") != 0)
 		throw std::runtime_error("Ollama HTTP error.");
@@ -191,7 +197,9 @@ void Bot::process_bot_response(t_request &req, Server &server)
 	if (end == req.recv_buffer.size()) // no closing quote found ->incomplete response
 		throw std::runtime_error("Incomplete Ollama response.");
 	answer = convert_json(req.recv_buffer.substr(start, end - start), JSON_UNESCAPE); // extract answer and convert json to normal text
-	server.send_response(req.client_fd, answer); // send answer to client
+	client_it = server.getClients().find(req.client_fd);
+	if (client_it != server.getClients().end())
+		server.send_notice(client_it->second, MIKURESPONSE, answer); // send miku answer to client
 	if (req.channel.empty())
 		memory = &this->_user_memory[req.client_fd]; // if no channel ->store memory for this client
 	else

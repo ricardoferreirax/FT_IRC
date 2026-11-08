@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/06 21:51:45 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/08 19:13:57 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,6 +51,11 @@ Server::~Server()
 std::string Server::getName(void) const
 {
 	return (this->_name);
+}
+
+std::map<int, Client> &Server::getClients(void)
+{
+	return (this->_clients);
 }
 
 void Server::close_connections(close_type type, int fd)
@@ -247,7 +252,6 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["PART"] = &Server::part_cmd;
 	cmds["KICK"] = &Server::kick_cmd;
 	cmds["PRIVMSG"] = &Server::privmsg_cmd;
-	cmds["NOTICE"] = &Server::notice_cmd;
 	cmds["WHO"] = &Server::who_cmd;
 	cmds["HELP"] = &Server::help_cmd;
 	cmds["AWAY"] = &Server::away_cmd;

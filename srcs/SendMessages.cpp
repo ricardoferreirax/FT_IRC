@@ -6,36 +6,13 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/07 22:55:32 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/08 19:20:30 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
 #include "../includes/Client.hpp"
 #include "../includes/Utils.hpp"
-
-void Server::send_cmd(Client &sender, Client &receiver, const std::string &msg)
-{
-	epoll_event event;
-	int 		fd;
-
-	fd = receiver.get_client_fd();
-	receiver.get_send_buffer() += ":" + sender.get_nick() + "!" + sender.get_user() + "@" + sender.get_host_ip() + " " + msg + "\r\n\r\n";
-	event.events = EPOLLIN | EPOLLOUT;
-	event.data.fd = fd;
-	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
-		throw std::runtime_error("IRC: epoll_ctl() failed.");
-}
-
-void Server::send_response(int client_fd, const std::string &msg)
-{
-    std::map<int, Client>::iterator it;
-
-    it = this->_clients.find(client_fd);
-    if (it == this->_clients.end())
-        return ;
-    this->send_notice(it->second, MIKURESPONSE, msg);
-}
 
 void Server::send_reply(Client &client, int reply, const std::string &param, const std::string &text)
 {
@@ -55,14 +32,14 @@ void Server::send_reply(Client &client, int reply, const std::string &param, con
 	replies[RPL_AWAY] = "301 " + nick + " " + param + " :" + text;
 	replies[RPL_UNAWAY] = "305 " + nick + " :You are no longer marked as being away";
 	replies[RPL_NOWAWAY] = "306 " + nick + " :You have been marked as being away";
-	replies[RPL_ENDOFWHO] = "315 " + nick + " " + param + " :End of WHO list";
+	replies[RPL_ENDOFWHO] = "315 " + nick + " " + param + " :End of /WHO list";
 	replies[RPL_CHANNELMODEIS] = "324 " + nick + " " + param;
 	replies[RPL_NOTOPIC] = "331 " + nick + " " + param + " :No topic is set";
 	replies[RPL_TOPIC] = "332 " + nick + " " + param + " :" + text;
 	replies[RPL_INVITING] = "341 " + nick + " " + param;
 	replies[RPL_WHOREPLY] = "352 " + nick + " " + param + " :" + text;
 	replies[RPL_NAMREPLY] = "353 " + nick + " " + param + " :" + text;
-	replies[RPL_ENDOFNAMES] = "366 " + nick + " " + param + " :End of NAMES list ";
+	replies[RPL_ENDOFNAMES] = "366 " + nick + " " + param + " :End of /NAMES list ";
 	replies[RPL_YOUREOPER] = "381 " + nick + " :You are now an IRC operator";
 	replies[RPL_HELPSTART] = "704 " + nick + " " + param + " :" + text;
 	replies[RPL_HELPTXT] = "705 " + nick + " " + param + " :" + text;
@@ -161,6 +138,19 @@ void Server::send_notice(Client &client, int notice, const std::string &param)
 	client.get_send_buffer() += msg;
 	if (msg.size() < 2 || msg.substr(msg.size() - 2) != "\r\n")
 		client.get_send_buffer() += "\r\n\r\n";
+	event.events = EPOLLIN | EPOLLOUT;
+	event.data.fd = fd;
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
+		throw std::runtime_error("IRC: epoll_ctl() failed.");
+}
+
+void Server::send_cmd(Client &sender, Client &receiver, const std::string &msg)
+{
+	epoll_event event;
+	int 		fd;
+
+	fd = receiver.get_client_fd();
+	receiver.get_send_buffer() += ":" + sender.get_nick() + "!" + sender.get_user() + "@" + sender.get_host_ip() + " " + msg + "\r\n\r\n";
 	event.events = EPOLLIN | EPOLLOUT;
 	event.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)

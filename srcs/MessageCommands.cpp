@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/03 13:41:14 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/07 12:14:23 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/08 18:55:54 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,42 +65,6 @@ int Server::privmsg_cmd(Client &client, const std::vector<std::string> &params)
 	return (0);
 }
 
-// used to send a notice msg to a specific client or all clients in a channel.
-int Server::notice_cmd(Client &client, const std::vector<std::string> &params)
-{
-	std::map<std::string, Channel>::iterator chanit;
-	std::map<int, Client *> 				 chan_clients;
-	std::map<int, Client *>::iterator 		 clienit;
-	std::map<int, Client>::iterator 		 it;
-	std::string 							 target;
-	std::string 							 msg;
-
-	if (params.size() < 2 || params[0].empty() || params[1].empty()) // check target and msg are provided
-		return (0);
-	target = params[0];
-	msg = params[1];
-	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
-	{
-		if (same_nick(it->second.get_nick(), target)) // target matches a client nick
-		{
-			this->send_cmd(client, it->second, "NOTICE " + it->second.get_nick() + " :" + msg); // send notice to target client
-			return (0);
-		}
-	}
-	chanit = this->_channels.find(target);
-	if (chanit == this->_channels.end()) // target isn't in channel
-		return (0);
-	chan_clients = chanit->second.getClients();
-	if (chan_clients.find(client.get_client_fd()) == chan_clients.end()) // client isn't part of channel
-		return (0);
-	for (clienit = chan_clients.begin(); clienit != chan_clients.end(); ++clienit) // iterate through all clients in channel
-	{
-		if (clienit->first != client.get_client_fd())
-			this->send_cmd(client, *(clienit->second), "NOTICE " + target + " :" + msg);
-	}
-	return (0);
-}
-
 int Server::help_cmd(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, std::string>::iterator it;
@@ -130,8 +94,6 @@ int Server::help_cmd(Client &client, const std::vector<std::string> &params)
 	parameters["KICK"] = "<channel>{,<channel>} <user>{,<user>} [<comment>]";
 	descripts["TOPIC"] = "View/modify the topic of a channel. If no topic is set, server will notify the user. Only channops can change the topic if the channel is restricted.";
 	parameters["TOPIC"] = "<channel> [<topic>]";
-	descripts["NOTICE"] = "Send info message to user/channel. Unlike PRIVMSG, NOTICE shouldn't create automatic error replies, it's useful for automated messages.";
-	parameters["NOTICE"] = "<nickname|channel>{,<nickname|channel>} :<message>";
 	descripts["WHO"] = "Display info about users matching a nickname/channel/search mask. Use * to search for multiple users or omit mask to list users.";
 	parameters["WHO"] = "[<mask> [o]]";
 	descripts["AWAY"] = "Mark as away from server by setting an absence message. Use AWAY w/out message to remove away status.";
