@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 17:31:45 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/07 21:59:19 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/08 20:57:49 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,7 +42,7 @@ std::map<int, Client>::iterator Server::reverseClientSearch(std::string nick)
 	clienit = this->_clients.begin();
 	while(clienit != this->_clients.end())
 	{
-		if(nick == clienit->second.get_nick())
+		if (same_nick(nick, clienit->second.get_nick()))
 			break;
 		clienit++;
 	}

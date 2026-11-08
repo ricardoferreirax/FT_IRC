@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/08 19:13:27 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/08 20:50:16 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,7 +56,11 @@ enum	e_reply
 	RPL_AWAY = 301,
 	RPL_UNAWAY = 305,
 	RPL_NOWAWAY = 306,
+	RPL_WHOISUSER = 311,
+	RPL_WHOISSERVER = 312,
 	RPL_ENDOFWHO = 315,
+	RPL_ENDOFWHOIS = 318,
+	RPL_WHOISCHANNELS = 319,
 	RPL_CHANNELMODEIS = 324,
 	RPL_NOTOPIC = 331,
 	RPL_TOPIC = 332,
@@ -155,6 +159,7 @@ class	Server
 		int 	quit_cmd(Client &client, const std::vector<std::string> &params);
 		int 	privmsg_cmd(Client &client, const std::vector<std::string> &params);
 		int 	who_cmd(Client &client, const std::vector<std::string> &params);
+		int 	whois_cmd(Client &client, const std::vector<std::string> &params);
 		int 	help_cmd(Client &client, const std::vector<std::string> &params);
 		int 	away_cmd(Client &client, const std::vector<std::string> &params);
 		int		join_cmd(Client &client, const std::vector<std::string> &params);
