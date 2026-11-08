@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/08 19:20:30 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/08 20:14:52 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -164,14 +164,14 @@ void Server::notify_new_op(Channel &channel, int fd)
 	epoll_event						  event;
 	std::string 					  msg;
 
-	newop = this->_clients.find(fd);
+	newop = this->_clients.find(fd); // find new chanop in clients
 	if (newop == this->_clients.end())
 		return ;
-	msg = ":" + this->_name + " MODE " + channel.getName() + " +o " + newop->second.get_nick() + "\r\n";
+	msg = ":" + this->_name + " MODE " + channel.getName() + " +o " + newop->second.get_nick() + "\r\n"; // mode msg to notify clients about new chanop
 	it = channel.getClients().begin();
 	while (it != channel.getClients().end())
 	{
-		it->second->get_send_buffer() += msg;
+		it->second->get_send_buffer() += msg; // send mode msg to all clients in channel
 		event.events = EPOLLIN | EPOLLOUT;
 		event.data.fd = it->first;
 		if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, it->first, &event) == -1)
@@ -185,7 +185,7 @@ void Server::notify_mode_change(Client &client, Channel &channel, t_modecmd flag
 	std::map<int, Client *>::iterator it;
 	std::string 					  msg;
 	
-	msg = "MODE " + channel.getName() + " ";
+	msg = "MODE " + channel.getName() + " "; // mode msg to notify clients about mode change
 	if (flag.is_add)
 		msg += "+";
 	else
@@ -196,7 +196,7 @@ void Server::notify_mode_change(Client &client, Channel &channel, t_modecmd flag
 	it = channel.getClients().begin();
 	while (it != channel.getClients().end())
 	{
-		this->send_cmd(client, *it->second, msg);
+		this->send_cmd(client, *it->second, msg); // send mode msg to all clients
 		it++;
 	}
 }
@@ -207,23 +207,23 @@ void Server::send_channel_modes(Client &client, Channel &channel)
 	std::string 	   modes;
 	std::string 	   args;
 	
-	modes = "+";
+	modes = "+"; // start with + ->modes are being set
 	if (channel.getMode().invite_only)
-		modes += "i";
+		modes += "i"; // channel is invite only
 	if (channel.getMode().topic_restricted)
-		modes += "t";
+		modes += "t"; // channel is topic restricted
 	if (!channel.getMode().key.empty())
 	{
-		modes += "k";
+		modes += "k"; // channel has a key
 		args += " " + channel.getMode().key;
 	}
 	if (channel.getMode().users.u_limit > 0)
 	{
-		modes += "l";
+		modes += "l"; // channel has a user limit
 		limit << channel.getMode().users.u_limit;
 		args += " " + limit.str();
 	}
-	this->send_reply(client, RPL_CHANNELMODEIS, channel.getName() + " " + modes + args, "");
+	this->send_reply(client, RPL_CHANNELMODEIS, channel.getName() + " " + modes + args, ""); // send channel modes to client
 }
 
 void Server::send_channel_names(Client &client, Channel &channel)
