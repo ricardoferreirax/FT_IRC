@@ -6,7 +6,7 @@
 #    By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/09/27 23:34:05 by rmedeiro          #+#    #+#              #
-#    Updated: 2026/11/05 22:17:08 by rmedeiro         ###   ########.fr        #
+#    Updated: 2026/11/08 21:18:07 by rmedeiro         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -26,14 +26,19 @@ SRCS = srcs/main.cpp \
        srcs/Server.cpp \
        srcs/Client.cpp \
 	   srcs/SocketData.cpp \
-	   srcs/ServerCommands.cpp \
-	   srcs/Registration.cpp \
-	   srcs/ChannelCommands.cpp \
-	   srcs/MessageCommands.cpp \
-	   srcs/SendMessages.cpp \
        srcs/Channels.cpp \
 	   srcs/Mode.cpp \
        srcs/Utils.cpp \
+	   srcs/cmds/Registration.cpp \
+	   srcs/cmds/Join.cpp \
+	   srcs/cmds/Invite.cpp \
+	   srcs/cmds/Part.cpp \
+	   srcs/cmds/Topic.cpp \
+	   srcs/cmds/Kick.cpp \
+	   srcs/cmds/Mode.cpp \
+	   srcs/ServerCmds.cpp \
+	   srcs/MessageCmds.cpp \
+	   srcs/SendMessages.cpp \
        bonus/srcs/Bot.cpp \
 	   bonus/srcs/BotUtils.cpp
 

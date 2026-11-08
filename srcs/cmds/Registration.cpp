@@ -5,14 +5,14 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/11/03 13:19:59 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 14:55:42 by rmedeiro         ###   ########.fr       */
+/*   Created: 2026/11/08 21:09:17 by rmedeiro          #+#    #+#             */
+/*   Updated: 2026/11/08 21:09:48 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../includes/Client.hpp"
-#include "../includes/Server.hpp"
-#include "../includes/Utils.hpp"
+#include "../../includes/Server.hpp"
+#include "../../includes/Client.hpp"
+#include "../../includes/Utils.hpp"
 
 int Server::pass_cmd(Client &client, const std::vector<std::string> &params)
 {
