@@ -1,16 +1,14 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Utils.cpp                                          :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
+/*                                                        :::      ::::::::   */ /*   Utils.cpp                                          :+:      :+:    :+:   */ /*                                                    +:+ +:+         +:+     */ /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/24 22:41:37 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/07 12:24:52 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Utils.hpp"
+#include "../includes/Server.hpp"
 
 t_cmode	default_mode(void)
 {
@@ -81,16 +79,17 @@ bool	same_nick(const std::string &nick1, const std::string &nick2)
 // space separates: cmd from params and params from each other
 void	parse_msg(const std::string &msg, std::string &cmd, std::vector<std::string> &params)
 {
-	std::string remaining;
-	std::string trailing;
-	size_t		space;
+	size_t	space;
 
+	std::string	remaining;
+	std::string trailing;
+	
 	params.clear(); // clear previous params
 	space = msg.find(' ');
 	cmd = msg.substr(0, space);
 	for (size_t i = 0; i < cmd.size(); i++)
-		cmd[i] = std::toupper(cmd[i]);
-	if (space == std::string::npos) // no space ->no params 
+        cmd[i] = std::toupper(cmd[i]);
+	if (space == std::string::npos) // no space -> no params
 		return ;
 	remaining = msg.substr(space + 1); // everything after cmd is params
 	while (!remaining.empty())
@@ -101,8 +100,8 @@ void	parse_msg(const std::string &msg, std::string &cmd, std::vector<std::string
 			break ;
 		if (remaining[0] == ':' || params.size() == 14)
 		{
-			trailing = remaining; // after ':' is single param
-			if (trailing[0] == ':')
+			trailing = remaining; // after ':' is single param 
+			if (trailing[0] == ':') 
 				trailing.erase(0, 1);
 			params.push_back(trailing); // add this single param
 			break ;
@@ -124,12 +123,15 @@ std::string registration_reply(const Client &client, const std::string &_name, c
 	std::string user;
 	std::string host;
 	std::string reply;
-	
+
 	nick = client.get_nick();
 	user = client.get_user();
 	host = client.get_host_ip();
-	reply += ":" + _name + " 001 " + nick + " :Welcome to the IRC Network " + nick + "!" + user + "@" + host + "\r\n";
+	reply += ":" + _name + " 001 " + nick + " :Welcome to the Internet Relay Network " + nick + "!" + user + "@" + host + "\r\n";
+	reply += ":" + _name + " 002 " + nick + " :Your host is " + _name + ", running version 1.1\r\n";
 	reply += ":" + _name + " 003 " + nick + " :This server was created " + date + "\r\n";
+	reply += ":" + _name + " 004 " + nick + " " + _name + " 1.1 io kost k\r\n";
+	reply += "\r\n";
 	return (reply);
 }
 
@@ -149,8 +151,8 @@ bool	is_valid_user_mode(const std::string &mode)
 std::vector<std::string> ft_split(const std::string &s, char delim)
 {
 	std::vector<std::string> result;
-	std::stringstream 		 ss(s);
-	std::string 			 item;
+	std::stringstream ss(s);
+	std::string item;
 	
 	while (getline(ss, item, delim))
 	{
@@ -170,6 +172,20 @@ bool match_ban(Client &client, t_banmask ban)
 			&& match_wildcard(ban.nick, client.get_nick()));
 }
 
+std::string generateRandomString(int length)
+{
+	const std::string chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+	std::string random_string = "";
+	int	index;
+	
+	for (int i = 0; i < length; ++i)
+	{
+		index = rand() % chars.size();
+		random_string += chars[index];
+	}
+	return (random_string);
+}
+
 t_banmask	parseBanMask(std::string banmask)
 {
 	// Pedro's Anti-Cheat ban 😆
@@ -177,13 +193,17 @@ t_banmask	parseBanMask(std::string banmask)
 
 	std::string::size_type exclamationPoint;
 	std::string::size_type arrobaPos;
-	std::string nick = "*";
-	std::string user = "*";
-	std::string host = "*";
+	std::string 		   remainer;
+	std::string 		   nick;
+	std::string 		   user;
+	std::string 		   host;
+	
+	nick = "*";
+	user = "*";
+	host = "*";
 	exclamationPoint = banmask.find("!");
 	if (exclamationPoint != banmask.npos)
 	{
-		std::string remainer;
 		nick = banmask.substr(0, exclamationPoint);
 		remainer = banmask.substr(exclamationPoint + 1);
 		if (nick.empty())
@@ -234,6 +254,72 @@ t_banmask	parseBanMask(std::string banmask)
 	PAC_ban.valid = true;
 	return (PAC_ban);
 }
+
+std::string get_error_param(const std::string &cmd, int error, const std::vector<std::string> &params)
+{
+	if (params.empty())
+		return (cmd);
+	if (cmd == "INVITE")
+	{
+		if (error == ERR_USERONCHANNEL && params.size() > 1)
+			return (params[0] + " " + params[1]); // send error w/ target and channel as param
+		if ((error == ERR_NOSUCHCHANNEL || error == ERR_NOTONCHANNEL || error == ERR_CHANOPRIVSNEEDED) && params.size() > 1)
+			return (params[1]); // send error w/ channel as param
+	}
+	if (cmd == "KICK")
+	{
+		if (error == ERR_NOSUCHNICK && params.size() > 1)
+			return (params[1]); // send error w/ nick as param
+		if (error == ERR_USERNOTINCHANNEL && params.size() > 1)
+			return (params[1] + " " + params[0]); // send error w/ target and channel as param
+	}
+	if (error == ERR_NOSUCHNICK || error == ERR_NICKNAMEINUSE || error == ERR_ERRONEOUSNICKNAME)
+		return (params[0]); // send error w/ nick as param
+	if (cmd == "JOIN" || cmd == "MODE" || cmd == "PART" || cmd == "TOPIC" || cmd == "KICK")
+	{
+		if (error == ERR_NOSUCHCHANNEL || error == ERR_NOTONCHANNEL || error == ERR_CHANOPRIVSNEEDED || error == ERR_INVITEONLYCHAN
+			|| error == ERR_BADCHANNELKEY || error == ERR_CHANNELISFULL || error == ERR_BADCHANMASK || error == ERR_BANNEDFROMCHAN)
+			return (params[0]); // send error w/ channel as param
+	}
+	if (cmd == "HELP" && error == ERR_HELPNOTFOUND)
+		return (params[0]); // send error w/ help topic as param
+	return (cmd); // send cmd as param
+}
+
+void	log_tcp(log_type type, int fd, ssize_t bytes, const std::string &data)
+{
+	bool	nl;
+	bool	started;
+	
+	if (type == TCP_RECEIVE)
+		std::cout << "\n\033[1;32m[Client " << fd << " -> Server]  Recv\033[0m   <<   ";
+	else if (type == TCP_SEND)
+		std::cout << "\033[1;34m[Server -> Client " << fd << "]  Send\033[0m   >>   ";
+	else
+		return ;
+	nl = false;
+	started = false;
+	for (size_t i = 0; i < data.size(); i++)
+	{
+		if (data[i] == '\r')
+			continue ;
+		if (data[i] == '\n')
+		{
+			if (started)
+				nl = true;
+			continue ;
+		}
+		if (nl)
+		{
+			std::cout << "\n                                  ";
+			nl = false;
+		}
+		std::cout << data[i];
+		started = true;
+	}
+	std::cout << " \033[90m(" << bytes << "B)\033[0m\n";
+}
+
 bool match_wildcard(std::string pattern, std::string match, size_t pi, size_t mi)
 {
 	if(pattern[pi] == '\0')
@@ -241,30 +327,14 @@ bool match_wildcard(std::string pattern, std::string match, size_t pi, size_t mi
 	if(pattern[pi] == '*')
 	{
 		if(match_wildcard(pattern , match, pi + 1, mi))
-			return true;
+			return (true);
 		if(match[mi] != '\0' && match_wildcard(pattern, match, pi, mi + 1))
-			return true;
-		return false;
+			return (true);
+		return (false);
 	}
 	if(match[mi] == '\0')
-		return false;
+		return (false);
 	if(match[mi] == pattern[pi])
 		return(match_wildcard(pattern,  match, pi + 1, mi + 1));
 	return false;
 }
-
-std::string generateRandomString(int length)
-{
-	int	index;
-
-	const std::string chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-	std::string random_string = "";
-	
-	for (int i = 0; i < length; ++i)
-	{
-		index = rand() % chars.size();
-		random_string += chars[index];
-	}
-	return (random_string);
-}
-

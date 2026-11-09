@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:31:53 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/24 22:56:02 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/08 21:36:14 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@ Client::Client()
 	this->_auth = false;
 	this->_registered = false;
 	this->_quit = false;
+	this->_server_op = false;
 }
 Client::Client(int client_fd)
 {
@@ -25,6 +26,7 @@ Client::Client(int client_fd)
 	this->_auth = false;
 	this->_registered = false;
 	this->_quit = false;
+	this->_server_op = false;
 }
 
 std::string &Client::get_recv_buffer()
@@ -56,6 +58,11 @@ const std::string &Client::get_host_ip() const
 	return (this->_host_ip);
 }
 
+const std::string &Client::get_realname() const
+{
+	return (this->_realname);
+}
+
 bool Client::get_auth() const
 {
 	return (this->_auth);
@@ -71,6 +78,11 @@ bool Client::get_quit() const
 	return (this->_quit);
 }
 
+const std::string &Client::get_away_msg() const
+{
+	return (this->_away_msg);
+}
+
 void Client::set_nick(const std::string &nick)
 {
 	this->_nick = nick;
@@ -79,6 +91,11 @@ void Client::set_nick(const std::string &nick)
 void Client::set_host_ip(const std::string &host_ip)
 {
 	this->_host_ip = host_ip;
+}
+
+void Client::set_realname(const std::string &realname)
+{
+	this->_realname = realname;
 }
 
 void Client::set_user(const std::string &user)
@@ -101,12 +118,27 @@ void Client::set_quit(bool quit)
 	this->_quit = quit;
 }
 
+void Client::set_away_msg(const std::string &msg)
+{
+	this->_away_msg = msg;
+}
+
+void Client::set_server_op(bool value)
+{
+	this->_server_op = value;
+}
+
 bool Client::can_register() const
 {
 	return (this->_auth && !this->_nick.empty() && !this->_user.empty());
 }
 
-// bool Client::is_registered(void)
-// {
-// 	return (this->_registered);
-// }
+bool Client::is_away() const
+{
+	return (!this->_away_msg.empty());
+}
+
+bool Client::is_server_op() const
+{
+	return (this->_server_op);
+}

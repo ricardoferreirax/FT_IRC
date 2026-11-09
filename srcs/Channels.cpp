@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:50:09 by pedro             #+#    #+#             */
-/*   Updated: 2026/10/21 16:35:13 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/06 15:14:07 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,27 +27,32 @@ Channel::Channel(std::string name, t_cmode mode, Client &chanop) : _name(name), 
 
 Channel::~Channel()
 {
+	
 }
 
-bool Channel::addBanMask(std::string banmask)
+std::string Channel::getName(void) const
 {
-	t_banmask ban = parseBanMask(banmask);
-	if(ban.valid)
-		this->_bans.push_back(ban);
-	return ban.valid;
+	return (this->_name);
 }
 
-void Channel::removeBanMask(std::string banmask)
+std::map<int, Client *> &Channel::getClients(void)
 {
-	t_banmask target = parseBanMask(banmask);
-	std::vector<t_banmask>::iterator bannit = this->_bans.begin();
-	while(bannit != this->_bans.end())
-	{
-		if(bannit->nick == target.nick && bannit->user == target.user && bannit->host == target.host)
-			this->_bans.erase(bannit);
-		else
-			bannit++;
-	}
+	return (this->_clients);
+}
+
+std::set<int> &Channel::getChannops(void)
+{
+	return (this->_chanops);
+}
+
+std::set<int> &Channel::getInvites(void)
+{
+	return (this->_invites);
+}
+
+t_cmode Channel::getMode(void) const
+{
+	return (this->_mode);
 }
 
 std::vector<t_banmask> Channel::getBanmask(void)
@@ -55,20 +60,65 @@ std::vector<t_banmask> Channel::getBanmask(void)
 	return (this->_bans);
 }
 
+bool Server::check_allchans(const std::vector<std::string> &chans, Client *client)
+{
+	size_t	i;
+
+	i = 0;
+	while (i < chans.size())
+	{
+		if (this->_channels.find(chans[i]) == this->_channels.end())
+		{
+			if (client != NULL)
+				this->send_error(*client, ERR_NOSUCHCHANNEL, chans[i] + ", no action was taken");
+			return (false);
+		}
+		i++;
+	}
+	return (true);
+}
+
+bool Channel::addBanMask(std::string banmask)
+{
+	t_banmask	ban;
+
+	ban = parseBanMask(banmask);
+	if (ban.valid)
+		this->_bans.push_back(ban);
+	return (ban.valid);
+}
+
+void Channel::removeBanMask(std::string banmask)
+{
+	std::vector<t_banmask>::iterator bannit;
+	t_banmask						 target;
+
+	target = parseBanMask(banmask);
+	bannit = this->_bans.begin();
+	while (bannit != this->_bans.end())
+	{
+		if (bannit->nick == target.nick && bannit->user == target.user && bannit->host == target.host)
+			bannit = this->_bans.erase(bannit);
+		else
+			bannit++;
+	}
+}
 
 int Channel::PAC_check(Client &guest)
 {
-	std::vector<t_banmask>::iterator bannit = this->_bans.begin();
-	while(bannit != this->_bans.end())
+	std::vector<t_banmask>::iterator bannit;
+	
+	bannit = this->_bans.begin();
+	while (bannit != this->_bans.end())
 	{
-		if(match_ban(guest, *bannit))
-			return -1;
+		if (match_ban(guest, *bannit))
+			return (-1);
 		bannit++;
 	}
-	return 0;
+	return (0);
 }
 
-int Channel::joinChannel(Client &guest, std::string key = "")
+int Channel::joinChannel(Client &guest, std::string key)
 {
 	if (this->_clients.find(guest.get_client_fd()) != this->_clients.end())
 		return (1);
@@ -91,55 +141,38 @@ int Channel::joinChannel(Client &guest, std::string key = "")
  * @brief Makes a client leave the channel
  * @return Returns the new channop FD if the use that left was the last channop, -1 if there's no more user in the channel, otherwise it retunrs 0
  */
-int Channel::leaveChannel(Client guest)
+int Channel::leaveChannel(Client &guest)
 {
-	int	ret_val;
+	std::map<int, Client *>::iterator clienit;
+	int 							  ret_val;
 
 	ret_val = 0;
+	if (this->_clients.find(guest.get_client_fd()) == this->_clients.end())
+		return (0);
 	this->_clients.erase(guest.get_client_fd());
 	this->_chanops.erase(guest.get_client_fd());
 	this->getInvites().erase(guest.get_client_fd());
-	std::map<int, Client *>::iterator clienit = this->_clients.begin();
+	this->_mode.users.u_count--;
+	if (this->_clients.size() <= 0)
+	{
+		this->_mode.users.u_count = 0;
+		return (-1);
+	}
 	if (this->_chanops.size() <= 0)
 	{
+		clienit = this->_clients.begin();
 		this->_chanops.insert(clienit->first);
 		ret_val = clienit->first;
 	}
-	this->_mode.users.u_count--;
 	if (this->_mode.users.u_count <= 0)
 		return (-1);
 	return (ret_val);
 }
 
-bool Channel::inviteUser(Client guest)
+bool Channel::inviteUser(Client &guest)
 {
 	this->_invites.insert(guest.get_client_fd());
 	return (true);
-}
-
-std::string Channel::getName(void) const
-{
-	return (this->_name);
-}
-
-std::set<int> &Channel::getChannops(void)
-{
-	return (this->_chanops);
-}
-
-std::map<int, Client *> &Channel::getClients(void)
-{
-	return (this->_clients);
-}
-
-std::set<int> &Channel::getInvites(void)
-{
-	return (this->_invites);
-}
-
-t_cmode Channel::getMode(void) const
-{
-	return (this->_mode);
 }
 
 void Channel::setMode(bool invite, bool topic_restricted, std::string topic, t_ulimit users, std::string key)
@@ -150,3 +183,4 @@ void Channel::setMode(bool invite, bool topic_restricted, std::string topic, t_u
 	this->_mode.users = users;
 	this->_mode.key = key;
 }
+

@@ -6,7 +6,7 @@
 #    By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/09/27 23:34:05 by rmedeiro          #+#    #+#              #
-#    Updated: 2026/10/24 22:46:20 by rmedeiro         ###   ########.fr        #
+#    Updated: 2026/11/08 21:28:36 by rmedeiro         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -25,10 +25,26 @@ DBG_DIR = .objs-debug
 SRCS = srcs/main.cpp \
        srcs/Server.cpp \
        srcs/Client.cpp \
-       srcs/Commands.cpp \
-	   srcs/Mode.cpp \
+	   srcs/SocketData.cpp \
        srcs/Channels.cpp \
+	   srcs/Mode.cpp \
        srcs/Utils.cpp \
+	   srcs/cmds/Registration.cpp \
+	   srcs/cmds/Help.cpp \
+	   srcs/cmds/Privmsg.cpp \
+	   srcs/cmds/Quit.cpp \
+	   srcs/cmds/Who.cpp \
+	   srcs/cmds/Whois.cpp \
+	   srcs/cmds/Away.cpp \
+	   srcs/cmds/Oper.cpp \
+	   srcs/cmds/Ping.cpp \
+	   srcs/cmds/Join.cpp \
+	   srcs/cmds/Mode.cpp \
+	   srcs/cmds/Invite.cpp \
+	   srcs/cmds/Topic.cpp \
+	   srcs/cmds/Part.cpp \
+	   srcs/cmds/Kick.cpp \
+	   srcs/SendMessages.cpp \
        bonus/srcs/Bot.cpp \
 	   bonus/srcs/BotUtils.cpp
 

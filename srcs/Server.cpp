@@ -6,18 +6,27 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/26 16:02:35 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/08 20:45:11 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../bonus/includes/Bot.hpp"
 #include "../includes/Server.hpp"
-#include "../includes/Utils.hpp"
 #include "../includes/Channels.hpp"
+#include "../includes/Utils.hpp"
+#include "../bonus/includes/Bot.hpp"
+#include <arpa/inet.h>
+#include <cstring>
+#include <fcntl.h>
+#include <iostream>
+#include <netinet/in.h>
+#include <stdexcept>
+#include <sys/epoll.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 Server::Server(const std::string &port, const std::string &pass)
 {
-	time_t	now;
+	time_t now;
 
 	this->_port = validate_port(port);
 	if (pass.empty())
@@ -30,6 +39,7 @@ Server::Server(const std::string &port, const std::string &pass)
 	this->_date = ctime(&now);
 	if (!this->_date.empty())
 		this->_date.erase(this->_date.size() - 1);
+	this->_opers["admin"] = "1234";
 }
 
 // close all client connections
@@ -57,34 +67,45 @@ void Server::leaveChans(Client client)
 	if (!chanList.empty())
 	{
 		chans.push_back(chanList);
-		this->handle_part(client, chans);
+		this->part_cmd(client, chans);
 	}
+}
+
+std::map<int, Client> &Server::getClients(void)
+{
+	return (this->_clients);
 }
 
 void Server::close_connections(close_type type, int fd)
 {
-	std::map<int, Client>::iterator it;
+	std::map<std::string, Channel>::iterator chanit;
+	std::map<int, Client>::iterator 		 it;
+
 	if (type == CLIENT_DISCONNECT)
 	{
-		this->_bot.cleanup(CLIENT_DISCONNECTED, fd, NULL);
-		// clear client memory and requests
 		it = this->_clients.find(fd);
-		if (it == this->_clients.end()) // client not found
+		if (it == this->_clients.end())
 			return ;
 		this->leaveChans(it->second);
+		this->_bot.cleanup(CLIENT_DISCONNECTED, fd, NULL); // rmv client's pending bot requests
+		for (chanit = this->_channels.begin(); chanit != this->_channels.end(); ++chanit)
+		{
+			if (chanit->second.getClients().count(fd))
+				chanit->second.leaveChannel(it->second); // rmv client from all channels
+		}
 		if (this->_epoll_fd != -1)
-			epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+			epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL); // rmv socket from epoll and close it
 		close(fd);
 		this->_clients.erase(it);
 		std::cout << "\n\033[1;31m- Client " << fd << " disconnected\033[0m\n\n";
 	}
-	else if (type == SERVER_SHUTDOWN)
+	else if (type == SERVER_SHUTDOWN) // close entire server and all client connections
 	{
-		this->_bot.cleanup(BOT_SHUTDOWN, -1, NULL);
-		// clear all requests and memory
+		this->_bot.cleanup(BOT_SHUTDOWN, -1, NULL); // close all bot requests
 		for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
-			close(it->first);   // close all client sockets
-		this->_clients.clear(); // rmv all clients
+			close(it->first); // close all client sockets
+		this->_clients.clear();
+		this->_channels.clear();
 		if (this->_listen_fd != -1)
 		{
 			close(this->_listen_fd);
@@ -125,22 +146,21 @@ void Server::start_socket()
 
 void Server::monitor_epoll_events()
 {
-	epoll_event	event;
-	epoll_event	events[10];
-	int			ready;
-	int			current_fd;
+	epoll_event event;
+	epoll_event events[10];
+	int 		ready;
 
 	this->_epoll_fd = epoll_create1(0);
 	if (this->_epoll_fd < 0)
 		throw std::runtime_error("IRC: epoll_create1() failed.");
-	this->_bot.set_epoll_fd(this->_epoll_fd); // share epoll with ollama bot
-	event.events = EPOLLIN;
+	this->_bot.set_epoll_fd(this->_epoll_fd);
+	event.events = EPOLLIN; // monitor listening socket for new connections
 	event.data.fd = this->_listen_fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 	while (alive)
 	{
-		ready = epoll_wait(this->_epoll_fd, events, 10, 1000);
+		ready = epoll_wait(this->_epoll_fd, events, 10, -1);
 		if (ready < 0)
 		{
 			if (!alive)
@@ -148,37 +168,54 @@ void Server::monitor_epoll_events()
 			throw std::runtime_error("IRC: epoll_wait() failed.");
 		}
 		for (int i = 0; i < ready; i++)
-		{
-			current_fd = events[i].data.fd;
-			this->handle_socket_event(current_fd, events[i].events);
-		}
+			this->handle_epoll_event(events[i].data.fd, events[i].events);
 	}
 }
 
-void Server::handle_socket_event(int fd, int events)
+// EPOLLIN on listening socket -> a new client connection is waiting -> accept it
+// EPOLLIN on client socket -> has incoming data ready to be received -> read data FROM client
+// EPOLLOUT on client socket -> is ready to send pending data -> write data TO client
+int Server::handle_epoll_event(int fd, int events)
 {
+	int ret;
+
 	if (fd == this->_listen_fd)
 	{
 		if (events & EPOLLIN)
-			this->accept_client();
-		// accept new client connection and add to epoll
+			this->accept_client(); // socket has pending data->accept new connection and add to epoll
+		return (SOCKET_SUCCESS);
 	}
-	else if (this->_bot.has_request(fd))
-		this->_bot.handle_bot_event(*this, fd, events);
-	// handle ollama bot event
-	else if (this->_clients.find(fd) != this->_clients.end())
+	if (this->_bot.has_request(fd))
 	{
-		if (events & (EPOLLERR | EPOLLHUP))
-			this->close_connections(CLIENT_DISCONNECT, fd);
-		// disconnect client if socket has error
-		else
+		this->_bot.handle_bot_event(*this, fd, events); // handle ollama bot socket events
+		return (SOCKET_SUCCESS);
+	}
+	if (this->_clients.find(fd) == this->_clients.end())
+		return (SOCKET_ERROR); // ignore sockets dont belong to clients or bot
+	if (events & (EPOLLERR | EPOLLHUP))
+	{
+		this->close_connections(CLIENT_DISCONNECT, fd); // disconnect clients with epoll error or hangup
+		return (SOCKET_ERROR);
+	}
+	if (events & EPOLLIN)
+	{
+		ret = this->handle_socket_data(fd, EPOLLIN, CLIENT_SOCKET); // receive data from clients
+		if (ret == SOCKET_ERROR)
 		{
-			if (events & EPOLLIN)
-				this->handle_client_data(fd, EPOLLIN);
-			if ((events & EPOLLOUT) && this->_clients.find(fd) != this->_clients.end())
-				this->handle_client_data(fd, EPOLLOUT);
+			this->close_connections(CLIENT_DISCONNECT, fd);
+			return (SOCKET_ERROR);
 		}
 	}
+	if ((events & EPOLLOUT) && this->_clients.find(fd) != this->_clients.end())
+	{
+		ret = this->handle_socket_data(fd, EPOLLOUT, CLIENT_SOCKET); // send data if client is still connected
+		if (ret == SOCKET_ERROR)
+		{
+			this->close_connections(CLIENT_DISCONNECT, fd);
+			return (SOCKET_ERROR);
+		}
+	}
+	return (SOCKET_SUCCESS);
 }
 
 void Server::accept_client()
@@ -207,143 +244,59 @@ void Server::accept_client()
 	}
 	this->_clients[client_fd] = Client(client_fd);
 	this->_clients[client_fd].set_host_ip(inet_ntoa(client_addr.sin_addr));
-	std::cout << "\n\033[1;32m"
-				<< "+ CLIENT " << client_fd << " CONNECTED"
-				<< "\033[0m\n";
+	std::cout << "\n\033[1;32m" << "+ CLIENT " << client_fd << " CONNECTED" << "\033[0m\n";
 }
 
-// recv() - receive data FROM client through client socket
-// send() - send pending data TO client through client socket
-void Server::handle_client_data(int client_fd, int event)
+void Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
 {
-	epoll_event	ev;
-	ssize_t		bytes;
-	char		buffer[1024];
+	typedef int (Server::*Cmd)(Client &, const std::vector<std::string> &);
+	std::map<std::string, Cmd>::iterator it;
+	std::map<std::string, Cmd> 			 cmds;
+	int 								 ret;
 
-	Client &client = this->_clients[client_fd];
-	if (event == EPOLLIN)
+	cmds["PASS"] = &Server::pass_cmd;
+	cmds["NICK"] = &Server::nick_cmd;
+	cmds["USER"] = &Server::user_cmd;
+	cmds["FAST"] = &Server::fast_cmd;
+	cmds["JOIN"] = &Server::join_cmd;
+	cmds["INVITE"] = &Server::invite_cmd;
+	cmds["TOPIC"] = &Server::topic_cmd;
+	cmds["MODE"] = &Server::mode_cmd;
+	cmds["PART"] = &Server::part_cmd;
+	cmds["KICK"] = &Server::kick_cmd;
+	cmds["PRIVMSG"] = &Server::privmsg_cmd;
+	cmds["WHO"] = &Server::who_cmd;
+	cmds["WHOIS"] = &Server::whois_cmd;
+	cmds["HELP"] = &Server::help_cmd;
+	cmds["AWAY"] = &Server::away_cmd;
+	cmds["OPER"] = &Server::oper_cmd;
+	cmds["PING"] = &Server::ping_cmd;
+	cmds["QUIT"] = &Server::quit_cmd;
+	it = cmds.find(cmd);
+	if (it == cmds.end())
 	{
-		std::string &recv_buffer = client.get_recv_buffer();
-		bytes = recv(client_fd, buffer, sizeof(buffer), 0);
-		if (bytes == 0)
-		{
-			this->close_connections(CLIENT_DISCONNECT, client_fd);
-			return ;
-		}
-		if (bytes < 0)
-			return ;
-		recv_buffer.append(buffer, bytes);
-		this->process_msg(client, recv_buffer);
+		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
+		return ;
 	}
-	else if (event == EPOLLOUT)
+	if (!client.get_registered() && cmd != "PASS" && cmd != "NICK" && cmd != "USER" 
+		&& cmd != "FAST" && cmd != "HELP" && cmd != "PING" && cmd != "QUIT")
 	{
-		std::string &send_buffer = client.get_send_buffer();
-		if (send_buffer.empty()) // no pending data to send to client
-			return ;
-		bytes = send(client_fd, send_buffer.c_str(), send_buffer.size(), MSG_NOSIGNAL);
-		if (bytes <= 0)
-			return ; // send failed or would block -> keep pending data
-		// log_tcp(TCP_SEND, client_fd, bytes, send_buffer.substr(0, bytes));
-		send_buffer.erase(0, bytes); // rmv only bytes successfully sent
-		if (send_buffer.empty())     // if all pending data was sent
-		{
-			if (client.get_quit())
-				this->close_connections(CLIENT_DISCONNECT, client_fd);
-			// QUIT was received -> disconnect client
-			else
-			{
-				ev.events = EPOLLIN;
-				ev.data.fd = client_fd;
-				if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &ev) < 0)
-					this->close_connections(CLIENT_DISCONNECT, client_fd);
-			}
-		}
+		if (cmd != "NOTICE")
+			this->send_error(client, ERR_NOTREGISTERED, cmd);
+		return ;
 	}
-}
-
-// irc msgs end with \r\n, which separates one complete msg from the next one
-// incomplete msgs remain in client_buffer till more data is received with recv()
-void Server::process_msg(Client &client, std::string &client_buffer)
-{
-	size_t	pos;
-
-	std::vector<std::string> params;
-	std::string msg;
-	std::string cmd;
-	pos = client_buffer.find("\r\n");
-	while (pos != std::string::npos)
+	ret = (this->*(it->second))(client, params);
+	if (cmd == "QUIT")
+		return ;
+	if (ret != 0)
 	{
-		msg = client_buffer.substr(0, pos);
-		client_buffer.erase(0, pos + 2);
-		if (!msg.empty())
-		{
-			parse_msg(msg, cmd, params);
-			this->execute_cmd(client, cmd, params);
-			if (client.get_quit())
-				return ;
-		}
-		pos = client_buffer.find("\r\n");
+		this->send_error(client, ret, get_error_param(cmd, ret, params));
+		return ;
 	}
-}
-
-void Server::send_msg(Client &client, const std::string &msg)
-{
-	epoll_event	event;
-	int			client_fd;
-
-	client_fd = client.get_client_fd();
-	client.get_send_buffer() += msg;
-	// append msg to send buffer
-	if (msg.size() < 2 || msg.substr(msg.size() - 2) != "\r\n")
-		// if msg does not end with \r\n
-		client.get_send_buffer() += "\r\n";
-	// end msg with \r\n
-	client.get_send_buffer() += "\r\n";
-	event.events = EPOLLIN | EPOLLOUT; // monitor socket for reading and writing
-	event.data.fd = client_fd;
-	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client_fd, &event) < 0)
-		throw std::runtime_error("IRC: epoll_ctl() failed.");
-}
-
-void Server::send_error(Client &client, int error, const std::string &param)
-{
-	std::map<int, std::string> errors;
-	// each error code has a corresponding error msg
-	std::string nick;
-	nick = client.get_nick();
-	if (nick.empty())
-		nick = "*";
-	errors[ERR_NOSUCHNICK] = "401 " + nick + " " + param + " :No such nick/channel";
-	errors[ERR_NOORIGIN] = "409 " + nick + " :No origin specified";
-	errors[ERR_NORECIPIENT] = "411 " + nick + " :No recipient given (" + param + ")";
-	errors[ERR_NOTEXTTOSEND] = "412 " + nick + " :No text to send";
-	errors[ERR_UNKNOWNCOMMAND] = "421 " + nick + " " + param + " :Unknown command";
-	errors[ERR_NONICKNAMEGIVEN] = "431 " + nick + " :No nickname given";
-	errors[ERR_ERRONEOUSNICKNAME] = "432 " + nick + " " + param + " :Erroneous nickname";
-	errors[ERR_NICKNAMEINUSE] = "433 " + nick + " " + param + " :Nickname is already in use";
-	errors[ERR_USERONCHANNEL] = "443 " + nick + " " + param + " :is already on channel";
-	errors[ERR_NOTREGISTERED] = "451 " + nick + " :You have not registered";
-	errors[ERR_NEEDMOREPARAMS] = "461 " + nick + " " + param + " :Not enough parameters";
-	errors[ERR_ALREADYREGISTRED] = "462 " + nick + " :You may not reregister";
-	errors[ERR_PASSWDMISMATCH] = "464 " + nick + " :Password incorrect";
-	errors[ERR_CHANNELISFULL] = "471 " + nick + " " + param + " :Cannot join channel (+l)";
-	errors[ERR_INVITEONLYCHAN] = "473 " + nick + " " + param + " :Cannot join channel (+i)";
-	errors[ERR_BADCHANNELKEY] = "475 " + nick + " " + param + " :Cannot join channel (+k)";
-	errors[ERR_BADCHANMASK] = "476 " + nick + " " + param + " :Bad Channel Mask";
-	errors[ERR_PASSALREADYACCEPTED] = "601 " + nick + " :PASS already accepted";
-	errors[ERR_PASSREQUIRED] = "602 " + nick + " :PASS must be accepted before NICK";
-	errors[ERR_NICKREQUIRED] = "603 " + nick + " :NICK must be set before USER";
-	errors[ERR_INVALIDUSERMODE] = "604 " + nick + " :Invalid USER mode: only numbers are allowed";
-	errors[ERR_MIKUUNAVAILABLE] = "605 " + nick + " :Miku is unavailable";
-	errors[ERR_BANNEDFROMCHAN] = "474 " + param + " :Cannot join channel (+b)";
-	errors[ERR_KEYSET] = "467 " + param + " :Channel key is alredy set";
-	errors[ERR_UNKNOWNMODE] = "472" + param + " :is unknown mode char to me for" + param;
-	errors[ERR_CHANOPRIVSNEEDED] = "481 " + param + " :You're not channel operator";
-	errors[ERR_NOSUCHCHANNEL] = "403 " + param + " :No such channel";
-	errors[ERR_CANNOTSENDTOCHAN] = "404 " + param + " :Cannot send to channel";
-	errors[ERR_USERNOTINCHANNEL] = "441 " + param + " " + param + "They aren't that channel";
-	errors[ERR_NOTONCHANNEL] = "442 " + param + " :You're not on that channel";
-	if (errors.find(error) == errors.end())
-		return ; // error code is not in map -> ignore it
-	this->send_msg(client, ":" + this->_name + " " + errors[error]);
+	if (!client.get_registered() && client.can_register())
+	{
+		client.set_registered(true);
+		std::cout << "\n\033[1;36m" << "✓ CLIENT " << client.get_client_fd() << " REGISTERED" << "\033[0m\n\n";
+		this->send_notice(client, REGISTRATION, "");
+	}
 }
