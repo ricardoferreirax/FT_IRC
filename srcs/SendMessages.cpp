@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/08 20:54:08 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 18:38:21 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -93,6 +93,7 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	errors[ERR_BANNEDFROMCHAN] = "474 " + nick + " " + param + " :Cannot join channel (+b)";
 	errors[ERR_BADCHANNELKEY] = "475 " + nick + " " + param + " :Cannot join channel (+k)";
 	errors[ERR_BADCHANMASK] = "476 " + nick + " " + param + " :Bad Channel Mask";
+	errors[ERR_NOPRIVILEGES] = "481 " + nick + " :Permission Denied- You're not an IRC operator";
 	errors[ERR_CHANOPRIVSNEEDED] = "482 " + nick + " " + param + " :You're not channel operator";
 	errors[ERR_NOOPERHOST] = "491 " + nick + " :No O-lines for your host";
 	errors[ERR_HELPNOTFOUND] = "524 " + nick + " " + param + " :Help topic not found";
@@ -132,6 +133,8 @@ void Server::send_notice(Client &client, int notice, const std::string &param)
 		notices[NICKSET] = "Set nickname to " + param;
 		notices[CHANNELCREATED] = "You created Channel " + param;
 		notices[CHANNELJOINED] = "You joined " + param;
+		notices[KILLSELF] = "You cannot KILL yourself";
+		notices[ALREADYDISCONNECTED] = "User is already disconnected";
 		notices[MIKUUNAVAILABLE] = "Miku is unavailable :/ Try again later.";
 		it = notices.find(notice);
 		if (it == notices.end())

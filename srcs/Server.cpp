@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/08 20:45:11 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 18:15:39 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -257,6 +257,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["HELP"] = &Server::help_cmd;
 	cmds["AWAY"] = &Server::away_cmd;
 	cmds["OPER"] = &Server::oper_cmd;
+	cmds["KILL"] = &Server::kill_cmd;
 	cmds["PING"] = &Server::ping_cmd;
 	cmds["QUIT"] = &Server::quit_cmd;
 	it = cmds.find(cmd);
@@ -273,7 +274,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 		return ;
 	}
 	ret = (this->*(it->second))(client, params);
-	if (cmd == "QUIT")
+	if (client.get_quit())
 		return ;
 	if (ret != 0)
 	{

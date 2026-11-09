@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/08 20:50:16 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 18:38:32 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -100,6 +100,7 @@ enum	e_irc_error
 	ERR_BANNEDFROMCHAN = 474,
 	ERR_BADCHANNELKEY = 475,
 	ERR_BADCHANMASK = 476,
+	ERR_NOPRIVILEGES = 481,
 	ERR_CHANOPRIVSNEEDED = 482,
 	ERR_NOOPERHOST = 491,
 	ERR_HELPNOTFOUND = 524,
@@ -115,6 +116,8 @@ enum	e_notice
 	CHANNELCREATED,
 	CHANNELJOINED,
 	PONGREPLY,
+	KILLSELF,
+	ALREADYDISCONNECTED,
 	MIKURESPONSE,
 	MIKUUNAVAILABLE
 };
@@ -155,6 +158,7 @@ class	Server
 		int		user_cmd(Client &client, const std::vector<std::string> &params);
 		int		fast_cmd(Client &client, const std::vector<std::string> &params);
 		int 	oper_cmd(Client &client, const std::vector<std::string> &params);
+		int 	kill_cmd(Client &client, const std::vector<std::string> &params);
 		int 	ping_cmd(Client &client, const std::vector<std::string> &params);
 		int 	quit_cmd(Client &client, const std::vector<std::string> &params);
 		int 	privmsg_cmd(Client &client, const std::vector<std::string> &params);

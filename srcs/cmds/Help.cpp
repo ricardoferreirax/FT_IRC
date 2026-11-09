@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/08 21:20:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/08 21:31:31 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 14:57:49 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,6 +51,8 @@ int Server::help_cmd(Client &client, const std::vector<std::string> &params)
 	parameters["AWAY"] = "[:<message>]";
 	descripts["OPER"] = "Authenticate as an IRC operator. Operators have special privileges to manage users and channels.";
 	parameters["OPER"] = "<user> <password>";
+	descripts["KILL"] = "Disconnect a user from server. Only IRC operators can use this command. Can provide a reason for kill.";
+	parameters["KILL"] = "<nickname> <comment>";
 	descripts["PING"] = "Check if client-server connection is still active. Server responds with PONG containing same token.";
 	parameters["PING"] = "<token>";
 	descripts["HELP"] = "Display info about IRC commands. Specify command to view its description or use without params to list available commands.";

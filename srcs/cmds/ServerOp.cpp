@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Oper.cpp                                           :+:      :+:    :+:   */
+/*   ServerOp.cpp                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/11/08 21:27:05 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 10:51:25 by rmedeiro         ###   ########.fr       */
+/*   Created: 2026/11/09 14:58:44 by rmedeiro          #+#    #+#             */
+/*   Updated: 2026/11/09 18:39:11 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,5 +29,40 @@ int Server::oper_cmd(Client &client, const std::vector<std::string> &params)
 		return (ERR_PASSWDMISMATCH);
 	client.set_server_op(true);
 	this->send_reply(client, RPL_YOUREOPER, "", "");
+	return (0);
+}
+
+int Server::kill_cmd(Client &client, const std::vector<std::string> &params)
+{
+	std::map<int, Client>::iterator it;
+	std::string 					nick;
+	std::string 					reason;
+
+	if (!client.is_server_op())
+		return (ERR_NOPRIVILEGES);
+	if (params.size() < 2 || params[0].empty() || params[1].empty())
+		return (ERR_NEEDMOREPARAMS);
+	nick = params[0];
+	reason = params[1];
+	for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
+	{
+		if (same_nick(it->second.get_nick(), nick))
+			break ;
+	}
+	if (it == this->_clients.end())
+		return (ERR_NOSUCHNICK);
+	if (it->second.get_client_fd() == client.get_client_fd())
+	{
+		this->send_notice(client, KILLSELF, "");
+		return (0);
+	}
+	if (it->second.get_quit())
+	{
+		this->send_notice(client, ALREADYDISCONNECTED, "");
+		return (0);
+	}
+	this->send_cmd(client, it->second, "KILL " + it->second.get_nick() + " :" + reason);
+	it->second.set_quit(true);
+	// std::cout << "[KILL] " << client.get_nick() << " killed " << it->second.get_nick() << " (" << reason << ")" << std::endl;
 	return (0);
 }
