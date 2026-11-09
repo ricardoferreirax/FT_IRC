@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 22:17:33 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 22:38:58 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,13 +14,45 @@
 #include "../includes/Client.hpp"
 #include "../includes/Utils.hpp"
 
-void Server::send_msg(Client &client, const std::string &msg)
+void Server::send_reply(Client &client, int reply, const std::string &param, const std::string &text)
 {
-	epoll_event event;
-	int 		fd;
+	std::map<int, std::string>::iterator it;
+	std::map<int, std::string> 			 replies;
+	std::string 						 nick;
+	epoll_event 						 event;
+	int 							 	 fd;
 
+	nick = client.get_nick();
+	if (nick.empty())
+		nick = "*";
+	replies[RPL_WELCOME] = "001 " + nick + " :" + text;
+	replies[RPL_YOURHOST] = "002 " + nick + " :" + text;
+	replies[RPL_CREATED] = "003 " + nick + " :" + text;
+	replies[RPL_MYINFO] = "004 " + nick + " " + param;
+	replies[RPL_AWAY] = "301 " + nick + " " + param + " :" + text;
+	replies[RPL_UNAWAY] = "305 " + nick + " :You are no longer marked as being away";
+	replies[RPL_NOWAWAY] = "306 " + nick + " :You have been marked as being away";
+	replies[RPL_ENDOFWHO] = "315 " + nick + " " + param + " :End of /WHO list";
+	replies[RPL_WHOISUSER] = "311 " + nick + " " + param + " " + text;
+	replies[RPL_WHOISSERVER] = "312 " + nick + " " + param + " " + text;
+	replies[RPL_ENDOFWHOIS] = "318 " + nick + " " + param + " :End of /WHOIS list";
+	replies[RPL_WHOISCHANNELS] = "319 " + nick + " " + param + " :" + text;
+	replies[RPL_CHANNELMODEIS] = "324 " + nick + " " + param;
+	replies[RPL_NOTOPIC] = "331 " + nick + " " + param + " :No topic is set";
+	replies[RPL_TOPIC] = "332 " + nick + " " + param + " :" + text;
+	replies[RPL_INVITING] = "341 " + nick + " " + param;
+	replies[RPL_WHOREPLY] = "352 " + nick + " " + param + " :" + text;
+	replies[RPL_NAMREPLY] = "353 " + nick + " " + param + " :" + text;
+	replies[RPL_ENDOFNAMES] = "366 " + nick + " " + param + " :End of /NAMES list ";
+	replies[RPL_YOUREOPER] = "381 " + nick + " :You are now an IRC operator";
+	replies[RPL_HELPSTART] = "704 " + nick + " " + param + " :" + text;
+	replies[RPL_HELPTXT] = "705 " + nick + " " + param + " :" + text;
+	replies[RPL_ENDOFHELP] = "706 " + nick + " " + param + " :" + text;
+	it = replies.find(reply);
+	if (it == replies.end())
+		return ;
 	fd = client.get_client_fd();
-	client.get_send_buffer() += msg + "\r\n";
+	client.get_send_buffer() += ":" + this->_name + " " + it->second + "\r\n";
 	event.events = EPOLLIN | EPOLLOUT;
 	event.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
@@ -31,6 +63,8 @@ void Server::send_error(Client &client, int error, const std::string &param)
 {
 	std::map<int, std::string> errors;
 	std::string 			   nick;
+	epoll_event 			   event;
+	int 					   fd;
 
 	nick = client.get_nick();
 	if (nick.empty())
@@ -59,7 +93,6 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	errors[ERR_BANNEDFROMCHAN] = "474 " + nick + " " + param + " :Cannot join channel (+b)";
 	errors[ERR_BADCHANNELKEY] = "475 " + nick + " " + param + " :Cannot join channel (+k)";
 	errors[ERR_BADCHANMASK] = "476 " + nick + " " + param + " :Bad Channel Mask";
-	errors[ERR_NOPRIVILEGES] = "481 " + nick + " :Permission Denied- You're not an IRC operator";
 	errors[ERR_CHANOPRIVSNEEDED] = "482 " + nick + " " + param + " :You're not channel operator";
 	errors[ERR_NOOPERHOST] = "491 " + nick + " :No O-lines for your host";
 	errors[ERR_HELPNOTFOUND] = "524 " + nick + " " + param + " :Help topic not found";
@@ -67,12 +100,65 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	errors[ERR_INVALIDUSERMODE] = "604 " + nick + " :Invalid USER mode: only numbers are allowed";
 	if (errors.find(error) == errors.end())
 		return ;
-	this->send_msg(client, ":" + this->_name + " " + errors[error]);
+	fd = client.get_client_fd();
+	client.get_send_buffer() += ":" + this->_name + " " + errors[error] + "\r\n";
+	event.events = EPOLLIN | EPOLLOUT;
+	event.data.fd = fd;
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
+		throw std::runtime_error("IRC: epoll_ctl() failed.");
+}
+
+void Server::send_notice(Client &client, int notice, const std::string &param)
+{
+	std::map<int, std::string>::iterator it;
+	std::map<int, std::string> 			 notices;
+	std::string 						 nick;
+	std::string 						 msg;
+	epoll_event 						 event;
+	int 								 fd;
+
+	nick = client.get_nick();
+	if (nick.empty())
+		nick = "*";
+	if (notice == PONGREPLY)
+		msg = ":" + this->_name + " PONG " + this->_name + " :" + param;
+	else if (notice == REGISTRATION)
+		msg = registration_reply(client, this->_name, this->_date);
+	else if (notice == MIKURESPONSE)
+		msg = ":Miku!Hatsune@127.0.0.1 PRIVMSG " + nick + " :\033[1;36m" + param + "\033[0m";
+	else
+	{
+		notices[PASSACCEPTED] = "PASS accepted";
+		notices[NICKSET] = "Set nickname to " + param;
+		notices[CHANNELCREATED] = "You created Channel " + param;
+		notices[CHANNELJOINED] = "You joined " + param;
+		notices[MIKUUNAVAILABLE] = "Miku is unavailable :/ Try again later.";
+		it = notices.find(notice);
+		if (it == notices.end())
+			return ;
+		msg = ":" + this->_name + " NOTICE " + nick + " :" + it->second;
+	}
+	fd = client.get_client_fd();
+	client.get_send_buffer() += msg;
+	if (msg.size() < 2 || msg.substr(msg.size() - 2) != "\r\n")
+		client.get_send_buffer() += "\r\n";
+	event.events = EPOLLIN | EPOLLOUT;
+	event.data.fd = fd;
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
+		throw std::runtime_error("IRC: epoll_ctl() failed.");
 }
 
 void Server::send_cmd(Client &sender, Client &receiver, const std::string &msg)
 {
-	this->send_msg(receiver, ":" + sender.get_nick() + "!" + sender.get_user() + "@" + sender.get_host_ip() + " " + msg);
+	epoll_event event;
+	int 		fd;
+
+	fd = receiver.get_client_fd();
+	receiver.get_send_buffer() += ":" + sender.get_nick() + "!" + sender.get_user() + "@" + sender.get_host_ip() + " " + msg + "\r\n";
+	event.events = EPOLLIN | EPOLLOUT;
+	event.data.fd = fd;
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
+		throw std::runtime_error("IRC: epoll_ctl() failed.");
 }
 
 void Server::notify_new_op(Channel &channel, int fd)
@@ -160,91 +246,3 @@ void Server::send_channel_names(Client &client, Channel &channel)
 	this->send_reply(client, RPL_NAMREPLY, "= " + channel.getName(), names);
 	this->send_reply(client, RPL_ENDOFNAMES, channel.getName(), "End of NAMES list.");
 }
-
-//void Server::send_reply(Client &client, int reply, const std::string &param, const std::string &text)
-// {
-// 	std::map<int, std::string>::iterator it;
-// 	std::map<int, std::string> 			 replies;
-// 	std::string 						 nick;
-// 	epoll_event 						 event;
-// 	int 							 	 fd;
-
-// 	nick = client.get_nick();
-// 	if (nick.empty())
-// 		nick = "*";
-// 	replies[RPL_WELCOME] = "001 " + nick + " :" + text;
-// 	replies[RPL_YOURHOST] = "002 " + nick + " :" + text;
-// 	replies[RPL_CREATED] = "003 " + nick + " :" + text;
-// 	replies[RPL_MYINFO] = "004 " + nick + " " + param;
-// 	replies[RPL_AWAY] = "301 " + nick + " " + param + " :" + text;
-// 	replies[RPL_UNAWAY] = "305 " + nick + " :You are no longer marked as being away";
-// 	replies[RPL_NOWAWAY] = "306 " + nick + " :You have been marked as being away";
-// 	replies[RPL_ENDOFWHO] = "315 " + nick + " " + param + " :End of /WHO list";
-// 	replies[RPL_WHOISUSER] = "311 " + nick + " " + param + " " + text;
-// 	replies[RPL_WHOISSERVER] = "312 " + nick + " " + param + " " + text;
-// 	replies[RPL_ENDOFWHOIS] = "318 " + nick + " " + param + " :End of /WHOIS list";
-// 	replies[RPL_WHOISCHANNELS] = "319 " + nick + " " + param + " :" + text;
-// 	replies[RPL_CHANNELMODEIS] = "324 " + nick + " " + param;
-// 	replies[RPL_NOTOPIC] = "331 " + nick + " " + param + " :No topic is set";
-// 	replies[RPL_TOPIC] = "332 " + nick + " " + param + " :" + text;
-// 	replies[RPL_INVITING] = "341 " + nick + " " + param;
-// 	replies[RPL_WHOREPLY] = "352 " + nick + " " + param + " :" + text;
-// 	replies[RPL_NAMREPLY] = "353 " + nick + " " + param + " :" + text;
-// 	replies[RPL_ENDOFNAMES] = "366 " + nick + " " + param + " :End of /NAMES list ";
-// 	replies[RPL_YOUREOPER] = "381 " + nick + " :You are now an IRC operator";
-// 	replies[RPL_HELPSTART] = "704 " + nick + " " + param + " :" + text;
-// 	replies[RPL_HELPTXT] = "705 " + nick + " " + param + " :" + text;
-// 	replies[RPL_ENDOFHELP] = "706 " + nick + " " + param + " :" + text;
-// 	it = replies.find(reply);
-// 	if (it == replies.end())
-// 		return ;
-// 	fd = client.get_client_fd();
-// 	client.get_send_buffer() += ":" + this->_name + " " + it->second + "\r\n";
-// 	event.events = EPOLLIN | EPOLLOUT;
-// 	event.data.fd = fd;
-// 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
-// 		throw std::runtime_error("IRC: epoll_ctl() failed.");
-// }
-
-
-// void Server::send_notice(Client &client, int notice, const std::string &param)
-// {
-// 	std::map<int, std::string>::iterator it;
-// 	std::map<int, std::string> 			 notices;
-// 	std::string 						 nick;
-// 	std::string 						 msg;
-// 	epoll_event 						 event;
-// 	int 								 fd;
-
-// 	nick = client.get_nick();
-// 	if (nick.empty())
-// 		nick = "*";
-// 	if (notice == PONGREPLY)
-// 		msg = ":" + this->_name + " PONG " + this->_name + " :" + param;
-// 	else if (notice == REGISTRATION)
-// 		msg = registration_reply(client, this->_name, this->_date);
-// 	else if (notice == MIKURESPONSE)
-// 		msg = ":Miku!Hatsune@127.0.0.1 PRIVMSG " + nick + " :\033[1;36m" + param + "\033[0m";
-// 	else
-// 	{
-// 		notices[PASSACCEPTED] = "PASS accepted";
-// 		notices[NICKSET] = "Set nickname to " + param;
-// 		notices[CHANNELCREATED] = "You created Channel " + param;
-// 		notices[CHANNELJOINED] = "You joined " + param;
-// 		notices[ALREADYDISCONNECTED] = "User is already disconnected";
-// 		notices[KILLSUICIDE] = "You killed yourself (IRC suicide)";
-// 		notices[MIKUUNAVAILABLE] = "Miku is unavailable :/ Try again later.";
-// 		it = notices.find(notice);
-// 		if (it == notices.end())
-// 			return ;
-// 		msg = ":" + this->_name + " NOTICE " + nick + " :" + it->second;
-// 	}
-// 	fd = client.get_client_fd();
-// 	client.get_send_buffer() += msg;
-// 	if (msg.size() < 2 || msg.substr(msg.size() - 2) != "\r\n")
-// 		client.get_send_buffer() += "\r\n";
-// 	event.events = EPOLLIN | EPOLLOUT;
-// 	event.data.fd = fd;
-// 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
-// 		throw std::runtime_error("IRC: epoll_ctl() failed.");
-// }
