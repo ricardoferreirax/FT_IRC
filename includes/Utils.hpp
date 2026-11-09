@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/08 16:14:29 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/06 13:26:34 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 22:21:06 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -74,7 +74,7 @@ bool 	match_ban(Client &client, t_banmask ban);
 
 std::vector<std::string> ft_split(const std::string &s, char delim);
 
-std::string registration_reply(const Client &client, const std::string &server_name, const std::string &date);
+std::string get_error_msg(const std::string &nickname, int error, const std::string &param, const std::string &server_name);
 std::string get_error_param(const std::string &cmd, int error, const std::vector<std::string> &params);
 std::string generateRandomString(int length);
 

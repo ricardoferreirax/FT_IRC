@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/09 14:58:44 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 21:28:13 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 21:41:17 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,18 +17,29 @@
 int Server::oper_cmd(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, std::string>::iterator it;
+	std::map<int, Client>::iterator 			 clienit;
 
-	if (params.size() < 2 || params[0].empty() || params[1].empty())
-		return (ERR_NEEDMOREPARAMS);
 	if (!client.get_registered())
 		return (ERR_NOTREGISTERED);
+	if (params.size() < 2 || params[0].empty() || params[1].empty())
+		return (ERR_NEEDMOREPARAMS);
 	if (client.is_server_op())
-		return (RPL_YOUREOPER);
+	{
+		this->send_reply(client, RPL_YOUREOPER, "", "");
+		return (0);
+	}
 	it = this->_opers.find(params[0]);
 	if (it == this->_opers.end() || it->second != params[1])
 		return (ERR_PASSWDMISMATCH);
 	client.set_server_op(true);
 	this->send_reply(client, RPL_YOUREOPER, "", "");
+	for (clienit = this->_clients.begin(); clienit != this->_clients.end(); ++clienit)
+	{
+		if (clienit->first != client.get_client_fd() && clienit->second.get_registered() && clienit->second.is_server_op())
+		{
+			this->send_cmd(client, clienit->second, "NOTICE " + clienit->second.get_nick() + " :" + client.get_nick() + " is now an IRC operator");
+		}
+	}
 	return (0);
 }
 

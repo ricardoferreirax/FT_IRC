@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 18:15:39 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 22:20:34 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -269,8 +269,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	if (!client.get_registered() && cmd != "PASS" && cmd != "NICK" && cmd != "USER" 
 		&& cmd != "FAST" && cmd != "HELP" && cmd != "PING" && cmd != "QUIT")
 	{
-		if (cmd != "NOTICE")
-			this->send_error(client, ERR_NOTREGISTERED, cmd);
+		this->send_error(client, ERR_NOTREGISTERED, cmd);
 		return ;
 	}
 	ret = (this->*(it->second))(client, params);
@@ -285,6 +284,9 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	{
 		client.set_registered(true);
 		std::cout << "\n\033[1;36m" << "✓ CLIENT " << client.get_client_fd() << " REGISTERED" << "\033[0m\n\n";
-		this->send_notice(client, REGISTRATION, "");
+		this->send_msg(client, ":" + this->_name + " 001 " + client.get_nick() + " :Welcome to the IRC server");
+		this->send_msg(client, ":" + this->_name + " 002 " + client.get_nick() + " :Your host is " + this->_name);
+		this->send_msg(client, ":" + this->_name + " 003 " + client.get_nick() + " :This server was created " + this->_date);
+		this->send_msg(client, ":" + this->_name + " 004 " + client.get_nick() + " " + this->_name + " 1.0 io itkol");
 	}
 }

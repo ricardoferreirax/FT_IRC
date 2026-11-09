@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/07 12:24:52 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 22:20:49 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -116,24 +116,6 @@ void	parse_msg(const std::string &msg, std::string &cmd, std::vector<std::string
 		params.push_back(remaining.substr(0, space)); // with space -> add param
 		remaining.erase(0, space + 1); // rmv it so loop can parse next one
 	}
-}
-
-std::string registration_reply(const Client &client, const std::string &_name, const std::string &date)
-{
-	std::string nick;
-	std::string user;
-	std::string host;
-	std::string reply;
-
-	nick = client.get_nick();
-	user = client.get_user();
-	host = client.get_host_ip();
-	reply += ":" + _name + " 001 " + nick + " :Welcome to the Internet Relay Network " + nick + "!" + user + "@" + host + "\r\n";
-	reply += ":" + _name + " 002 " + nick + " :Your host is " + _name + ", running version 1.1\r\n";
-	reply += ":" + _name + " 003 " + nick + " :This server was created " + date + "\r\n";
-	reply += ":" + _name + " 004 " + nick + " " + _name + " 1.1 io kost k\r\n";
-	reply += "\r\n";
-	return (reply);
 }
 
 bool	is_valid_user_mode(const std::string &mode)
