@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 22:37:05 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 23:43:57 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,7 +39,8 @@ Server::Server(const std::string &port, const std::string &pass)
 	this->_date = ctime(&now);
 	if (!this->_date.empty())
 		this->_date.erase(this->_date.size() - 1);
-	this->_opers["admin"] = "1234";
+	this->_opers["admin"] = "sudo";
+	this->_restart = false;
 }
 
 // close all client connections
@@ -80,13 +81,13 @@ void Server::close_connections(close_type type, int fd)
 		this->_clients.erase(it);
 		std::cout << "\n\033[1;31m- Client " << fd << " disconnected\033[0m\n\n";
 	}
-	else if (type == SERVER_SHUTDOWN) // close entire server and all client connections
+	else if (type == SERVER_SHUTDOWN || type == SERVER_RESTART)
 	{
 		this->_bot.cleanup(BOT_SHUTDOWN, -1, NULL); // close all bot requests
+		this->_channels.clear();
 		for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 			close(it->first); // close all client sockets
 		this->_clients.clear();
-		this->_channels.clear();
 		if (this->_listen_fd != -1)
 		{
 			close(this->_listen_fd);
@@ -97,7 +98,10 @@ void Server::close_connections(close_type type, int fd)
 			close(this->_epoll_fd);
 			this->_epoll_fd = -1;
 		}
-		std::cout << "[SERVER] Closed!" << std::endl;
+		if (type == SERVER_RESTART)
+			std::cout << "[SERVER] Restarted!" << std::endl;
+		else
+			std::cout << "[SERVER] Closed!" << std::endl;
 	}
 }
 
@@ -139,21 +143,43 @@ void Server::monitor_epoll_events()
 	if (this->_epoll_fd < 0)
 		throw std::runtime_error("IRC: epoll_create1() failed.");
 	this->_bot.set_epoll_fd(this->_epoll_fd);
-	event.events = EPOLLIN; // monitor listening socket for new connections
+	event.events = EPOLLIN; // monitor listening socket for incoming connections
 	event.data.fd = this->_listen_fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 	while (alive)
 	{
+		if (this->_restart)
+		{
+			this->close_connections(SERVER_RESTART, -1);
+			this->start_socket();
+			this->_epoll_fd = epoll_create1(0);
+			if (this->_epoll_fd < 0)
+				throw std::runtime_error("IRC: epoll_create1() failed.");
+			this->_bot.set_epoll_fd(this->_epoll_fd);
+			event.events = EPOLLIN;
+			event.data.fd = this->_listen_fd;
+			if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0)
+				throw std::runtime_error("IRC: epoll_ctl() failed.");
+			this->_restart = false;
+			std::cout << "[SERVER] Restarted successfully!" << std::endl;
+			continue ;
+		}
 		ready = epoll_wait(this->_epoll_fd, events, 10, -1);
 		if (ready < 0)
 		{
 			if (!alive)
 				break ;
+			if (errno == EINTR)
+				continue ;
 			throw std::runtime_error("IRC: epoll_wait() failed.");
 		}
 		for (int i = 0; i < ready; i++)
+		{
 			this->handle_epoll_event(events[i].data.fd, events[i].events);
+			if (this->_restart)
+				break ;
+		}
 	}
 }
 
@@ -191,6 +217,8 @@ int Server::handle_epoll_event(int fd, int events)
 			return (SOCKET_ERROR);
 		}
 	}
+	if (this->_restart)
+		return (SOCKET_SUCCESS);
 	if ((events & EPOLLOUT) && this->_clients.find(fd) != this->_clients.end())
 	{
 		ret = this->handle_socket_data(fd, EPOLLOUT, CLIENT_SOCKET); // send data if client is still connected
@@ -258,6 +286,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["HELP"] = &Server::help_cmd;
 	cmds["AWAY"] = &Server::away_cmd;
 	cmds["OPER"] = &Server::oper_cmd;
+	cmds["RESTART"] = &Server::restart_cmd;
 	cmds["KILL"] = &Server::kill_cmd;
 	cmds["PING"] = &Server::ping_cmd;
 	cmds["QUIT"] = &Server::quit_cmd;

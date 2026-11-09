@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/05 17:17:06 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 22:06:10 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 23:39:21 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -85,7 +85,7 @@ int Server::handle_socket_read(int fd, e_socket_type type, std::string &buffer)
 			parse_msg(msg, cmd, params);
 			if (!cmd.empty())
 				this->execute_cmd(client, cmd, params);
-			if (client.get_quit())
+			if (this->_restart || client.get_quit())
     			return (SOCKET_SUCCESS);
 		}
 		pos = buffer.find("\r\n");

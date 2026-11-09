@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/09 14:58:44 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 21:41:17 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 23:40:27 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -74,5 +74,15 @@ int Server::kill_cmd(Client &client, const std::vector<std::string> &params)
 	quit.push_back("killed by " + client.get_nick());
 	this->quit_cmd(it->second, quit);
 	// std::cout << "[KILL] " << client.get_nick() << " killed " << it->second.get_nick() << " (" << reason << ")" << std::endl;
+	return (0);
+}
+
+int Server::restart_cmd(Client &client, const std::vector<std::string> &params)
+{
+	(void)params;
+
+	if (!client.is_server_op())
+		return (ERR_NOPRIVILEGES);
+	this->_restart = true;
 	return (0);
 }

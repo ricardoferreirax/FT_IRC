@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 23:07:48 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 23:24:28 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,7 +31,8 @@ typedef struct s_modecmd		t_modecmd;
 enum	close_type
 {
 	CLIENT_DISCONNECT,
-	SERVER_SHUTDOWN
+	SERVER_SHUTDOWN,
+	SERVER_RESTART
 };
 
 enum	e_socket_type
@@ -131,6 +132,7 @@ class	Server
 		int			_port;
 		int			_listen_fd;
 		int			_epoll_fd;
+		bool		_restart;
 		Bot			_bot;
 		
 		std::map<std::string, std::string> _opers;
@@ -193,7 +195,8 @@ class	Server
 		void	monitor_epoll_events();
 		int		handle_socket_data(int fd, int event, e_socket_type type);
 		void	send_notice(Client &client, int notice, const std::string &param);
-
+		int 	restart_cmd(Client &client, const std::vector<std::string> &params);
+		void 	restart_server();
 };
 
 void	handle_signal(int signal);
