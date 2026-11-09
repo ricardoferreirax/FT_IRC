@@ -6,13 +6,26 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 22:38:58 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 23:08:25 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
 #include "../includes/Client.hpp"
 #include "../includes/Utils.hpp"
+
+void Server::send_cmd(Client &sender, Client &receiver, const std::string &msg)
+{
+	epoll_event event;
+	int 		fd;
+
+	fd = receiver.get_client_fd();
+	receiver.get_send_buffer() += ":" + sender.get_nick() + "!" + sender.get_user() + "@" + sender.get_host_ip() + " " + msg + "\r\n";
+	event.events = EPOLLIN | EPOLLOUT;
+	event.data.fd = fd;
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
+		throw std::runtime_error("IRC: epoll_ctl() failed.");
+}
 
 void Server::send_reply(Client &client, int reply, const std::string &param, const std::string &text)
 {
@@ -148,19 +161,6 @@ void Server::send_notice(Client &client, int notice, const std::string &param)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 }
 
-void Server::send_cmd(Client &sender, Client &receiver, const std::string &msg)
-{
-	epoll_event event;
-	int 		fd;
-
-	fd = receiver.get_client_fd();
-	receiver.get_send_buffer() += ":" + sender.get_nick() + "!" + sender.get_user() + "@" + sender.get_host_ip() + " " + msg + "\r\n";
-	event.events = EPOLLIN | EPOLLOUT;
-	event.data.fd = fd;
-	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
-		throw std::runtime_error("IRC: epoll_ctl() failed.");
-}
-
 void Server::notify_new_op(Channel &channel, int fd)
 {
 	std::map<int, Client *>::iterator it;
@@ -180,27 +180,6 @@ void Server::notify_new_op(Channel &channel, int fd)
 		event.data.fd = it->first;
 		if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, it->first, &event) == -1)
 			std::cerr << "IRC: epoll_ctl() failed." << std::endl;
-		it++;
-	}
-}
-
-void Server::notify_mode_change(Client &client, Channel &channel, t_modecmd flag)
-{
-	std::map<int, Client *>::iterator it;
-	std::string 					  msg;
-	
-	msg = "MODE " + channel.getName() + " "; // mode msg to notify clients about mode change
-	if (flag.is_add)
-		msg += "+";
-	else
-		msg += "-";
-	msg += flag.flag;
-	if (!flag.param.empty())
-		msg += " " + flag.param;
-	it = channel.getClients().begin();
-	while (it != channel.getClients().end())
-	{
-		this->send_cmd(client, *it->second, msg); // send mode msg to all clients
 		it++;
 	}
 }
@@ -228,21 +207,4 @@ void Server::send_channel_modes(Client &client, Channel &channel)
 		args += " " + limit.str();
 	}
 	this->send_reply(client, RPL_CHANNELMODEIS, channel.getName() + " " + modes + args, ""); // send channel modes to client
-}
-
-void Server::send_channel_names(Client &client, Channel &channel)
-{
-	std::map<int, Client *>::iterator it;
-	std::string 					  names;
-
-	it = channel.getClients().begin();
-	while (it != channel.getClients().end())
-	{
-		if (channel.getChannops().count(it->first))
-			names += "@";
-		names += it->second->get_nick() + " ";
-		it++;
-	}
-	this->send_reply(client, RPL_NAMREPLY, "= " + channel.getName(), names);
-	this->send_reply(client, RPL_ENDOFNAMES, channel.getName(), "End of NAMES list.");
 }

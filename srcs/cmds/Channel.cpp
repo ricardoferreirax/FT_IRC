@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/09 14:50:06 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 14:52:22 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 23:07:08 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,7 @@ int Server::join_cmd(Client &client, const std::vector<std::string> &params)
 	std::vector<std::string> 				 keys;
 	std::string 							 chan_name;
 	std::string 							 key;
+	std::string 							 names;
 	size_t									 i;
 	int										 ret;
 	
@@ -80,8 +81,18 @@ int Server::join_cmd(Client &client, const std::vector<std::string> &params)
 			this->send_reply(client, RPL_TOPIC, chan_name, chanit->second.getMode().topic); // has topic->send topic to client
 		else
 			this->send_reply(client, RPL_NOTOPIC, chan_name, "No topic is set"); // has no topic->send no topic to client
-		this->send_channel_names(client, chanit->second);
-		i++;
+		names = "";
+		it = chanit->second.getClients().begin();
+        while (it != chanit->second.getClients().end())
+        {
+			if (chanit->second.getChannops().count(it->first))
+				names += "@";
+			names += it->second->get_nick() + " ";
+			it++;
+		}
+		this->send_reply(client, RPL_NAMREPLY, "= " + chan_name, names);
+		this->send_reply(client, RPL_ENDOFNAMES, chan_name, "End of NAMES list.");
+        i++;
 	}
 	return (0);
 }
@@ -148,7 +159,9 @@ int Server::topic_cmd(Client &client, const std::vector<std::string> &params)
 int Server::mode_cmd(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, Channel>::iterator chanit;
+	std::map<int, Client *>::iterator 		 it;
 	std::vector<t_modecmd> 					 flags;
+	std::string 							 msg;
 	size_t									 i;
 	int										 ret;
 	int										 newopFD;
@@ -203,7 +216,20 @@ int Server::mode_cmd(Client &client, const std::vector<std::string> &params)
 		}
 		if (!res)
 			return (0);
-		this->notify_mode_change(client, chanit->second, flags[i]); // notify clients about mode change
+		msg = "MODE " + chanit->second.getName() + " ";
+		if (flags[i].is_add)
+			msg += "+";
+		else
+			msg += "-";
+		msg += flags[i].flag;
+		if (!flags[i].param.empty())
+			msg += " " + flags[i].param;
+		it = chanit->second.getClients().begin();
+		while (it != chanit->second.getClients().end())
+		{
+			this->send_cmd(client, *it->second, msg); // send mode change to all clients in channel
+			it++;
+		}
 		if (newopFD > 0 && !chanit->second.getChannops().count(newopFD))
 			this->notify_new_op(chanit->second, *chanit->second.getChannops().begin()); // notify clients about new chanop
 		i++;

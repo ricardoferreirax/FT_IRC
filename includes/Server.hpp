@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 21:15:43 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 23:07:48 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -143,14 +143,11 @@ class	Server
 		int 	handle_socket_read(int fd, e_socket_type type, std::string &buffer);
 		int 	handle_socket_write(int fd, e_socket_type type, std::string &buffer);
 		
-		void 	send_msg(Client &client, const std::string &msg);
 		void	send_cmd(Client &sender, Client &receiver, const std::string &message);
 		void	send_reply(Client &client, int reply, const std::string &param, const std::string &text);
 		void	send_error(Client &client, int error, const std::string &cmd);
 		void    send_channel_modes(Client &client, Channel &channel);
-		void	send_channel_names(Client &client, Channel &channel);
 		void 	notify_new_op(Channel &channel, int fd);
-		void 	notify_mode_change(Client &client, Channel &channel, t_modecmd flag);
 
 		void	execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params);
 		int		pass_cmd(Client &client, const std::vector<std::string> &params);

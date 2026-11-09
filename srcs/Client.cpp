@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:31:53 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 22:26:40 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 22:44:29 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -143,5 +143,3 @@ bool Client::is_server_op() const
 {
 	return (this->_server_op);
 }
-
-
