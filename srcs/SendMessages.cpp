@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 18:38:21 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 21:16:01 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -133,8 +133,8 @@ void Server::send_notice(Client &client, int notice, const std::string &param)
 		notices[NICKSET] = "Set nickname to " + param;
 		notices[CHANNELCREATED] = "You created Channel " + param;
 		notices[CHANNELJOINED] = "You joined " + param;
-		notices[KILLSELF] = "You cannot KILL yourself";
 		notices[ALREADYDISCONNECTED] = "User is already disconnected";
+		notices[KILLSUICIDE] = "You killed yourself (IRC suicide)";
 		notices[MIKUUNAVAILABLE] = "Miku is unavailable :/ Try again later.";
 		it = notices.find(notice);
 		if (it == notices.end())

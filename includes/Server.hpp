@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 18:38:32 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 21:15:43 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -116,8 +116,8 @@ enum	e_notice
 	CHANNELCREATED,
 	CHANNELJOINED,
 	PONGREPLY,
-	KILLSELF,
 	ALREADYDISCONNECTED,
+	KILLSUICIDE,
 	MIKURESPONSE,
 	MIKUUNAVAILABLE
 };

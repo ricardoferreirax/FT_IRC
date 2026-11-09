@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/08 21:21:15 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/08 21:25:15 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 21:22:29 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,7 +38,7 @@ int Server::quit_cmd(Client &client, const std::vector<std::string> &params)
 			}
 		}
 	}
-	client.get_send_buffer() += "Closing connection: " + client.get_nick() + " (" + reason + ")\r\n";
+	client.get_send_buffer() += "Closing " + client.get_nick() + " connection :" + reason + "\r\n";
 	event.events = EPOLLOUT; // set EPOLLOUT to send quit msg before closing connection
 	event.data.fd = client.get_client_fd();
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, client.get_client_fd(), &event) < 0)

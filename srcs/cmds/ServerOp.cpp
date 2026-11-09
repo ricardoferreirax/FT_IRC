@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/09 14:58:44 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 18:39:11 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 21:28:13 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,6 +35,7 @@ int Server::oper_cmd(Client &client, const std::vector<std::string> &params)
 int Server::kill_cmd(Client &client, const std::vector<std::string> &params)
 {
 	std::map<int, Client>::iterator it;
+	std::vector<std::string> 		quit;
 	std::string 					nick;
 	std::string 					reason;
 
@@ -51,18 +52,16 @@ int Server::kill_cmd(Client &client, const std::vector<std::string> &params)
 	}
 	if (it == this->_clients.end())
 		return (ERR_NOSUCHNICK);
-	if (it->second.get_client_fd() == client.get_client_fd())
-	{
-		this->send_notice(client, KILLSELF, "");
-		return (0);
-	}
 	if (it->second.get_quit())
 	{
 		this->send_notice(client, ALREADYDISCONNECTED, "");
 		return (0);
 	}
+	if (it->first == client.get_client_fd())
+		this->send_notice(client, KILLSUICIDE, "");
 	this->send_cmd(client, it->second, "KILL " + it->second.get_nick() + " :" + reason);
-	it->second.set_quit(true);
+	quit.push_back("killed by " + client.get_nick());
+	this->quit_cmd(it->second, quit);
 	// std::cout << "[KILL] " << client.get_nick() << " killed " << it->second.get_nick() << " (" << reason << ")" << std::endl;
 	return (0);
 }
