@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/08 21:21:36 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/08 21:24:46 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 13:17:20 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,9 +37,11 @@ int Server::who_cmd(Client &client, const std::vector<std::string> &params)
 				continue ;
 			flags = "H";
 			if (clienit->second->is_away())
-				flags = "G";
+    			flags = "G"; // client is away->set flags to G
+			if (clienit->second->is_server_op())
+				flags += "*"; // client is server op->add *
 			if (chanit->second.getChannops().count(clienit->second->get_client_fd()))
-				flags += "@"; // if client is channop->add @
+				flags += "@"; // client is channop->add @
 			info = mask + " " + clienit->second->get_user() + " " + clienit->second->get_host_ip() + " " + this->_name + " " + clienit->second->get_nick() + " " + flags;
 			this->send_reply(client, RPL_WHOREPLY, info, "0 " + clienit->second->get_realname()); // send for each client in channel
 		}
@@ -56,6 +58,8 @@ int Server::who_cmd(Client &client, const std::vector<std::string> &params)
 			flags = "H";
 			if (it->second.is_away())
 				flags = "G";
+			if (it->second.is_server_op())
+				flags += "*";
 			info = "* " + it->second.get_user() + " " + it->second.get_host_ip() + " " + this->_name + " " + it->second.get_nick() + " " + flags;
 			this->send_reply(client, RPL_WHOREPLY, info, "0 " + it->second.get_realname()); // send for matching client
 		}
