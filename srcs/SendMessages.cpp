@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/10 21:25:26 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 22:10:50 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -142,6 +142,15 @@ void Server::send_notice(Client &client, int notice, const std::string &param)
 	notices[TOPICCHANGED] = "The topic changed to: " + param.substr(param.find(' ') + 1);
 	notices[CHANNELKEYSET] = "Password set for channel " + param;
 	notices[CHANNELKEYREMOVED] = "Password removed from channel " + param;
+	notices[CHANNELINVITEONLY] = "Channel " + param + " is now invite-only";
+	notices[CHANNELINVITEOPEN] = "Channel " + param + " is no longer invite-only";
+	notices[CHANNELTOPICRESTRICTED] = "Only channel operators can change the topic in " + param;
+	notices[CHANNELTOPICOPEN] = "All channel members can change the topic in " + param;
+	notices[CHANNELOPSET] = "Channel operator privileges granted to " + param;
+	notices[CHANNELOPREMOVED] = "Channel operator privileges removed from " + param;
+	notices[CHANNELLIMITSET] = "User limit set for channel " + param;
+	notices[CHANNELLIMITREMOVED] = "User limit removed from channel " + param;
+	notices[INVALIDCHANNELLIMIT] = "Invalid channel limit. Limit must be greater than 0";
 	if (notice == REGISTRATION)
 		msg = registration_reply(client, this->_name, this->_date);
 	else if (notices.find(notice) == notices.end())

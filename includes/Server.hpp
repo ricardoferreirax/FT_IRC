@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/10 21:31:52 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 22:10:30 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -118,6 +118,15 @@ enum	e_notice
 	CHANNELJOINED,
 	CHANNELKEYSET,
 	CHANNELKEYREMOVED,
+	CHANNELINVITEONLY,
+	CHANNELINVITEOPEN,
+	CHANNELTOPICRESTRICTED,
+	CHANNELTOPICOPEN,
+	CHANNELOPSET,
+	CHANNELOPREMOVED,
+	CHANNELLIMITSET,
+	CHANNELLIMITREMOVED,
+	INVALIDCHANNELLIMIT,
 	TOPICCHANGED,
 	PONGREPLY,
 	ALREADYDISCONNECTED,

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 17:31:45 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/10 21:31:06 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 22:15:23 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -123,11 +123,15 @@ Channel *Server::validate_channel_op(Client &client, const std::string &channel_
 bool Server::handle_imode(Client &client, std::string chan_name, t_modecmd flag)
 {
 	Channel *channel;
-	
-	channel = validate_channel_op(client, chan_name);
-	if(!channel)
+
+	channel = this->validate_channel_op(client, chan_name);
+	if (!channel)
 		return (false);
 	channel->setMode(flag.is_add, channel->getMode().topic_restricted, channel->getMode().topic, channel->getMode().users, channel->getMode().key);
+	if (flag.is_add)
+		this->send_notice(client, CHANNELINVITEONLY, chan_name);
+	else
+		this->send_notice(client, CHANNELINVITEOPEN, chan_name);
 	// std::cout << "Channel " << chan_name << " now has " << flag.is_add << " i" << std::endl;
 	return (true);
 }
@@ -136,10 +140,14 @@ bool Server::handle_tmode(Client &client, std::string chan_name, t_modecmd flag)
 {
 	Channel *channel;
 
-	channel = validate_channel_op(client, chan_name);
-	if(!channel)
+	channel = this->validate_channel_op(client, chan_name);
+	if (!channel)
 		return (false);
 	channel->setMode(channel->getMode().invite_only, flag.is_add, channel->getMode().topic, channel->getMode().users, channel->getMode().key);
+	if (flag.is_add)
+		this->send_notice(client, CHANNELTOPICRESTRICTED, chan_name);
+	else
+		this->send_notice(client, CHANNELTOPICOPEN, chan_name);
 	// std::cout << "Channel " << chan_name << " now has " << flag.is_add << " t" << std::endl;
 	return (true);
 }
@@ -179,7 +187,7 @@ bool Server::handle_omode(Client &client, std::string chan_name, t_modecmd flag)
 {
 	std::map<int, Client *>::iterator it;
 	std::map<int, Client>::iterator   clienit;
-	Channel							 *channel;
+	Channel 						 *channel;
 
 	channel = this->validate_channel_op(client, chan_name);
 	if (!channel)
@@ -196,9 +204,15 @@ bool Server::handle_omode(Client &client, std::string chan_name, t_modecmd flag)
 		return (false);
 	}
 	if (flag.is_add)
+	{
 		channel->getChannops().insert(clienit->second.get_client_fd());
+		this->send_notice(client, CHANNELOPSET, flag.param + " in " + chan_name);
+	}
 	else
+	{
 		channel->getChannops().erase(clienit->second.get_client_fd());
+		this->send_notice(client, CHANNELOPREMOVED, flag.param + " in " + chan_name);
+	}
 	if (channel->getChannops().empty() && !channel->getClients().empty())
 	{
 		it = channel->getClients().begin();
@@ -215,15 +229,24 @@ bool Server::handle_lmode(Client &client, std::string chan_name, t_modecmd flag)
 	Channel *channel;
 	t_ulimit users;
 
-	channel = validate_channel_op(client, chan_name);
+	channel = this->validate_channel_op(client, chan_name);
 	if (!channel)
 		return (false);
 	users = channel->getMode().users;
+	if (!flag.param.empty() && std::atoi(flag.param.c_str()) <= 0)
+	{
+		this->send_notice(client, INVALIDCHANNELLIMIT, "");
+		return (false);
+	}
 	if (flag.is_add)
 		users.u_limit = std::atoi(flag.param.c_str());
 	else
 		users.u_limit = 0;
 	channel->setMode(channel->getMode().invite_only, channel->getMode().topic_restricted, channel->getMode().topic, users, channel->getMode().key);
+	if (flag.is_add)
+		this->send_notice(client, CHANNELLIMITSET, chan_name + " to " + flag.param + " users");
+	else
+		this->send_notice(client, CHANNELLIMITREMOVED, chan_name);
 	// std::cout << "Channel " << chan_name << " now has " << flag.is_add << " l" << std::endl;
 	return (true);
 }
