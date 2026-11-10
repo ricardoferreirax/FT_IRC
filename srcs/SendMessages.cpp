@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/10 20:52:15 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 21:25:26 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -123,41 +123,37 @@ void Server::send_error(Client &client, int error, const std::string &param)
 
 void Server::send_notice(Client &client, int notice, const std::string &param)
 {
-	std::map<int, std::string>::iterator it;
-	std::map<int, std::string> 			 notices;
-	std::string 						 nick;
-	std::string 						 msg;
-	epoll_event 						 event;
-	int 								 fd;
+	std::map<int, std::string> notices;
+	std::string 			   nick;
+	std::string 			   msg;
+	epoll_event 			   event;
+	int 					   fd;
 
 	nick = client.get_nick();
 	if (nick.empty())
 		nick = "*";
-	if (notice == PONGREPLY)
-		msg = ":" + this->_name + " PONG " + this->_name + " :" + param;
-	else if (notice == REGISTRATION)
+	notices[PONGREPLY] = "PONG " + this->_name + " :" + param;
+	notices[MIKURESPONSE] = "PRIVMSG " + nick + " :\033[1;36m" + param + "\033[0m";
+	notices[PASSACCEPTED] = "PASS accepted";
+	notices[NICKSET] = "Set nickname to " + param;
+	notices[CHANNELCREATED] = "You created Channel " + param;
+	notices[CHANNELJOINED] = "You joined " + param;
+	notices[MIKUUNAVAILABLE] = "Miku is unavailable :/ Try again later.";
+	notices[TOPICCHANGED] = "The topic changed to: " + param.substr(param.find(' ') + 1);
+	notices[CHANNELKEYSET] = "Password set for channel " + param;
+	notices[CHANNELKEYREMOVED] = "Password removed from channel " + param;
+	if (notice == REGISTRATION)
 		msg = registration_reply(client, this->_name, this->_date);
+	else if (notices.find(notice) == notices.end())
+		return ;
+	else if (notice == PONGREPLY)
+		msg = ":" + this->_name + " " + notices[notice];
 	else if (notice == MIKURESPONSE)
-		msg = ":Miku!Hatsune@127.0.0.1 PRIVMSG " + nick + " :\033[1;36m" + param + "\033[0m";
-	else if (notice == TOPICCHANGED)
-	{
-		std::string::size_type pos = param.find(' ');
-		if (pos == std::string::npos)
-			return ;
-		msg = ":" + this->_name + " NOTICE " + param.substr(0, pos) + " :The topic changed to: " + param.substr(pos + 1);
-	}
+		msg = ":Miku!Hatsune@127.0.0.1 " + notices[notice];
+	else if (notice == TOPICCHANGED && param.find(' ') != std::string::npos)
+		msg = ":" + this->_name + " NOTICE " + param.substr(0, param.find(' ')) + " :" + notices[notice];
 	else
-	{
-		notices[PASSACCEPTED] = "PASS accepted";
-		notices[NICKSET] = "Set nickname to " + param;
-		notices[CHANNELCREATED] = "You created Channel " + param;
-		notices[CHANNELJOINED] = "You joined " + param;
-		notices[MIKUUNAVAILABLE] = "Miku is unavailable :/ Try again later.";
-		it = notices.find(notice);
-		if (it == notices.end())
-			return ;
-		msg = ":" + this->_name + " NOTICE " + nick + " :" + it->second;
-	}
+		msg = ":" + this->_name + " NOTICE " + nick + " :" + notices[notice];
 	fd = client.get_client_fd();
 	client.get_send_buffer() += msg;
 	if (msg.size() < 2 || msg.substr(msg.size() - 2) != "\r\n")

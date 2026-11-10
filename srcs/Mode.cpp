@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 17:31:45 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/08 20:57:49 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 21:31:06 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -162,9 +162,15 @@ bool Server::handle_kmode(Client &client, std::string chan_name, t_modecmd flag)
 		return (false);
 	}
 	if (flag.is_add)
-		channel->setMode(channel->getMode().invite_only, channel->getMode().topic_restricted, channel->getMode().topic, channel->getMode().users, flag.param);
+	{
+		channel->setMode(channel->getMode().invite_only, channel->getMode().topic_restricted, channel->getMode().topic, channel->getMode().users, flag.param); // set new key
+		this->send_notice(client, CHANNELKEYSET, chan_name + " (Pass: " + flag.param + ")");
+	}
 	else
-		channel->setMode(channel->getMode().invite_only, channel->getMode().topic_restricted, channel->getMode().topic, channel->getMode().users, "");
+	{
+		channel->setMode(channel->getMode().invite_only, channel->getMode().topic_restricted, channel->getMode().topic, channel->getMode().users, ""); // clear key
+		this->send_notice(client, CHANNELKEYREMOVED, chan_name);
+	}
 	// std::cout << "Channel " << chan_name << " now has " << flag.is_add << " k" << std::endl;
 	return (true);
 }
