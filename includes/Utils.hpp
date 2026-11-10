@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/08 16:14:29 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 22:35:17 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 20:46:15 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,6 +65,7 @@ enum	log_type
 int		validate_port(const std::string &port);
 bool	is_valid_nick(const std::string &nick);
 bool	same_nick(const std::string &nick1, const std::string &nick2);
+bool	valid_channel_name(const std::string &name);
 void	parse_params(std::string params, std::vector<std::string> &parsed);
 bool	is_valid_user_mode(const std::string &mode);
 void	parse_msg(const std::string &msg, std::string &cmd, std::vector<std::string> &params);

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 23:08:25 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 20:52:15 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -139,6 +139,13 @@ void Server::send_notice(Client &client, int notice, const std::string &param)
 		msg = registration_reply(client, this->_name, this->_date);
 	else if (notice == MIKURESPONSE)
 		msg = ":Miku!Hatsune@127.0.0.1 PRIVMSG " + nick + " :\033[1;36m" + param + "\033[0m";
+	else if (notice == TOPICCHANGED)
+	{
+		std::string::size_type pos = param.find(' ');
+		if (pos == std::string::npos)
+			return ;
+		msg = ":" + this->_name + " NOTICE " + param.substr(0, pos) + " :The topic changed to: " + param.substr(pos + 1);
+	}
 	else
 	{
 		notices[PASSACCEPTED] = "PASS accepted";

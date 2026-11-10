@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/05 17:17:06 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 23:57:19 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 20:22:52 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -106,8 +106,10 @@ int Server::handle_socket_write(int fd, e_socket_type type, std::string &buffer)
 	if (!buffer.empty()) // there is pending data to send
 	{
 		bytes = send(fd, buffer.c_str(), buffer.size(), MSG_NOSIGNAL);
-		if (bytes <= 0)
+		if (bytes < 0)
 			return (SOCKET_PENDING); // if send() fails->keep pending data for next event
+		if (bytes == 0)
+			return (SOCKET_ERROR); // peer closed connection
 		if (type == CLIENT_SOCKET)
 			log_tcp(TCP_SEND, fd, bytes, buffer.substr(0, bytes));
 		buffer.erase(0, bytes); // rmv only bytes successfully sent

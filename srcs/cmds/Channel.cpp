@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/09 14:50:06 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 23:07:08 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 20:47:47 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,7 +35,7 @@ int Server::join_cmd(Client &client, const std::vector<std::string> &params)
 	while (i < c_names.size())
 	{
 		chan_name = c_names[i];
-		if (chan_name.empty() || (chan_name[0] != '#' && chan_name[0] != '&'))
+		if (!valid_channel_name(chan_name))
 		{
 			this->send_error(client, ERR_BADCHANMASK, chan_name);
 			i++;
@@ -151,6 +151,7 @@ int Server::topic_cmd(Client &client, const std::vector<std::string> &params)
 	while (it != chanit->second.getClients().end())
 	{
 		this->send_cmd(client, *it->second, msg); // send new topic to all clients in channel
+		this->send_notice(*it->second, TOPICCHANGED, params[0] + " " + chanit->second.getMode().topic);
 		it++;
 	}
 	return (0);

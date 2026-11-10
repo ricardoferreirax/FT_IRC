@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 23:24:28 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 20:34:52 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -116,6 +116,7 @@ enum	e_notice
 	NICKSET,
 	CHANNELCREATED,
 	CHANNELJOINED,
+	TOPICCHANGED,
 	PONGREPLY,
 	ALREADYDISCONNECTED,
 	KILLSUICIDE,

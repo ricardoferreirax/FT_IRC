@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/10 00:06:53 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 20:17:28 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,7 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <errno.h>
 
 Server::Server(const std::string &port, const std::string &pass)
 {
@@ -138,6 +139,7 @@ void Server::monitor_epoll_events()
 	epoll_event event;
 	epoll_event events[10];
 	int 		ready;
+	int			errno;
 
 	this->_epoll_fd = epoll_create1(0);
 	if (this->_epoll_fd < 0)
@@ -261,7 +263,6 @@ void	Server::accept_client()
 	this->_clients[client_fd].set_host_ip(inet_ntoa(client_addr.sin_addr));
 	std::cout << "\n\033[1;32m" << "+ CLIENT " << client_fd << " CONNECTED" << "\033[0m\n";
 }
-
 
 void Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
 {

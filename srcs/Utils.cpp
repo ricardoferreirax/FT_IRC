@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 22:41:34 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 20:45:56 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,6 +72,20 @@ bool	same_nick(const std::string &nick1, const std::string &nick2)
 	for (size_t i = 0; i < nick1.size(); i++)
 	{
 		if (std::tolower(nick1[i]) != std::tolower(nick2[i])) // compare nicks ignoring case
+			return (false);
+	}
+	return (true);
+}
+
+bool	valid_channel_name(const std::string &name)
+{
+	if (name.size() < 2 || name.size() > 50)
+		return (false);
+	if (name[0] != '#' && name[0] != '&')
+		return (false);
+	for (size_t i = 1; i < name.size(); i++)
+	{
+		if (name[i] == ' ' || name[i] == '\t' || name[i] == ',' || name[i] == '\r' || name[i] == '\n')
 			return (false);
 	}
 	return (true);
