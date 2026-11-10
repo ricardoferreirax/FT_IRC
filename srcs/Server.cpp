@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 23:43:57 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 00:06:53 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -208,7 +208,7 @@ int Server::handle_epoll_event(int fd, int events)
 		this->close_connections(CLIENT_DISCONNECT, fd); // disconnect clients with epoll error or hangup
 		return (SOCKET_ERROR);
 	}
-	if (events & EPOLLIN)
+	if ((events & EPOLLIN) && !this->_clients[fd].get_quit())
 	{
 		ret = this->handle_socket_data(fd, EPOLLIN, CLIENT_SOCKET); // receive data from clients
 		if (ret == SOCKET_ERROR)
@@ -219,9 +219,9 @@ int Server::handle_epoll_event(int fd, int events)
 	}
 	if (this->_restart)
 		return (SOCKET_SUCCESS);
-	if ((events & EPOLLOUT) && this->_clients.find(fd) != this->_clients.end())
+	if (events & EPOLLOUT)
 	{
-		ret = this->handle_socket_data(fd, EPOLLOUT, CLIENT_SOCKET); // send data if client is still connected
+		ret = this->handle_socket_data(fd, EPOLLOUT, CLIENT_SOCKET); // send data to clients
 		if (ret == SOCKET_ERROR)
 		{
 			this->close_connections(CLIENT_DISCONNECT, fd);

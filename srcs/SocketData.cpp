@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/05 17:17:06 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 23:39:21 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/09 23:57:19 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,6 +73,8 @@ int Server::handle_socket_read(int fd, e_socket_type type, std::string &buffer)
 		return (SOCKET_SUCCESS); // bot responses are processed separately so don't parse bot response here
 	log_tcp(TCP_RECEIVE, fd, bytes, std::string(data, bytes));
 	Client &client = this->_clients.find(fd)->second;
+	if (client.get_quit())
+		return (SOCKET_SUCCESS); // client quit ->don't process any more msgs
 	pos = buffer.find("\r\n");
 	while (pos != std::string::npos)
 	{
