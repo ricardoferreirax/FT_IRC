@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/10 20:17:28 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 22:29:05 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -281,6 +281,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["MODE"] = &Server::mode_cmd;
 	cmds["PART"] = &Server::part_cmd;
 	cmds["KICK"] = &Server::kick_cmd;
+	cmds["NAMES"] = &Server::names_cmd;
 	cmds["PRIVMSG"] = &Server::privmsg_cmd;
 	cmds["WHO"] = &Server::who_cmd;
 	cmds["WHOIS"] = &Server::whois_cmd;

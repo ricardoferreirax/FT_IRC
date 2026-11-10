@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/09 14:50:06 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/10 20:47:47 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 22:39:34 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -81,18 +81,9 @@ int Server::join_cmd(Client &client, const std::vector<std::string> &params)
 			this->send_reply(client, RPL_TOPIC, chan_name, chanit->second.getMode().topic); // has topic->send topic to client
 		else
 			this->send_reply(client, RPL_NOTOPIC, chan_name, "No topic is set"); // has no topic->send no topic to client
-		names = "";
-		it = chanit->second.getClients().begin();
-        while (it != chanit->second.getClients().end())
-        {
-			if (chanit->second.getChannops().count(it->first))
-				names += "@";
-			names += it->second->get_nick() + " ";
-			it++;
-		}
-		this->send_reply(client, RPL_NAMREPLY, "= " + chan_name, names);
-		this->send_reply(client, RPL_ENDOFNAMES, chan_name, "End of NAMES list.");
-        i++;
+		this->send_names(client, chanit->second, chan_name);
+		this->send_reply(client, RPL_ENDOFNAMES, chan_name, "");
+		i++;
 	}
 	return (0);
 }
@@ -356,3 +347,39 @@ int Server::kick_cmd(Client &client, const std::vector<std::string> &params)
 	}
 	return (0);
 }
+
+int Server::names_cmd(Client &client, const std::vector<std::string> &params)
+{
+	std::map<std::string, Channel>::iterator it;
+	std::vector<std::string> 				 channels;
+	size_t 									 i;
+
+	if (params.empty())
+	{
+		if (this->_channels.empty())
+			this->send_notice(client, NOCHANNELS, "");
+		else
+		{
+			it = this->_channels.begin();
+			while (it != this->_channels.end())
+			{
+				this->send_names(client, it->second, it->first);
+				it++;
+			}
+		}
+		this->send_reply(client, RPL_ENDOFNAMES, "*", "");
+		return (0);
+	}
+	channels = ft_split(params[0], ',');
+	i = 0;
+	while (i < channels.size())
+	{
+		it = this->_channels.find(channels[i]);
+		if (it != this->_channels.end())
+			this->send_names(client, it->second, it->first);
+		this->send_reply(client, RPL_ENDOFNAMES, channels[i], "");
+		i++;
+	}
+	return (0);
+}
+

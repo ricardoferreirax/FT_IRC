@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/10 22:10:50 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 22:34:34 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,7 +56,7 @@ void Server::send_reply(Client &client, int reply, const std::string &param, con
 	replies[RPL_INVITING] = "341 " + nick + " " + param;
 	replies[RPL_WHOREPLY] = "352 " + nick + " " + param + " :" + text;
 	replies[RPL_NAMREPLY] = "353 " + nick + " " + param + " :" + text;
-	replies[RPL_ENDOFNAMES] = "366 " + nick + " " + param + " :End of /NAMES list ";
+	replies[RPL_ENDOFNAMES] = "366 " + nick + " " + param + " :End of /NAMES list";
 	replies[RPL_YOUREOPER] = "381 " + nick + " :You are now an IRC operator";
 	replies[RPL_HELPSTART] = "704 " + nick + " " + param + " :" + text;
 	replies[RPL_HELPTXT] = "705 " + nick + " " + param + " :" + text;
@@ -136,6 +136,7 @@ void Server::send_notice(Client &client, int notice, const std::string &param)
 	notices[MIKURESPONSE] = "PRIVMSG " + nick + " :\033[1;36m" + param + "\033[0m";
 	notices[PASSACCEPTED] = "PASS accepted";
 	notices[NICKSET] = "Set nickname to " + param;
+	notices[NOCHANNELS] = "There are no channels available";
 	notices[CHANNELCREATED] = "You created Channel " + param;
 	notices[CHANNELJOINED] = "You joined " + param;
 	notices[MIKUUNAVAILABLE] = "Miku is unavailable :/ Try again later.";
@@ -171,6 +172,24 @@ void Server::send_notice(Client &client, int notice, const std::string &param)
 	event.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
+}
+
+void Server::send_names(Client &client, Channel &channel, const std::string &chan_name)
+{
+	std::map<int, Client *>::iterator it;
+	std::string 					  names;
+
+	it = channel.getClients().begin();
+	while (it != channel.getClients().end())
+	{
+		if (!names.empty())
+			names += " ";
+		if (channel.getChannops().find(it->first) != channel.getChannops().end())
+			names += "@";
+		names += it->second->get_nick();
+		it++;
+	}
+	this->send_reply(client, RPL_NAMREPLY, "= " + chan_name, names);
 }
 
 void Server::notify_new_op(Channel &channel, int fd)

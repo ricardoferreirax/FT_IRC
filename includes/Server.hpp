@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/10 22:10:30 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 22:32:44 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -114,6 +114,7 @@ enum	e_notice
 	REGISTRATION,
 	PASSACCEPTED,
 	NICKSET,
+	NOCHANNELS,
 	CHANNELCREATED,
 	CHANNELJOINED,
 	CHANNELKEYSET,
@@ -160,6 +161,7 @@ class	Server
 		void	send_cmd(Client &sender, Client &receiver, const std::string &message);
 		void	send_reply(Client &client, int reply, const std::string &param, const std::string &text);
 		void	send_error(Client &client, int error, const std::string &cmd);
+		void 	send_names(Client &client, Channel &channel, const std::string &chan_name);
 		void    send_channel_modes(Client &client, Channel &channel);
 		void 	notify_new_op(Channel &channel, int fd);
 
@@ -176,6 +178,7 @@ class	Server
 		int 	who_cmd(Client &client, const std::vector<std::string> &params);
 		int 	whois_cmd(Client &client, const std::vector<std::string> &params);
 		int 	help_cmd(Client &client, const std::vector<std::string> &params);
+		int 	names_cmd(Client &client, const std::vector<std::string> &params);
 		int 	away_cmd(Client &client, const std::vector<std::string> &params);
 		int		join_cmd(Client &client, const std::vector<std::string> &params);
 		int 	invite_cmd(Client &client, const std::vector<std::string> &params);
