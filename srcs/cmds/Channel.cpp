@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/09 14:50:06 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/11 21:38:39 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/11 22:57:00 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -155,21 +155,21 @@ int Server::mode_cmd(Client &client, const std::vector<std::string> &params)
 	std::string 							 msg;
 	size_t									 i;
 	int										 ret;
-	int										 newopFD;
 	bool									 res;
+	bool									 newop;
 
 	if (params.empty() || params[0].empty())
 		return (ERR_NEEDMOREPARAMS);
 	chanit = this->_channels.find(params[0]);
 	if (chanit == this->_channels.end())
 		return (ERR_NOSUCHCHANNEL);
-	if (params.size() < 2)
+	if (params.size() < 2) // MODE #channel
 	{
-		this->send_channel_modes(client, chanit->second); // send channel modes to client
+		this->send_channel_modes(client, chanit->second); // no mode provided->send channel modes to client
 		return (0);
 	}
 	if (!chanit->second.getChannops().count(client.get_client_fd()))
-		return (ERR_CHANOPRIVSNEEDED); // user is not a chanop
+		return (ERR_CHANOPRIVSNEEDED); // only chanops can change channel modes
 	ret = tokenize_mode_flags(params[1], flags, params, 2);
 	if (ret == -1)
 		return (ERR_UNKNOWNMODE);
@@ -180,49 +180,54 @@ int Server::mode_cmd(Client &client, const std::vector<std::string> &params)
 	i = 0;
 	while (i < flags.size())
 	{
-		res = false;
-		newopFD = -1; // no new chanop is set
+		if (!chanit->second.getChannops().count(client.get_client_fd()))
+			return (ERR_CHANOPRIVSNEEDED); // check again in case mode rmv privileges
+		newop = false; // no new chanop is set
 		if (flags[i].flag == 'o' && !flags[i].is_add && chanit->second.getChannops().size() == 1)
-			newopFD = *chanit->second.getChannops().begin(); // chanop is rmvd and there are no more chanops->set to first client in channel
+			newop = true; // -o will rmv the only chanop->set new chanop to first client
+		res = false;
 		switch (flags[i].flag)
 		{
 		case 'i':
-			res = handle_imode(client, params[0], flags[i]);
+			res = this->handle_imode(client, params[0], flags[i]);
 			break ;
 		case 't':
-			res = handle_tmode(client, params[0], flags[i]);
+			res = this->handle_tmode(client, params[0], flags[i]);
 			break ;
 		case 'k':
-			res = handle_kmode(client, params[0], flags[i]);
+			res = this->handle_kmode(client, params[0], flags[i]);
 			break ;
 		case 'o':
-			res = handle_omode(client, params[0], flags[i]);
+			res = this->handle_omode(client, params[0], flags[i]);
 			break ;
 		case 'l':
-			res = handle_lmode(client, params[0], flags[i]);
+			res = this->handle_lmode(client, params[0], flags[i]);
 			break ;
 		case 'b':
-			res = handle_bmode(client, params[0], flags[i]);
+			res = this->handle_bmode(client, params[0], flags[i]);
+			break ;
+		default:
 			break ;
 		}
-		if (!res)
-			return (0);
-		msg = "MODE " + chanit->second.getName() + " ";
-		if (flags[i].is_add)
-			msg += "+";
-		else
-			msg += "-";
-		msg += flags[i].flag;
-		if (!flags[i].param.empty())
-			msg += " " + flags[i].param;
-		it = chanit->second.getClients().begin();
-		while (it != chanit->second.getClients().end())
+		if (res)
 		{
-			this->send_cmd(client, *it->second, msg); // send mode change to all clients in channel
-			it++;
+			msg = "MODE " + params[0] + " ";
+			if (flags[i].is_add)
+				msg += "+";
+			else
+				msg += "-";
+			msg += flags[i].flag;
+			if (!flags[i].param.empty())
+				msg += " " + flags[i].param;
+			it = chanit->second.getClients().begin();
+			while (it != chanit->second.getClients().end())
+			{
+				this->send_cmd(client, *it->second, msg); // send mode change to all clients
+				it++;
+			}
+			if (newop && !chanit->second.getChannops().empty())
+				this->notify_new_op(chanit->second, *chanit->second.getChannops().begin()); // if new chanop is set->notify clients
 		}
-		if (newopFD > 0 && !chanit->second.getChannops().count(newopFD) && !chanit->second.getChannops().empty())
-			this->notify_new_op(chanit->second, *chanit->second.getChannops().begin()); // notify clients about new chanop
 		i++;
 	}
 	return (0);
