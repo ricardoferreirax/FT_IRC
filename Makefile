@@ -6,7 +6,7 @@
 #    By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/09/27 23:34:05 by rmedeiro          #+#    #+#              #
-#    Updated: 2026/11/09 18:17:59 by rmedeiro         ###   ########.fr        #
+#    Updated: 2026/11/11 23:47:55 by rmedeiro         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -35,8 +35,7 @@ SRCS = srcs/main.cpp \
 	   srcs/cmds/Help.cpp \
 	   srcs/cmds/Privmsg.cpp \
 	   srcs/cmds/Quit.cpp \
-	   srcs/cmds/Who.cpp \
-	   srcs/cmds/Whois.cpp \
+	   srcs/cmds/Whos.cpp \
 	   srcs/cmds/Away.cpp \
 	   srcs/cmds/Ping.cpp \
 	   srcs/SendMessages.cpp \

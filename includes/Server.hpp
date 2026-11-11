@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/11 22:22:33 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/11 23:37:04 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -59,6 +59,7 @@ enum	e_reply
 	RPL_NOWAWAY = 306,
 	RPL_WHOISUSER = 311,
 	RPL_WHOISSERVER = 312,
+	RPL_WHOWASUSER = 314,
 	RPL_ENDOFWHO = 315,
 	RPL_ENDOFWHOIS = 318,
 	RPL_WHOISCHANNELS = 319,
@@ -69,6 +70,7 @@ enum	e_reply
 	RPL_WHOREPLY = 352,
 	RPL_NAMREPLY = 353,
 	RPL_ENDOFNAMES = 366,
+	RPL_ENDOFWHOWAS = 369,
 	RPL_YOUREOPER = 381,
 	RPL_HELPSTART = 704,
 	RPL_HELPTXT = 705,
@@ -80,6 +82,7 @@ enum	e_irc_error
 	ERR_NOSUCHNICK = 401,
 	ERR_NOSUCHCHANNEL = 403,
 	ERR_CANNOTSENDTOCHAN = 404,
+	ERR_WASNOSUCHNICK = 406,
 	ERR_NOORIGIN = 409,
 	ERR_NORECIPIENT = 411,
 	ERR_NOTEXTTOSEND = 412,
@@ -153,6 +156,7 @@ class	Server
 		std::map<std::string, std::string> _opers;
 		std::map<std::string, Channel>	   _channels;
 		std::map<int, Client>			   _clients;
+		std::map<std::string, t_whowas>    _whowas;
 
 		void	close_connections(close_type type, int fd);
 		void	accept_client();
@@ -179,6 +183,7 @@ class	Server
 		int 	privmsg_cmd(Client &client, const std::vector<std::string> &params);
 		int 	who_cmd(Client &client, const std::vector<std::string> &params);
 		int 	whois_cmd(Client &client, const std::vector<std::string> &params);
+		int 	whowas_cmd(Client &client, const std::vector<std::string> &params);
 		int 	help_cmd(Client &client, const std::vector<std::string> &params);
 		int 	names_cmd(Client &client, const std::vector<std::string> &params);
 		int 	away_cmd(Client &client, const std::vector<std::string> &params);

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/08 16:14:29 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/10 20:46:15 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/11 23:26:17 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,7 @@
 #include <string>
 #include <sys/types.h>
 #include <vector>
+#include <map>
 
 typedef struct	s_ulimit
 {
@@ -55,6 +56,14 @@ typedef struct	s_banmask
 	s_banmask(): nick("*"), user("*"), host("*"), valid(true) {};
 }	t_banmask;
 
+typedef struct	s_whowas
+{
+	std::string nick;
+	std::string user;
+	std::string host;
+	std::string realname;
+}	t_whowas;
+
 enum	log_type
 {
 	TCP_RECEIVE,
@@ -72,6 +81,7 @@ void	parse_msg(const std::string &msg, std::string &cmd, std::vector<std::string
 void	log_tcp(log_type type, int fd, ssize_t bytes, const std::string &data);
 bool 	match_wildcard(std::string pattern, std::string match, size_t pi = 0, size_t mi = 0);
 bool 	match_ban(Client &client, t_banmask ban);
+void 	save_whowas(std::map<std::string, t_whowas> &history, const Client &client);
 
 std::vector<std::string> ft_split(const std::string &s, char delim);
 

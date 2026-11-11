@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/10 22:29:05 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/11 23:38:57 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,6 +70,8 @@ void Server::close_connections(close_type type, int fd)
 		it = this->_clients.find(fd);
 		if (it == this->_clients.end())
 			return ;
+		if (it->second.get_registered())
+			save_whowas(this->_whowas, it->second); // save client info to whowas before disconnecting
 		this->_bot.cleanup(CLIENT_DISCONNECTED, fd, NULL); // rmv client's pending bot requests
 		for (chanit = this->_channels.begin(); chanit != this->_channels.end(); ++chanit)
 		{
@@ -285,6 +287,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["PRIVMSG"] = &Server::privmsg_cmd;
 	cmds["WHO"] = &Server::who_cmd;
 	cmds["WHOIS"] = &Server::whois_cmd;
+	cmds["WHOWAS"] = &Server::whowas_cmd;
 	cmds["HELP"] = &Server::help_cmd;
 	cmds["AWAY"] = &Server::away_cmd;
 	cmds["OPER"] = &Server::oper_cmd;

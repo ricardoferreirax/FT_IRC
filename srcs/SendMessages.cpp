@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/11 22:23:24 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/11 23:35:11 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,6 +48,7 @@ void Server::send_reply(Client &client, int reply, const std::string &param, con
 	replies[RPL_ENDOFWHO] = "315 " + nick + " " + param + " :End of /WHO list";
 	replies[RPL_WHOISUSER] = "311 " + nick + " " + param + " " + text;
 	replies[RPL_WHOISSERVER] = "312 " + nick + " " + param + " " + text;
+	replies[RPL_WHOWASUSER] = "314 " + nick + " " + param + " " + text;
 	replies[RPL_ENDOFWHOIS] = "318 " + nick + " " + param + " :End of /WHOIS list";
 	replies[RPL_WHOISCHANNELS] = "319 " + nick + " " + param + " :" + text;
 	replies[RPL_CHANNELMODEIS] = "324 " + nick + " " + param;
@@ -57,6 +58,7 @@ void Server::send_reply(Client &client, int reply, const std::string &param, con
 	replies[RPL_WHOREPLY] = "352 " + nick + " " + param + " :" + text;
 	replies[RPL_NAMREPLY] = "353 " + nick + " " + param + " :" + text;
 	replies[RPL_ENDOFNAMES] = "366 " + nick + " " + param + " :End of /NAMES list";
+	replies[RPL_ENDOFWHOWAS] = "369 " + nick + " " + param + " :End of /WHOWAS list";
 	replies[RPL_YOUREOPER] = "381 " + nick + " :You are now an IRC operator";
 	replies[RPL_HELPSTART] = "704 " + nick + " " + param + " :" + text;
 	replies[RPL_HELPTXT] = "705 " + nick + " " + param + " :" + text;
@@ -85,6 +87,7 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	errors[ERR_NOSUCHNICK] = "401 " + nick + " " + param + " :No such nick/channel";
 	errors[ERR_NOSUCHCHANNEL] = "403 " + nick + " " + param + " :No such channel";
 	errors[ERR_CANNOTSENDTOCHAN] = "404 " + nick + " " + param + " :Cannot send to channel";
+	errors[ERR_WASNOSUCHNICK] = "406 " + nick + " " + param + " :There was no such nickname";
 	errors[ERR_NOORIGIN] = "409 " + nick + " :No origin specified";
 	errors[ERR_NORECIPIENT] = "411 " + nick + " :No recipient given (" + param + ")";
 	errors[ERR_NOTEXTTOSEND] = "412 " + nick + " :No text to send";
