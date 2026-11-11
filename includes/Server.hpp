@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/10 22:32:44 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/11 22:22:33 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -114,6 +114,8 @@ enum	e_notice
 	REGISTRATION,
 	PASSACCEPTED,
 	NICKSET,
+	USERALREADYOP,
+	USERNOTOP,
 	NOCHANNELS,
 	CHANNELCREATED,
 	CHANNELJOINED,

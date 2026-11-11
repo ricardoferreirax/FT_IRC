@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/10 22:34:34 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/11 22:23:24 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -136,6 +136,8 @@ void Server::send_notice(Client &client, int notice, const std::string &param)
 	notices[MIKURESPONSE] = "PRIVMSG " + nick + " :\033[1;36m" + param + "\033[0m";
 	notices[PASSACCEPTED] = "PASS accepted";
 	notices[NICKSET] = "Set nickname to " + param;
+	notices[USERALREADYOP] = "You are already a channel operator";
+	notices[USERNOTOP] = "You are not a channel operator";
 	notices[NOCHANNELS] = "There are no channels available";
 	notices[CHANNELCREATED] = "You created Channel " + param;
 	notices[CHANNELJOINED] = "You joined " + param;

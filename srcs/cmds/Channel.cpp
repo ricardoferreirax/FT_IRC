@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/09 14:50:06 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/10 22:39:34 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/11 21:38:39 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,6 @@ int Server::join_cmd(Client &client, const std::vector<std::string> &params)
 	std::vector<std::string> 				 keys;
 	std::string 							 chan_name;
 	std::string 							 key;
-	std::string 							 names;
 	size_t									 i;
 	int										 ret;
 	
@@ -50,7 +49,7 @@ int Server::join_cmd(Client &client, const std::vector<std::string> &params)
 			Channel ch(chan_name, default_mode(), client);
 			this->_channels.insert(std::make_pair(chan_name, ch));
 			chanit = this->_channels.find(chan_name);
-			this->send_cmd(client, client, "NOTICE " + client.get_nick() + " :You created Channel " + chan_name);
+			this->send_notice(client, CHANNELCREATED, chan_name);
 		}
 		else
 		{
@@ -222,7 +221,7 @@ int Server::mode_cmd(Client &client, const std::vector<std::string> &params)
 			this->send_cmd(client, *it->second, msg); // send mode change to all clients in channel
 			it++;
 		}
-		if (newopFD > 0 && !chanit->second.getChannops().count(newopFD))
+		if (newopFD > 0 && !chanit->second.getChannops().count(newopFD) && !chanit->second.getChannops().empty())
 			this->notify_new_op(chanit->second, *chanit->second.getChannops().begin()); // notify clients about new chanop
 		i++;
 	}
@@ -302,6 +301,12 @@ int Server::kick_cmd(Client &client, const std::vector<std::string> &params)
 	while (i < channels.size())
 	{
 		chanit = this->_channels.find(channels[i]);
+		if (chanit == this->_channels.end())
+		{
+			this->send_error(client, ERR_NOSUCHCHANNEL, channels[i]);
+			i++;
+			continue ;
+		}
 		if (!chanit->second.getChannops().count(client.get_client_fd()))
 			this->send_error(client, ERR_CHANOPRIVSNEEDED, channels[i]); // user is not a chanop
 		else

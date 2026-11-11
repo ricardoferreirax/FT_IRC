@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 17:31:45 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/10 22:15:23 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/11 22:24:02 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -187,7 +187,7 @@ bool Server::handle_omode(Client &client, std::string chan_name, t_modecmd flag)
 {
 	std::map<int, Client *>::iterator it;
 	std::map<int, Client>::iterator   clienit;
-	Channel 						 *channel;
+	Channel	*channel;
 
 	channel = this->validate_channel_op(client, chan_name);
 	if (!channel)
@@ -198,29 +198,39 @@ bool Server::handle_omode(Client &client, std::string chan_name, t_modecmd flag)
 		this->send_error(client, ERR_NOSUCHNICK, flag.param);
 		return (false);
 	}
-	if (channel->getClients().find(clienit->first) == channel->getClients().end())
+	if (!channel->getClients().count(clienit->first))
 	{
 		this->send_error(client, ERR_USERNOTINCHANNEL, flag.param + " " + chan_name);
 		return (false);
 	}
+	if (flag.is_add && channel->getChannops().count(clienit->first))
+	{
+		this->send_notice(client, USERALREADYOP, flag.param + " in " + chan_name);
+		return (false);
+	}
+	if (!flag.is_add && !channel->getChannops().count(clienit->first))
+	{
+		this->send_notice(client, USERNOTOP, flag.param + " in " + chan_name);
+		return (false);
+	}
 	if (flag.is_add)
 	{
-		channel->getChannops().insert(clienit->second.get_client_fd());
+		channel->getChannops().insert(clienit->first); // add user as chanop
 		this->send_notice(client, CHANNELOPSET, flag.param + " in " + chan_name);
 	}
 	else
 	{
-		channel->getChannops().erase(clienit->second.get_client_fd());
+		channel->getChannops().erase(clienit->first); // rmv user as chanop
 		this->send_notice(client, CHANNELOPREMOVED, flag.param + " in " + chan_name);
 	}
-	if (channel->getChannops().empty() && !channel->getClients().empty())
+	if (channel->getChannops().empty() && !channel->getClients().empty()) // no op left->promote another client
 	{
 		it = channel->getClients().begin();
-		if (it->first == clienit->first && channel->getClients().size() > 1)
-			it++;
-		channel->getChannops().insert(it->first);
+		if (it->first == clienit->first && channel->getClients().size() > 1) // client removed is first in list
+			it++; // to avoid promoting removed op->move to next client
+		channel->getChannops().insert(it->first); // set client as new chanop
 	}
-	// std::cout << "Channel " << chan_name << " now has " << flag.is_add << " o" << std::endl;
+	// std::cout << "Channel " << chan_name << " now has " << flag.is_add << " o for " << flag.param << std::endl;
 	return (true);
 }
 
