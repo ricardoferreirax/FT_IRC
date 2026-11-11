@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/09 14:50:06 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/11 22:57:00 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/11 23:17:14 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -236,8 +236,8 @@ int Server::mode_cmd(Client &client, const std::vector<std::string> &params)
 int Server::part_cmd(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, Channel>::iterator chanit;
-	std::vector<std::string> channels, 		 notify_chan;
 	std::map<int, Client *>::iterator 		 it;
+	std::vector<std::string> 				 channels;
 	std::string 							 msg;
 	size_t									 i;
 	int										 newchannopFD;
@@ -257,21 +257,16 @@ int Server::part_cmd(Client &client, const std::vector<std::string> &params)
 			this->send_error(client, ERR_NOTONCHANNEL, channels[i]);
 		else
 		{
-			notify_chan.clear();
-			notify_chan.push_back(channels[i]);
-			notify_chan.push_back(client.get_nick() + " has left");
-			if (params.size() > 1)
-				notify_chan.push_back("Reason: " + params[1]);
-			msg = "PART " + notify_chan[0];
+			msg = "PART " + channels[i];
 			if (params.size() > 1)
 				msg += " :" + params[1];
 			it = chanit->second.getClients().begin();
 			while (it != chanit->second.getClients().end())
 			{
-				this->send_cmd(client, *it->second, msg); // send PART to all clients in channel
+				this->send_cmd(client, *it->second, msg); // send PART msg to all clients in channel
 				it++;
 			}
-			newchannopFD = chanit->second.leaveChannel(client); // rnv client from channel and get new chanop if need
+			newchannopFD = chanit->second.leaveChannel(client); // rmv client and get new chanop if needed
 			if (newchannopFD > 0)
 				this->notify_new_op(chanit->second, newchannopFD); // notify clients about new chanop
 			else if (newchannopFD == -1)
@@ -289,11 +284,12 @@ int Server::kick_cmd(Client &client, const std::vector<std::string> &params)
 	std::map<int, Client *>::iterator 		 it;
 	std::vector<std::string> 				 channels;
 	std::vector<std::string> 				 clients;
-	std::vector<std::string> 				 args;
-	size_t 									 i;
-	size_t 									 j;
-	int 									 ret;
-	
+	std::string 							 msg;
+	std::string 							 reason;
+	size_t									 i;
+	size_t									 j;
+	int										 ret;
+
 	if (params.size() < 2 || params[0].empty() || params[1].empty())
 		return (ERR_NEEDMOREPARAMS);
 	channels = ft_split(params[0], ',');
@@ -302,6 +298,9 @@ int Server::kick_cmd(Client &client, const std::vector<std::string> &params)
 		return (ERR_NEEDMOREPARAMS);
 	if (!check_allchans(channels, &client)) // check if client is in all channels
 		return (0);
+	reason = "No reason provided";
+	if (params.size() > 2 && !params[2].empty())
+		reason = params[2];
 	i = 0;
 	while (i < channels.size())
 	{
@@ -313,33 +312,27 @@ int Server::kick_cmd(Client &client, const std::vector<std::string> &params)
 			continue ;
 		}
 		if (!chanit->second.getChannops().count(client.get_client_fd()))
-			this->send_error(client, ERR_CHANOPRIVSNEEDED, channels[i]); // user is not a chanop
+			this->send_error(client, ERR_CHANOPRIVSNEEDED, channels[i]); // only chanops can kick clients
 		else
 		{
 			j = 0;
 			while (j < clients.size())
 			{
-				clienit = this->reverseClientSearch(clients[j]); // find client by nick
+				clienit = this->reverseClientSearch(clients[j]);
 				if (clienit == this->_clients.end())
 					this->send_error(client, ERR_NOSUCHNICK, clients[j]);
 				else if (!chanit->second.getClients().count(clienit->first))
 					this->send_error(client, ERR_USERNOTINCHANNEL, clients[j] + " " + channels[i]);
 				else
 				{
-					args.clear();
-					args.push_back(channels[i]);
-					args.push_back(clients[j]);
-					if (params.size() > 2 && !params[2].empty())
-						args.push_back(params[2]);
-					else
-						args.push_back("No reason provided");
+					msg = "KICK " + channels[i] + " " + clients[j] + " :" + reason;
 					it = chanit->second.getClients().begin();
 					while (it != chanit->second.getClients().end())
 					{
-						this->send_cmd(client, *it->second, "KICK " + args[0] + " " + args[1] + " :" + args[2]); // send KICK to all clients
+						this->send_cmd(client, *it->second, msg); // send KICK msg to all clients
 						it++;
 					}
-					ret = chanit->second.leaveChannel(clienit->second); // rmv client from channel and get new chanop if need
+					ret = chanit->second.leaveChannel(clienit->second); // rmv client and promote new chanop if needed
 					if (ret == -1)
 					{
 						this->_channels.erase(chanit); // channel is empty->erase it
