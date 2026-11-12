@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/08 21:20:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/08 21:31:31 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/11 23:55:25 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,14 +43,20 @@ int Server::help_cmd(Client &client, const std::vector<std::string> &params)
 	parameters["KICK"] = "<channel>{,<channel>} <user>{,<user>} [<comment>]";
 	descripts["TOPIC"] = "View/modify the topic of a channel. If no topic is set, server will notify the user. Only channops can change the topic if the channel is restricted.";
 	parameters["TOPIC"] = "<channel> [<topic>]";
+	descripts["NAMES"] = "List all users in a channel. If no channel is provided, list all users in all channels.";
+	parameters["NAMES"] = "<channel>,{<channel>}";
 	descripts["WHO"] = "Display info about users matching a nickname/channel/search mask. Use * to search for multiple users or omit mask to list users.";
 	parameters["WHO"] = "[<mask> [o]]";
 	descripts["WHOIS"] = "Display info about users matching a nickname. Can provide several nicknames separated by commas.";
 	parameters["WHOIS"] = "<nickname>{,<nickname>}";
+	descripts["WHOWAS"] = "Display info about users that were previously connected to server. Can provide several nicknames separated by commas.";
+	parameters["WHOWAS"] = "<nickname>{,<nickname>}";
 	descripts["AWAY"] = "Mark as away from server by setting an absence message. Use AWAY w/out message to remove away status.";
 	parameters["AWAY"] = "[:<message>]";
 	descripts["OPER"] = "Authenticate as an IRC operator. Operators have special privileges to manage users and channels.";
 	parameters["OPER"] = "<user> <password>";
+	descripts["KILL"] = "Disconnect a user from server. Only IRC operators can use this command. Can provide a reason for kill.";
+	parameters["KILL"] = "<nickname> <comment>";
 	descripts["PING"] = "Check if client-server connection is still active. Server responds with PONG containing same token.";
 	parameters["PING"] = "<token>";
 	descripts["HELP"] = "Display info about IRC commands. Specify command to view its description or use without params to list available commands.";

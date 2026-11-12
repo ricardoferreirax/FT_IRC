@@ -3,7 +3,7 @@
 /*                                                        :::      ::::::::   */ /*   Utils.cpp                                          :+:      :+:    :+:   */ /*                                                    +:+ +:+         +:+     */ /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/07 12:24:52 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/11 23:28:45 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -76,6 +76,20 @@ bool	same_nick(const std::string &nick1, const std::string &nick2)
 	return (true);
 }
 
+bool	valid_channel_name(const std::string &name)
+{
+	if (name.size() < 2 || name.size() > 50)
+		return (false);
+	if (name[0] != '#' && name[0] != '&')
+		return (false);
+	for (size_t i = 1; i < name.size(); i++)
+	{
+		if (name[i] == ' ' || name[i] == '\t' || name[i] == ',' || name[i] == '\r' || name[i] == '\n')
+			return (false);
+	}
+	return (true);
+}
+
 // space separates: cmd from params and params from each other
 void	parse_msg(const std::string &msg, std::string &cmd, std::vector<std::string> &params)
 {
@@ -127,6 +141,7 @@ std::string registration_reply(const Client &client, const std::string &_name, c
 	nick = client.get_nick();
 	user = client.get_user();
 	host = client.get_host_ip();
+	reply = "\r\n";
 	reply += ":" + _name + " 001 " + nick + " :Welcome to the Internet Relay Network " + nick + "!" + user + "@" + host + "\r\n";
 	reply += ":" + _name + " 002 " + nick + " :Your host is " + _name + ", running version 1.1\r\n";
 	reply += ":" + _name + " 003 " + nick + " :This server was created " + date + "\r\n";
@@ -337,4 +352,15 @@ bool match_wildcard(std::string pattern, std::string match, size_t pi, size_t mi
 	if(match[mi] == pattern[pi])
 		return(match_wildcard(pattern,  match, pi + 1, mi + 1));
 	return false;
+}
+
+void	save_whowas(std::map<std::string, t_whowas> &history, const Client &client)
+{
+	t_whowas info;
+
+	info.nick = client.get_nick(); // save client info before disconnecting or changing nick
+	info.user = client.get_user();
+	info.host = client.get_host_ip();
+	info.realname = client.get_realname();
+	history[info.nick] = info; // store in history map with nick as key
 }

@@ -6,13 +6,26 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/08 20:54:08 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/11 23:35:11 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Server.hpp"
 #include "../includes/Client.hpp"
 #include "../includes/Utils.hpp"
+
+void Server::send_cmd(Client &sender, Client &receiver, const std::string &msg)
+{
+	epoll_event event;
+	int 		fd;
+
+	fd = receiver.get_client_fd();
+	receiver.get_send_buffer() += ":" + sender.get_nick() + "!" + sender.get_user() + "@" + sender.get_host_ip() + " " + msg + "\r\n";
+	event.events = EPOLLIN | EPOLLOUT;
+	event.data.fd = fd;
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
+		throw std::runtime_error("IRC: epoll_ctl() failed.");
+}
 
 void Server::send_reply(Client &client, int reply, const std::string &param, const std::string &text)
 {
@@ -35,6 +48,7 @@ void Server::send_reply(Client &client, int reply, const std::string &param, con
 	replies[RPL_ENDOFWHO] = "315 " + nick + " " + param + " :End of /WHO list";
 	replies[RPL_WHOISUSER] = "311 " + nick + " " + param + " " + text;
 	replies[RPL_WHOISSERVER] = "312 " + nick + " " + param + " " + text;
+	replies[RPL_WHOWASUSER] = "314 " + nick + " " + param + " " + text;
 	replies[RPL_ENDOFWHOIS] = "318 " + nick + " " + param + " :End of /WHOIS list";
 	replies[RPL_WHOISCHANNELS] = "319 " + nick + " " + param + " :" + text;
 	replies[RPL_CHANNELMODEIS] = "324 " + nick + " " + param;
@@ -43,7 +57,8 @@ void Server::send_reply(Client &client, int reply, const std::string &param, con
 	replies[RPL_INVITING] = "341 " + nick + " " + param;
 	replies[RPL_WHOREPLY] = "352 " + nick + " " + param + " :" + text;
 	replies[RPL_NAMREPLY] = "353 " + nick + " " + param + " :" + text;
-	replies[RPL_ENDOFNAMES] = "366 " + nick + " " + param + " :End of /NAMES list ";
+	replies[RPL_ENDOFNAMES] = "366 " + nick + " " + param + " :End of /NAMES list";
+	replies[RPL_ENDOFWHOWAS] = "369 " + nick + " " + param + " :End of /WHOWAS list";
 	replies[RPL_YOUREOPER] = "381 " + nick + " :You are now an IRC operator";
 	replies[RPL_HELPSTART] = "704 " + nick + " " + param + " :" + text;
 	replies[RPL_HELPTXT] = "705 " + nick + " " + param + " :" + text;
@@ -52,7 +67,7 @@ void Server::send_reply(Client &client, int reply, const std::string &param, con
 	if (it == replies.end())
 		return ;
 	fd = client.get_client_fd();
-	client.get_send_buffer() += ":" + this->_name + " " + it->second + "\r\n\r\n";
+	client.get_send_buffer() += ":" + this->_name + " " + it->second + "\r\n";
 	event.events = EPOLLIN | EPOLLOUT;
 	event.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
@@ -72,6 +87,7 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	errors[ERR_NOSUCHNICK] = "401 " + nick + " " + param + " :No such nick/channel";
 	errors[ERR_NOSUCHCHANNEL] = "403 " + nick + " " + param + " :No such channel";
 	errors[ERR_CANNOTSENDTOCHAN] = "404 " + nick + " " + param + " :Cannot send to channel";
+	errors[ERR_WASNOSUCHNICK] = "406 " + nick + " " + param + " :There was no such nickname";
 	errors[ERR_NOORIGIN] = "409 " + nick + " :No origin specified";
 	errors[ERR_NORECIPIENT] = "411 " + nick + " :No recipient given (" + param + ")";
 	errors[ERR_NOTEXTTOSEND] = "412 " + nick + " :No text to send";
@@ -101,7 +117,7 @@ void Server::send_error(Client &client, int error, const std::string &param)
 	if (errors.find(error) == errors.end())
 		return ;
 	fd = client.get_client_fd();
-	client.get_send_buffer() += ":" + this->_name + " " + errors[error] + "\r\n\r\n";
+	client.get_send_buffer() += ":" + this->_name + " " + errors[error] + "\r\n";
 	event.events = EPOLLIN | EPOLLOUT;
 	event.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
@@ -110,55 +126,75 @@ void Server::send_error(Client &client, int error, const std::string &param)
 
 void Server::send_notice(Client &client, int notice, const std::string &param)
 {
-	std::map<int, std::string>::iterator it;
-	std::map<int, std::string> 			 notices;
-	std::string 						 nick;
-	std::string 						 msg;
-	epoll_event 						 event;
-	int 								 fd;
+	std::map<int, std::string> notices;
+	std::string 			   nick;
+	std::string 			   msg;
+	epoll_event 			   event;
+	int 					   fd;
 
 	nick = client.get_nick();
 	if (nick.empty())
 		nick = "*";
-	if (notice == PONGREPLY)
-		msg = ":" + this->_name + " PONG " + this->_name + " :" + param;
-	else if (notice == REGISTRATION)
+	notices[PONGREPLY] = "PONG " + this->_name + " :" + param;
+	notices[MIKURESPONSE] = "PRIVMSG " + nick + " :\033[1;36m" + param + "\033[0m";
+	notices[PASSACCEPTED] = "PASS accepted";
+	notices[NICKSET] = "Set nickname to " + param;
+	notices[USERALREADYOP] = "You are already a channel operator";
+	notices[USERNOTOP] = "You are not a channel operator";
+	notices[NOCHANNELS] = "There are no channels available";
+	notices[CHANNELCREATED] = "You created Channel " + param;
+	notices[CHANNELJOINED] = "You joined " + param;
+	notices[MIKUUNAVAILABLE] = "Miku is unavailable :/ Try again later.";
+	notices[TOPICCHANGED] = "The topic changed to: " + param.substr(param.find(' ') + 1);
+	notices[CHANNELKEYSET] = "Password set for channel " + param;
+	notices[CHANNELKEYREMOVED] = "Password removed from channel " + param;
+	notices[CHANNELINVITEONLY] = "Channel " + param + " is now invite-only";
+	notices[CHANNELINVITEOPEN] = "Channel " + param + " is no longer invite-only";
+	notices[CHANNELTOPICRESTRICTED] = "Only channel operators can change the topic in " + param;
+	notices[CHANNELTOPICOPEN] = "All channel members can change the topic in " + param;
+	notices[CHANNELOPSET] = "Channel operator privileges granted to " + param;
+	notices[CHANNELOPREMOVED] = "Channel operator privileges removed from " + param;
+	notices[CHANNELLIMITSET] = "User limit set for channel " + param;
+	notices[CHANNELLIMITREMOVED] = "User limit removed from channel " + param;
+	notices[INVALIDCHANNELLIMIT] = "Invalid channel limit. Limit must be greater than 0";
+	if (notice == REGISTRATION)
 		msg = registration_reply(client, this->_name, this->_date);
+	else if (notices.find(notice) == notices.end())
+		return ;
+	else if (notice == PONGREPLY)
+		msg = ":" + this->_name + " " + notices[notice];
 	else if (notice == MIKURESPONSE)
-		msg = ":Miku!Hatsune@127.0.0.1 PRIVMSG " + nick + " :\033[1;36m" + param + "\033[0m";
+		msg = ":Miku!Hatsune@127.0.0.1 " + notices[notice];
+	else if (notice == TOPICCHANGED && param.find(' ') != std::string::npos)
+		msg = ":" + this->_name + " NOTICE " + param.substr(0, param.find(' ')) + " :" + notices[notice];
 	else
-	{
-		notices[PASSACCEPTED] = "PASS accepted";
-		notices[NICKSET] = "Set nickname to " + param;
-		notices[CHANNELCREATED] = "You created Channel " + param;
-		notices[CHANNELJOINED] = "You joined " + param;
-		notices[MIKUUNAVAILABLE] = "Miku is unavailable :/ Try again later.";
-		it = notices.find(notice);
-		if (it == notices.end())
-			return ;
-		msg = ":" + this->_name + " NOTICE " + nick + " :" + it->second;
-	}
+		msg = ":" + this->_name + " NOTICE " + nick + " :" + notices[notice];
 	fd = client.get_client_fd();
 	client.get_send_buffer() += msg;
 	if (msg.size() < 2 || msg.substr(msg.size() - 2) != "\r\n")
-		client.get_send_buffer() += "\r\n\r\n";
+		client.get_send_buffer() += "\r\n";
 	event.events = EPOLLIN | EPOLLOUT;
 	event.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 }
 
-void Server::send_cmd(Client &sender, Client &receiver, const std::string &msg)
+void Server::send_names(Client &client, Channel &channel, const std::string &chan_name)
 {
-	epoll_event event;
-	int 		fd;
+	std::map<int, Client *>::iterator it;
+	std::string 					  names;
 
-	fd = receiver.get_client_fd();
-	receiver.get_send_buffer() += ":" + sender.get_nick() + "!" + sender.get_user() + "@" + sender.get_host_ip() + " " + msg + "\r\n\r\n";
-	event.events = EPOLLIN | EPOLLOUT;
-	event.data.fd = fd;
-	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)
-		throw std::runtime_error("IRC: epoll_ctl() failed.");
+	it = channel.getClients().begin();
+	while (it != channel.getClients().end())
+	{
+		if (!names.empty())
+			names += " ";
+		if (channel.getChannops().find(it->first) != channel.getChannops().end())
+			names += "@";
+		names += it->second->get_nick();
+		it++;
+	}
+	this->send_reply(client, RPL_NAMREPLY, "= " + chan_name, names);
 }
 
 void Server::notify_new_op(Channel &channel, int fd)
@@ -180,27 +216,6 @@ void Server::notify_new_op(Channel &channel, int fd)
 		event.data.fd = it->first;
 		if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, it->first, &event) == -1)
 			std::cerr << "IRC: epoll_ctl() failed." << std::endl;
-		it++;
-	}
-}
-
-void Server::notify_mode_change(Client &client, Channel &channel, t_modecmd flag)
-{
-	std::map<int, Client *>::iterator it;
-	std::string 					  msg;
-	
-	msg = "MODE " + channel.getName() + " "; // mode msg to notify clients about mode change
-	if (flag.is_add)
-		msg += "+";
-	else
-		msg += "-";
-	msg += flag.flag;
-	if (!flag.param.empty())
-		msg += " " + flag.param;
-	it = channel.getClients().begin();
-	while (it != channel.getClients().end())
-	{
-		this->send_cmd(client, *it->second, msg); // send mode msg to all clients
 		it++;
 	}
 }
@@ -228,21 +243,4 @@ void Server::send_channel_modes(Client &client, Channel &channel)
 		args += " " + limit.str();
 	}
 	this->send_reply(client, RPL_CHANNELMODEIS, channel.getName() + " " + modes + args, ""); // send channel modes to client
-}
-
-void Server::send_channel_names(Client &client, Channel &channel)
-{
-	std::map<int, Client *>::iterator it;
-	std::string 					  names;
-
-	it = channel.getClients().begin();
-	while (it != channel.getClients().end())
-	{
-		if (channel.getChannops().count(it->first))
-			names += "@";
-		names += it->second->get_nick() + " ";
-		it++;
-	}
-	this->send_reply(client, RPL_NAMREPLY, "= " + channel.getName(), names);
-	this->send_reply(client, RPL_ENDOFNAMES, channel.getName(), "End of NAMES list.");
 }

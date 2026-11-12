@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/08 20:50:16 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/11 23:37:04 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,7 +31,8 @@ typedef struct s_modecmd		t_modecmd;
 enum							close_type
 {
 	CLIENT_DISCONNECT,
-	SERVER_SHUTDOWN
+	SERVER_SHUTDOWN,
+	SERVER_RESTART
 };
 
 enum	e_socket_type
@@ -58,6 +59,7 @@ enum	e_reply
 	RPL_NOWAWAY = 306,
 	RPL_WHOISUSER = 311,
 	RPL_WHOISSERVER = 312,
+	RPL_WHOWASUSER = 314,
 	RPL_ENDOFWHO = 315,
 	RPL_ENDOFWHOIS = 318,
 	RPL_WHOISCHANNELS = 319,
@@ -68,6 +70,7 @@ enum	e_reply
 	RPL_WHOREPLY = 352,
 	RPL_NAMREPLY = 353,
 	RPL_ENDOFNAMES = 366,
+	RPL_ENDOFWHOWAS = 369,
 	RPL_YOUREOPER = 381,
 	RPL_HELPSTART = 704,
 	RPL_HELPTXT = 705,
@@ -79,6 +82,7 @@ enum	e_irc_error
 	ERR_NOSUCHNICK = 401,
 	ERR_NOSUCHCHANNEL = 403,
 	ERR_CANNOTSENDTOCHAN = 404,
+	ERR_WASNOSUCHNICK = 406,
 	ERR_NOORIGIN = 409,
 	ERR_NORECIPIENT = 411,
 	ERR_NOTEXTTOSEND = 412,
@@ -88,8 +92,7 @@ enum	e_irc_error
 	ERR_NICKNAMEINUSE = 433,
 	ERR_USERNOTINCHANNEL = 441,
 	ERR_NOTONCHANNEL = 442,
-	ERR_USERONCHANNEL = 443,
-	ERR_NOTREGISTERED = 451,
+	ERR_USERONCHANNEL = 443, ERR_NOTREGISTERED = 451,
 	ERR_NEEDMOREPARAMS = 461,
 	ERR_ALREADYREGISTRED = 462,
 	ERR_PASSWDMISMATCH = 464,
@@ -100,13 +103,12 @@ enum	e_irc_error
 	ERR_BANNEDFROMCHAN = 474,
 	ERR_BADCHANNELKEY = 475,
 	ERR_BADCHANMASK = 476,
+	ERR_NOPRIVILEGES = 481,
 	ERR_CHANOPRIVSNEEDED = 482,
 	ERR_NOOPERHOST = 491,
 	ERR_HELPNOTFOUND = 524,
 	ERR_PASSREQUIRED = 601,
 	ERR_INVALIDUSERMODE = 604,
-	ERR_NOPRIVILEGES = 481,
-
 };
 
 enum	e_notice
@@ -114,9 +116,26 @@ enum	e_notice
 	REGISTRATION,
 	PASSACCEPTED,
 	NICKSET,
+	USERALREADYOP,
+	USERNOTOP,
+	NOCHANNELS,
 	CHANNELCREATED,
 	CHANNELJOINED,
+	CHANNELKEYSET,
+	CHANNELKEYREMOVED,
+	CHANNELINVITEONLY,
+	CHANNELINVITEOPEN,
+	CHANNELTOPICRESTRICTED,
+	CHANNELTOPICOPEN,
+	CHANNELOPSET,
+	CHANNELOPREMOVED,
+	CHANNELLIMITSET,
+	CHANNELLIMITREMOVED,
+	INVALIDCHANNELLIMIT,
+	TOPICCHANGED,
 	PONGREPLY,
+	ALREADYDISCONNECTED,
+	KILLSUICIDE,
 	MIKURESPONSE,
 	MIKUUNAVAILABLE
 };
@@ -130,11 +149,13 @@ class Server
 		int			_port;
 		int			_listen_fd;
 		int			_epoll_fd;
+		bool		_restart;
 		Bot			_bot;
 		
 		std::map<std::string, std::string> _opers;
 		std::map<std::string, Channel>	   _channels;
 		std::map<int, Client>			   _clients;
+		std::map<std::string, t_whowas>    _whowas;
 
 		void	close_connections(close_type type, int fd);
 		void	accept_client();
@@ -142,14 +163,12 @@ class Server
 		int 	handle_socket_read(int fd, e_socket_type type, std::string &buffer);
 		int 	handle_socket_write(int fd, e_socket_type type, std::string &buffer);
 		
-		void 	send_msg(Client &client, const std::string &msg);
 		void	send_cmd(Client &sender, Client &receiver, const std::string &message);
 		void	send_reply(Client &client, int reply, const std::string &param, const std::string &text);
 		void	send_error(Client &client, int error, const std::string &cmd);
+		void 	send_names(Client &client, Channel &channel, const std::string &chan_name);
 		void    send_channel_modes(Client &client, Channel &channel);
-		void	send_channel_names(Client &client, Channel &channel);
 		void 	notify_new_op(Channel &channel, int fd);
-		void 	notify_mode_change(Client &client, Channel &channel, t_modecmd flag);
 
 		void	execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params);
 		int		pass_cmd(Client &client, const std::vector<std::string> &params);
@@ -157,12 +176,15 @@ class Server
 		int		user_cmd(Client &client, const std::vector<std::string> &params);
 		int		fast_cmd(Client &client, const std::vector<std::string> &params);
 		int 	oper_cmd(Client &client, const std::vector<std::string> &params);
+		int 	kill_cmd(Client &client, const std::vector<std::string> &params);
 		int 	ping_cmd(Client &client, const std::vector<std::string> &params);
 		int 	quit_cmd(Client &client, const std::vector<std::string> &params);
 		int 	privmsg_cmd(Client &client, const std::vector<std::string> &params);
 		int 	who_cmd(Client &client, const std::vector<std::string> &params);
 		int 	whois_cmd(Client &client, const std::vector<std::string> &params);
+		int 	whowas_cmd(Client &client, const std::vector<std::string> &params);
 		int 	help_cmd(Client &client, const std::vector<std::string> &params);
+		int 	names_cmd(Client &client, const std::vector<std::string> &params);
 		int 	away_cmd(Client &client, const std::vector<std::string> &params);
 		int		join_cmd(Client &client, const std::vector<std::string> &params);
 		int 	invite_cmd(Client &client, const std::vector<std::string> &params);
@@ -194,6 +216,8 @@ class Server
 		void	monitor_epoll_events();
 		int		handle_socket_data(int fd, int event, e_socket_type type);
 		void	send_notice(Client &client, int notice, const std::string &param);
+		int 	restart_cmd(Client &client, const std::vector<std::string> &params);
+		void 	restart_server();
 };
 
 void							handle_signal(int signal);

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/08 16:14:29 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/06 13:26:34 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/11 23:26:17 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,7 @@
 #include <string>
 #include <sys/types.h>
 #include <vector>
+#include <map>
 
 typedef struct	s_ulimit
 {
@@ -55,6 +56,14 @@ typedef struct	s_banmask
 	s_banmask(): nick("*"), user("*"), host("*"), valid(true) {};
 }	t_banmask;
 
+typedef struct	s_whowas
+{
+	std::string nick;
+	std::string user;
+	std::string host;
+	std::string realname;
+}	t_whowas;
+
 enum	log_type
 {
 	TCP_RECEIVE,
@@ -66,16 +75,19 @@ enum	log_type
 int		validate_port(const std::string &port);
 bool	is_valid_nick(const std::string &nick);
 bool	same_nick(const std::string &nick1, const std::string &nick2);
+bool	valid_channel_name(const std::string &name);
 void	parse_params(std::string params, std::vector<std::string> &parsed);
 bool	is_valid_user_mode(const std::string &mode);
 void	parse_msg(const std::string &msg, std::string &cmd, std::vector<std::string> &params);
 void	log_tcp(log_type type, int fd, ssize_t bytes, const std::string &data);
 bool 	match_wildcard(std::string pattern, std::string match, size_t pi = 0, size_t mi = 0);
 bool 	match_ban(Client &client, t_banmask ban);
+void 	save_whowas(std::map<std::string, t_whowas> &history, const Client &client);
 
 std::vector<std::string> ft_split(const std::string &s, char delim);
 
-std::string registration_reply(const Client &client, const std::string &server_name, const std::string &date);
+std::string registration_reply(const Client &client, const std::string &_name, const std::string &date);
+std::string get_error_msg(const std::string &nickname, int error, const std::string &param, const std::string &server_name);
 std::string get_error_param(const std::string &cmd, int error, const std::vector<std::string> &params);
 std::string generateRandomString(int length);
 

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:50:09 by pedro             #+#    #+#             */
-/*   Updated: 2026/11/06 15:14:07 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/10 21:02:04 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -133,7 +133,7 @@ int Channel::joinChannel(Client &guest, std::string key)
 	this->_clients.insert(std::make_pair(guest.get_client_fd(), &guest));
 	this->_invites.erase(guest.get_client_fd());
 	this->_mode.users.u_count++;
-	std::cout << "Client has joined the channel" << std::endl;
+	// std::cout << "Client has joined the channel" << std::endl;
 	return (0);
 }
 
