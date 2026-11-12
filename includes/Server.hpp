@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/11 23:37:04 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/12 17:20:40 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -112,35 +112,6 @@ enum	e_irc_error
 	ERR_INVALIDUSERMODE = 604,
 };
 
-enum	e_notice
-{
-	REGISTRATION,
-	PASSACCEPTED,
-	NICKSET,
-	USERALREADYOP,
-	USERNOTOP,
-	NOCHANNELS,
-	CHANNELCREATED,
-	CHANNELJOINED,
-	CHANNELKEYSET,
-	CHANNELKEYREMOVED,
-	CHANNELINVITEONLY,
-	CHANNELINVITEOPEN,
-	CHANNELTOPICRESTRICTED,
-	CHANNELTOPICOPEN,
-	CHANNELOPSET,
-	CHANNELOPREMOVED,
-	CHANNELLIMITSET,
-	CHANNELLIMITREMOVED,
-	INVALIDCHANNELLIMIT,
-	TOPICCHANGED,
-	PONGREPLY,
-	ALREADYDISCONNECTED,
-	KILLSUICIDE,
-	MIKURESPONSE,
-	MIKUUNAVAILABLE
-};
-
 class	Server
 {
 	private:
@@ -212,11 +183,12 @@ class	Server
 		
 		std::map<int, Client> &getClients(void);
 		std::string	getName(void) const;
+		int get_epoll_fd() const;
 		
 		void	start_socket();
 		void	monitor_epoll_events();
 		int		handle_socket_data(int fd, int event, e_socket_type type);
-		void	send_notice(Client &client, int notice, const std::string &param);
+		void	send_notice(Client &client, const std::string &msg);
 		int 	restart_cmd(Client &client, const std::vector<std::string> &params);
 		void 	restart_server();
 };

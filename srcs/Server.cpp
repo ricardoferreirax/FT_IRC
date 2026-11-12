@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/11 23:38:57 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/12 17:19:35 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,6 +58,11 @@ std::string Server::getName(void) const
 std::map<int, Client> &Server::getClients(void)
 {
 	return (this->_clients);
+}
+
+int Server::get_epoll_fd() const
+{
+	return (this->_epoll_fd);
 }
 
 void Server::close_connections(close_type type, int fd)
@@ -320,6 +325,9 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	{
 		client.set_registered(true);
 		std::cout << "\n\033[1;36m" << "✓ CLIENT " << client.get_client_fd() << " REGISTERED" << "\033[0m\n\n";
-		this->send_notice(client, REGISTRATION, "");
+		this->send_reply(client, RPL_WELCOME, "", "Welcome to the Internet Relay Network " + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip());
+		this->send_reply(client, RPL_YOURHOST, "", "Your host is " + this->_name + ", running version 1.1");
+		this->send_reply(client, RPL_CREATED, "", "This server was created " + this->_date);
+		this->send_reply(client, RPL_MYINFO, this->_name + " 1.1 o itkolb", "");
 	}
 }

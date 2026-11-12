@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/08 19:20:02 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/12 17:23:47 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,7 +79,7 @@ void Bot::cleanup(clear_type type, int fd, Server *server)
 		{
 			client_it = server->getClients().find(client_fd);
 			if (client_it != server->getClients().end())
-				server->send_notice(client_it->second, MIKURESPONSE, "Miku is unavailable."); // notify client if request failed
+				server->send_notice(client_it->second, "Miku is unavailable."); // notify client if request failed
 		}
 	}
 }
@@ -174,9 +174,10 @@ void Bot::process_bot_response(t_request &req, Server &server)
 {
 	std::map<int, Client>::iterator client_it;
 	std::string 				   *memory;
-	std::string 					answer;
-	size_t 							start;
-	size_t 							end;
+	std::string 				   answer;
+	epoll_event 				   event;
+	size_t 						   start;
+	size_t 						   end;
 
 	if (req.recv_buffer.find("HTTP/1.1 200") != 0)
 		throw std::runtime_error("Ollama HTTP error.");
@@ -199,7 +200,14 @@ void Bot::process_bot_response(t_request &req, Server &server)
 	answer = convert_json(req.recv_buffer.substr(start, end - start), JSON_UNESCAPE); // extract answer and convert json to normal text
 	client_it = server.getClients().find(req.client_fd);
 	if (client_it != server.getClients().end())
-		server.send_notice(client_it->second, MIKURESPONSE, answer); // send miku answer to client
+	{
+		Client &client = client_it->second;
+		client.get_send_buffer() += ":Miku!Hatsune@127.0.0.1 PRIVMSG " + client.get_nick() + " :\033[1;36m" + answer + "\033[0m\r\n"; // send miku answer to client
+		event.events = EPOLLIN | EPOLLOUT;
+		event.data.fd = client.get_client_fd();
+		if (epoll_ctl(server.get_epoll_fd(), EPOLL_CTL_MOD, event.data.fd, &event) < 0)
+			throw std::runtime_error("IRC: epoll_ctl() failed.");
+	}
 	if (req.channel.empty())
 		memory = &this->_user_memory[req.client_fd]; // if no channel ->store memory for this client
 	else

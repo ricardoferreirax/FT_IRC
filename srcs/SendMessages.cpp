@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/27 21:53:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/11 23:35:11 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/12 17:07:07 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -124,55 +124,19 @@ void Server::send_error(Client &client, int error, const std::string &param)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
 }
 
-void Server::send_notice(Client &client, int notice, const std::string &param)
+void Server::send_notice(Client &client, const std::string &text)
 {
-	std::map<int, std::string> notices;
-	std::string 			   nick;
-	std::string 			   msg;
-	epoll_event 			   event;
-	int 					   fd;
+	epoll_event event;
+	std::string nick;
+	std::string msg;
+	int		    fd;
 
 	nick = client.get_nick();
 	if (nick.empty())
 		nick = "*";
-	notices[PONGREPLY] = "PONG " + this->_name + " :" + param;
-	notices[MIKURESPONSE] = "PRIVMSG " + nick + " :\033[1;36m" + param + "\033[0m";
-	notices[PASSACCEPTED] = "PASS accepted";
-	notices[NICKSET] = "Set nickname to " + param;
-	notices[USERALREADYOP] = "You are already a channel operator";
-	notices[USERNOTOP] = "You are not a channel operator";
-	notices[NOCHANNELS] = "There are no channels available";
-	notices[CHANNELCREATED] = "You created Channel " + param;
-	notices[CHANNELJOINED] = "You joined " + param;
-	notices[MIKUUNAVAILABLE] = "Miku is unavailable :/ Try again later.";
-	notices[TOPICCHANGED] = "The topic changed to: " + param.substr(param.find(' ') + 1);
-	notices[CHANNELKEYSET] = "Password set for channel " + param;
-	notices[CHANNELKEYREMOVED] = "Password removed from channel " + param;
-	notices[CHANNELINVITEONLY] = "Channel " + param + " is now invite-only";
-	notices[CHANNELINVITEOPEN] = "Channel " + param + " is no longer invite-only";
-	notices[CHANNELTOPICRESTRICTED] = "Only channel operators can change the topic in " + param;
-	notices[CHANNELTOPICOPEN] = "All channel members can change the topic in " + param;
-	notices[CHANNELOPSET] = "Channel operator privileges granted to " + param;
-	notices[CHANNELOPREMOVED] = "Channel operator privileges removed from " + param;
-	notices[CHANNELLIMITSET] = "User limit set for channel " + param;
-	notices[CHANNELLIMITREMOVED] = "User limit removed from channel " + param;
-	notices[INVALIDCHANNELLIMIT] = "Invalid channel limit. Limit must be greater than 0";
-	if (notice == REGISTRATION)
-		msg = registration_reply(client, this->_name, this->_date);
-	else if (notices.find(notice) == notices.end())
-		return ;
-	else if (notice == PONGREPLY)
-		msg = ":" + this->_name + " " + notices[notice];
-	else if (notice == MIKURESPONSE)
-		msg = ":Miku!Hatsune@127.0.0.1 " + notices[notice];
-	else if (notice == TOPICCHANGED && param.find(' ') != std::string::npos)
-		msg = ":" + this->_name + " NOTICE " + param.substr(0, param.find(' ')) + " :" + notices[notice];
-	else
-		msg = ":" + this->_name + " NOTICE " + nick + " :" + notices[notice];
+	msg = ":" + this->_name + " NOTICE " + nick + " :" + text + "\r\n";
 	fd = client.get_client_fd();
 	client.get_send_buffer() += msg;
-	if (msg.size() < 2 || msg.substr(msg.size() - 2) != "\r\n")
-		client.get_send_buffer() += "\r\n";
 	event.events = EPOLLIN | EPOLLOUT;
 	event.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0)

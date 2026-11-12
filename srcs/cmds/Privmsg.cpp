@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/08 21:20:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/08 21:47:36 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/12 17:10:15 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,12 +39,12 @@ int Server::privmsg_cmd(Client &client, const std::vector<std::string> &params)
 			try
 			{
 				if (!this->_bot.start_request(client.get_client_fd(), client.get_nick(), "", msg))
-					this->send_notice(client, MIKUUNAVAILABLE, "");
+					this->send_notice(client, "Miku is unavailable");
 			}
 			catch (const std::exception &e)
 			{
 				std::cerr << "Miku: " << e.what() << std::endl;
-				this->send_notice(client, MIKUUNAVAILABLE, "");
+				this->send_notice(client, "Miku is unavailable");
 			}
 			i++;
 			continue ; // skip to next target->will not search for miku in clients/channels

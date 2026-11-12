@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/09 14:50:06 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/11 23:17:14 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/12 16:14:56 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,7 +49,7 @@ int Server::join_cmd(Client &client, const std::vector<std::string> &params)
 			Channel ch(chan_name, default_mode(), client);
 			this->_channels.insert(std::make_pair(chan_name, ch));
 			chanit = this->_channels.find(chan_name);
-			this->send_notice(client, CHANNELCREATED, chan_name);
+			this->send_notice(client, "You created Channel " + chan_name);
 		}
 		else
 		{
@@ -141,7 +141,7 @@ int Server::topic_cmd(Client &client, const std::vector<std::string> &params)
 	while (it != chanit->second.getClients().end())
 	{
 		this->send_cmd(client, *it->second, msg); // send new topic to all clients in channel
-		this->send_notice(*it->second, TOPICCHANGED, params[0] + " " + chanit->second.getMode().topic);
+		this->send_notice(*it->second, "The topic changed to: " + chanit->second.getMode().topic);
 		it++;
 	}
 	return (0);
@@ -360,8 +360,7 @@ int Server::names_cmd(Client &client, const std::vector<std::string> &params)
 	if (params.empty())
 	{
 		if (this->_channels.empty())
-
-			this->send_notice(client, NOCHANNELS, "");
+			this->send_notice(client, "There are no channels available");
 		else
 		{
 			it = this->_channels.begin();

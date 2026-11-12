@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/08 21:09:17 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/11 23:43:04 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/12 16:53:14 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,7 +23,7 @@ int Server::pass_cmd(Client &client, const std::vector<std::string> &params)
 	if (params[0] != this->_pass)
 		return (ERR_PASSWDMISMATCH);
 	client.set_auth(true);
-	this->send_notice(client, PASSACCEPTED, "");
+	this->send_notice(client, "PASS accepted");
 	return (0);
 }
 
@@ -66,7 +66,7 @@ int Server::nick_cmd(Client &client, const std::vector<std::string> &params)
 		}
 	}
 	else
-		this->send_notice(client, NICKSET, nick); // if client not registered->send notice to client
+		this->send_notice(client, "NICK set to: " + nick); // if client not registered->send notice to client
 	client.set_nick(nick);
 	return (0);
 }
