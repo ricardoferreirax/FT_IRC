@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/08 21:21:36 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/11 23:51:54 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/12 17:26:41 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -117,37 +117,6 @@ int Server::whois_cmd(Client &client, const std::vector<std::string> &params)
 		if (!channels.empty())
 			this->send_reply(client, RPL_WHOISCHANNELS, clienit->second.get_nick(), channels); // user is member in channels
 		this->send_reply(client, RPL_ENDOFWHOIS, clienit->second.get_nick(), "");
-		i++;
-	}
-	return (0);
-}
-
-int Server::whowas_cmd(Client &client, const std::vector<std::string> &params)
-{
-	std::map<std::string, t_whowas>::iterator it;
-	std::vector<std::string> 				  nicks;
-	std::string 							  msg;
-	size_t									  i;
-
-	if (params.empty() || params[0].empty())
-		return (ERR_NONICKNAMEGIVEN);
-	nicks = ft_split(params[0], ',');
-	if (nicks.empty())
-		return (ERR_NONICKNAMEGIVEN);
-	i = 0;
-	while (i < nicks.size())
-	{
-		it = this->_whowas.find(nicks[i]);
-		if (it == this->_whowas.end())
-			this->send_error(client, ERR_WASNOSUCHNICK, nicks[i]);
-		else
-		{
-			msg = it->second.nick + " " + it->second.user + " " + it->second.host + " *";
-			this->send_reply(client, RPL_WHOWASUSER, msg, ":" + it->second.realname); // send whowas info to client
-			msg = it->second.nick + " " + this->_name;
-			this->send_reply(client, RPL_WHOISSERVER, msg, ":IRC Server");
-		}
-		this->send_reply(client, RPL_ENDOFWHOWAS, nicks[i], "");
 		i++;
 	}
 	return (0);

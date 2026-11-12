@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 17:01:42 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/12 17:02:41 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/12 17:28:35 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -331,15 +331,4 @@ bool match_wildcard(std::string pattern, std::string match, size_t pi, size_t mi
 	if(match[mi] == pattern[pi])
 		return(match_wildcard(pattern,  match, pi + 1, mi + 1));
 	return false;
-}
-
-void	save_whowas(std::map<std::string, t_whowas> &history, const Client &client)
-{
-	t_whowas info;
-
-	info.nick = client.get_nick(); // save client info before disconnecting or changing nick
-	info.user = client.get_user();
-	info.host = client.get_host_ip();
-	info.realname = client.get_realname();
-	history[info.nick] = info; // store in history map with nick as key
 }

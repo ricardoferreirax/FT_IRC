@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/08 16:14:29 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/11 23:26:17 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/12 17:28:44 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -81,11 +81,9 @@ void	parse_msg(const std::string &msg, std::string &cmd, std::vector<std::string
 void	log_tcp(log_type type, int fd, ssize_t bytes, const std::string &data);
 bool 	match_wildcard(std::string pattern, std::string match, size_t pi = 0, size_t mi = 0);
 bool 	match_ban(Client &client, t_banmask ban);
-void 	save_whowas(std::map<std::string, t_whowas> &history, const Client &client);
 
 std::vector<std::string> ft_split(const std::string &s, char delim);
 
-std::string registration_reply(const Client &client, const std::string &_name, const std::string &date);
 std::string get_error_msg(const std::string &nickname, int error, const std::string &param, const std::string &server_name);
 std::string get_error_param(const std::string &cmd, int error, const std::vector<std::string> &params);
 std::string generateRandomString(int length);

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/08 21:20:43 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/11 23:55:25 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/12 17:29:10 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,8 +49,6 @@ int Server::help_cmd(Client &client, const std::vector<std::string> &params)
 	parameters["WHO"] = "[<mask> [o]]";
 	descripts["WHOIS"] = "Display info about users matching a nickname. Can provide several nicknames separated by commas.";
 	parameters["WHOIS"] = "<nickname>{,<nickname>}";
-	descripts["WHOWAS"] = "Display info about users that were previously connected to server. Can provide several nicknames separated by commas.";
-	parameters["WHOWAS"] = "<nickname>{,<nickname>}";
 	descripts["AWAY"] = "Mark as away from server by setting an absence message. Use AWAY w/out message to remove away status.";
 	parameters["AWAY"] = "[:<message>]";
 	descripts["OPER"] = "Authenticate as an IRC operator. Operators have special privileges to manage users and channels.";

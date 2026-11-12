@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/08 21:09:17 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/12 16:53:14 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/12 17:28:41 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,7 +49,6 @@ int Server::nick_cmd(Client &client, const std::vector<std::string> &params)
 	}
 	if (client.get_registered())
 	{
-		save_whowas(this->_whowas, client); // save client info to whowas before changing nick
 		this->send_cmd(client, client, "NICK :" + nick); // if client registered->send NICK to client
 		for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 		{

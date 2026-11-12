@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/12 17:19:35 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/12 17:28:26 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -75,8 +75,6 @@ void Server::close_connections(close_type type, int fd)
 		it = this->_clients.find(fd);
 		if (it == this->_clients.end())
 			return ;
-		if (it->second.get_registered())
-			save_whowas(this->_whowas, it->second); // save client info to whowas before disconnecting
 		this->_bot.cleanup(CLIENT_DISCONNECTED, fd, NULL); // rmv client's pending bot requests
 		for (chanit = this->_channels.begin(); chanit != this->_channels.end(); ++chanit)
 		{
@@ -292,7 +290,6 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["PRIVMSG"] = &Server::privmsg_cmd;
 	cmds["WHO"] = &Server::who_cmd;
 	cmds["WHOIS"] = &Server::whois_cmd;
-	cmds["WHOWAS"] = &Server::whowas_cmd;
 	cmds["HELP"] = &Server::help_cmd;
 	cmds["AWAY"] = &Server::away_cmd;
 	cmds["OPER"] = &Server::oper_cmd;
@@ -309,8 +306,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	if (!client.get_registered() && cmd != "PASS" && cmd != "NICK" && cmd != "USER" 
 		&& cmd != "FAST" && cmd != "HELP" && cmd != "PING" && cmd != "QUIT")
 	{
-		if (cmd != "NOTICE")
-			this->send_error(client, ERR_NOTREGISTERED, cmd);
+		this->send_error(client, ERR_NOTREGISTERED, cmd);
 		return ;
 	}
 	ret = (this->*(it->second))(client, params);
