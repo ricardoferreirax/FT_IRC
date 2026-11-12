@@ -281,7 +281,7 @@ int Server::kick_cmd(Client &client, const std::vector<std::string> &params)
 {
 	std::map<std::string, Channel>::iterator chanit;
 	std::map<int, Client>::iterator 		 clienit;
-	std::map<int, Client *>::iterator 		 it;
+	std::map<int, Client *>::iterator 		 chan_clienit;
 	std::vector<std::string> 				 channels;
 	std::vector<std::string> 				 clients;
 	std::string 							 msg;
@@ -326,11 +326,11 @@ int Server::kick_cmd(Client &client, const std::vector<std::string> &params)
 				else
 				{
 					msg = "KICK " + channels[i] + " " + clients[j] + " :" + reason;
-					it = chanit->second.getClients().begin();
-					while (it != chanit->second.getClients().end())
+					chan_clienit = chanit->second.getClients().begin();
+					while (chan_clienit != chanit->second.getClients().end())
 					{
-						this->send_cmd(client, *it->second, msg); // send KICK msg to all clients
-						it++;
+						this->send_cmd(client, *chan_clienit->second, msg); // send KICK msg to all clients
+						chan_clienit++;
 					}
 					ret = chanit->second.leaveChannel(clienit->second); // rmv client and promote new chanop if needed
 					if (ret == -1)
@@ -360,6 +360,7 @@ int Server::names_cmd(Client &client, const std::vector<std::string> &params)
 	if (params.empty())
 	{
 		if (this->_channels.empty())
+
 			this->send_notice(client, NOCHANNELS, "");
 		else
 		{
