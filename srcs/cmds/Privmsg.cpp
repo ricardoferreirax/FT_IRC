@@ -38,12 +38,12 @@ int Server::privmsg_cmd(Client &client, const std::vector<std::string> &params)
 		{
 			try
 			{
-				if (!this->_bot.start_request(client.get_client_fd(), client.get_nick(), "", msg))
+				if (!this->_bot->start_request(client.get_client_fd(), client.get_nick(), "", msg))
 					this->send_notice(client, MIKUUNAVAILABLE, "");
 			}
 			catch (const std::exception &e)
 			{
-				std::cerr << "Miku: " << e.what() << std::endl;
+				std::cerr << "Bot: " << e.what() << std::endl;
 				this->send_notice(client, MIKUUNAVAILABLE, "");
 			}
 			i++;

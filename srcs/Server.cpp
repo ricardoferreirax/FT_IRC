@@ -10,12 +10,13 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../includes/Server.hpp"
-#include "../includes/Channels.hpp"
-#include "../includes/Utils.hpp"
 #include "../bonus/includes/Bot.hpp"
+#include "../includes/Channels.hpp"
+#include "../includes/Server.hpp"
+#include "../includes/Utils.hpp"
 #include <arpa/inet.h>
 #include <cstring>
+#include <errno.h>
 #include <fcntl.h>
 #include <iostream>
 #include <netinet/in.h>
@@ -23,12 +24,31 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <errno.h>
+
+std::string miku_content()
+{
+	std::string content;
+	content += "\"You are Miku, a japanese singer. Remember important facts from previous conversations. ";
+	content += "Use previous messages to understand current conversation. ";
+	content += "If you do not know something say Miku Miku Beam.";
+	return (content);
+}
+
+std::string teto_content()
+{
+	std::string content;
+	content += "\"You are Kasane Teto, a japanese singer. Remember important facts from previous conversations. ";
+	content += "Use previous messages to understand current conversation. ";
+	content += "If you do not know something say Miku Miku Beam.";
+	return (content);
+}
 
 Server::Server(const std::string &port, const std::string &pass)
 {
-	time_t now;
+	time_t	now;
 
+	this->_bot = new Bot("Miku", miku_content());
+	// this->_bot = new Bot("Teto", teto_content());
 	this->_port = validate_port(port);
 	if (pass.empty())
 		throw std::runtime_error("IRC: a server password is required!");
@@ -81,8 +101,7 @@ std::map<int, Client> &Server::getClients(void)
 void Server::close_connections(close_type type, int fd)
 {
 	std::map<std::string, Channel>::iterator chanit;
-	std::map<int, Client>::iterator 		 it;
-
+	std::map<int, Client>::iterator it;
 	if (type == CLIENT_DISCONNECT)
 	{
 		it = this->_clients.find(fd);
@@ -90,7 +109,7 @@ void Server::close_connections(close_type type, int fd)
 			return ;
 		if (it->second.get_registered())
 			save_whowas(this->_whowas, it->second); // save client info to whowas before disconnecting
-		this->_bot.cleanup(CLIENT_DISCONNECTED, fd, NULL); // rmv client's pending bot requests
+		this->_bot->cleanup(CLIENT_DISCONNECTED, fd, NULL);
 		for (chanit = this->_channels.begin(); chanit != this->_channels.end(); ++chanit)
 		{
 			if (chanit->second.getClients().count(fd))
@@ -104,7 +123,8 @@ void Server::close_connections(close_type type, int fd)
 	}
 	else if (type == SERVER_SHUTDOWN || type == SERVER_RESTART)
 	{
-		this->_bot.cleanup(BOT_SHUTDOWN, -1, NULL); // close all bot requests
+		this->_bot->cleanup(BOT_SHUTDOWN, -1, NULL);
+		delete this->_bot;
 		this->_channels.clear();
 		for (it = this->_clients.begin(); it != this->_clients.end(); ++it)
 			close(it->first); // close all client sockets
@@ -152,15 +172,15 @@ void Server::start_socket()
 
 void Server::monitor_epoll_events()
 {
-	epoll_event event;
-	epoll_event events[10];
-	int 		ready;
+	epoll_event	event;
+	epoll_event	events[10];
+	int			ready;
 	int			errno;
 
 	this->_epoll_fd = epoll_create1(0);
 	if (this->_epoll_fd < 0)
 		throw std::runtime_error("IRC: epoll_create1() failed.");
-	this->_bot.set_epoll_fd(this->_epoll_fd);
+	this->_bot->set_epoll_fd(this->_epoll_fd);
 	event.events = EPOLLIN; // monitor listening socket for incoming connections
 	event.data.fd = this->_listen_fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0)
@@ -174,7 +194,7 @@ void Server::monitor_epoll_events()
 			this->_epoll_fd = epoll_create1(0);
 			if (this->_epoll_fd < 0)
 				throw std::runtime_error("IRC: epoll_create1() failed.");
-			this->_bot.set_epoll_fd(this->_epoll_fd);
+			this->_bot->set_epoll_fd(this->_epoll_fd);
 			event.events = EPOLLIN;
 			event.data.fd = this->_listen_fd;
 			if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0)
@@ -206,7 +226,7 @@ void Server::monitor_epoll_events()
 // EPOLLOUT on client socket -> is ready to send pending data -> write data TO client
 int Server::handle_epoll_event(int fd, int events)
 {
-	int ret;
+	int	ret;
 
 	if (fd == this->_listen_fd)
 	{
@@ -214,9 +234,9 @@ int Server::handle_epoll_event(int fd, int events)
 			this->accept_client(); // socket has pending data->accept new connection and add to epoll
 		return (SOCKET_SUCCESS);
 	}
-	if (this->_bot.has_request(fd))
+	if (this->_bot->has_request(fd))
 	{
-		this->_bot.handle_bot_event(*this, fd, events); // handle ollama bot socket events
+		this->_bot->handle_bot_event(*this, fd, events); // handle ollama bot socket events
 		return (SOCKET_SUCCESS);
 	}
 	if (this->_clients.find(fd) == this->_clients.end())
@@ -275,16 +295,18 @@ void Server::accept_client()
 	}
 	this->_clients[client_fd] = Client(client_fd);
 	this->_clients[client_fd].set_host_ip(inet_ntoa(client_addr.sin_addr));
-	std::cout << "\n\033[1;32m" << "+ CLIENT " << client_fd << " CONNECTED" << "\033[0m\n";
+	std::cout << "\n\033[1;32m"
+				<< "+ CLIENT " << client_fd << " CONNECTED"
+				<< "\033[0m\n";
 }
 
 void Server::execute_cmd(Client &client, const std::string &cmd, const std::vector<std::string> &params)
 {
+	int	ret;
+
 	typedef int (Server::*Cmd)(Client &, const std::vector<std::string> &);
 	std::map<std::string, Cmd>::iterator it;
-	std::map<std::string, Cmd> 			 cmds;
-	int 								 ret;
-
+	std::map<std::string, Cmd> cmds;
 	cmds["PASS"] = &Server::pass_cmd;
 	cmds["NICK"] = &Server::nick_cmd;
 	cmds["USER"] = &Server::user_cmd;
@@ -297,6 +319,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["KICK"] = &Server::kick_cmd;
 	cmds["NAMES"] = &Server::names_cmd;
 	cmds["PRIVMSG"] = &Server::privmsg_cmd;
+	cmds["MSG"] = &Server::privmsg_cmd;
 	cmds["WHO"] = &Server::who_cmd;
 	cmds["WHOIS"] = &Server::whois_cmd;
 	cmds["WHOWAS"] = &Server::whowas_cmd;
@@ -313,8 +336,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
 		return ;
 	}
-	if (!client.get_registered() && cmd != "PASS" && cmd != "NICK" && cmd != "USER" 
-		&& cmd != "FAST" && cmd != "HELP" && cmd != "PING" && cmd != "QUIT")
+	if (!client.get_registered() && cmd != "PASS" && cmd != "NICK" && cmd != "USER" && cmd != "FAST" && cmd != "HELP" && cmd != "PING" && cmd != "QUIT")
 	{
 		if (cmd != "NOTICE")
 			this->send_error(client, ERR_NOTREGISTERED, cmd);
@@ -331,7 +353,9 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	if (!client.get_registered() && client.can_register())
 	{
 		client.set_registered(true);
-		std::cout << "\n\033[1;36m" << "✓ CLIENT " << client.get_client_fd() << " REGISTERED" << "\033[0m\n\n";
+		std::cout << "\n\033[1;36m"
+					<< "✓ CLIENT " << client.get_client_fd() << " REGISTERED"
+					<< "\033[0m\n\n";
 		this->send_notice(client, REGISTRATION, "");
 	}
 }

@@ -21,7 +21,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-Bot::Bot()
+Bot::Bot(std::string name, std::string context): _name(name), _context(context)
 {
 	this->_epoll_fd = -1;
 }
@@ -79,7 +79,7 @@ void Bot::cleanup(clear_type type, int fd, Server *server)
 		{
 			client_it = server->getClients().find(client_fd);
 			if (client_it != server->getClients().end())
-				server->send_notice(client_it->second, MIKURESPONSE, "Miku is unavailable."); // notify client if request failed
+				server->send_notice(client_it->second, MIKURESPONSE, this->_name + " is unavailable."); // notify client if request failed
 		}
 	}
 }
@@ -103,13 +103,11 @@ std::string Bot::create_request(int client_fd, const std::string &nick, const st
 		memory = this->_user_memory[client_fd];
 	else
 		memory = this->_chan_memory[channel];
-	content = "{\"model\":\"qwen:latest\",";
+	content = "{\"model\":\"qwen3:latest\",";
 	content += "\"messages\":[";
 	content += "{\"role\":\"system\",\"content\":";
-	content += "\"You are Miku, a japanese singer. Remember important facts from previous conversations. ";
-	content += "Use previous messages to understand current conversation. ";
-	content += "The user's current name is " + convert_json(nick, JSON_ESCAPE) + ". ";
-	content += "If you do not know something say Miku Miku Beam.\"}";
+	content += this->_context;
+	content += "The user's current name is " + convert_json(nick, JSON_ESCAPE) + ". \"}";
 	if (!memory.empty())
 		content += "," + memory; // if there is previous conversation->add it to request
 	content += ",{\"role\":\"user\",\"content\":\"";
@@ -248,7 +246,7 @@ bool Bot::handle_bot_event(Server &server, int bot_fd, int events)
 		}
 		catch (const std::exception &error)
 		{
-			std::cerr << "Miku cleanup: " << error.what() << std::endl;
+			std::cerr << this->_name << " cleanup: " << error.what() << std::endl;
 		}
 		return (false);
 	}

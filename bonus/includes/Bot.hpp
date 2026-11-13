@@ -57,9 +57,12 @@ class	Bot
 
 		std::string create_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question);
 		bool		handle_request_data(int bot_fd, int event);
+		std::string _name;
+		std::string _context;
+		Bot();
 
 	public:
-		Bot();
+		Bot(std::string name, std::string context);
 		~Bot();
 
 		void	set_epoll_fd(int epoll_fd);

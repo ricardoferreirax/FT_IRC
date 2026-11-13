@@ -29,7 +29,7 @@ int Server::handle_socket_data(int fd, int event, e_socket_type type)
 	}
 	else if (type == BOT_SOCKET)
 	{
-		req = this->_bot.get_request(fd);
+		req = this->_bot->get_request(fd);
 		if (!req)
 			return (SOCKET_ERROR);
 		recv_buffer = &req->recv_buffer;
@@ -65,7 +65,7 @@ int Server::handle_socket_read(int fd, e_socket_type type, std::string &buffer)
 		if (type == CLIENT_SOCKET)
 			return (SOCKET_ERROR); // client disconnected ->close connection
 		else if (type == BOT_SOCKET)
-			this->_bot.get_request(fd)->response_complete = true;
+			this->_bot->get_request(fd)->response_complete = true;
 		return (SOCKET_SUCCESS);
 	}
 	buffer.append(data, bytes); // append received data->tcp may deliver msgs in parts
