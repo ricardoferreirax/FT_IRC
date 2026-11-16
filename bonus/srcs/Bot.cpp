@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 22:49:19 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 23:20:42 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,41 +94,78 @@ void Bot::cleanup(clear_type type, int fd, Server *server)
 	}
 }
 
-bool Bot::start_request(Server &server, int client_fd, const std::string &nick, const std::string &channel, const std::string &question)
+bool Bot::start_request(Server &server, int client_fd, int bot_fd, const std::string &nick, const std::string &channel, const std::string &question)
 {
 	epoll_event event;
 	t_request   req;
-	int 		bot_fd;
+	int		   	ollama_fd; // http socket to communicate with ollama
 
 	if (this->_epoll_fd < 0)
 		return (false);
-	bot_fd = server.start_socket(11434, CONNECT_SOCKET);
-	if (bot_fd < 0)
+	ollama_fd = server.start_socket(11434, CONNECT_SOCKET);
+	if (ollama_fd < 0)
 		return (false);
 	req.client_fd = client_fd;
 	req.nick = nick;
+	req.bot_fd = bot_fd;
 	req.channel = channel;
 	req.response_complete = false;
 	req.question = question;
-	req.send_buffer = this->create_request(client_fd, nick, channel, question); // create http request with client nick and channel
-	req.recv_buffer.clear();
+	req.send_buffer = this->create_request(server, bot_fd, client_fd, nick, channel, question); // create http request with client nick and channel
+	req.recv_buffer.clear(); // clear any previous response data
 	event.events = EPOLLOUT; // start monitoring socket for writing
-	event.data.fd = bot_fd;
-	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, bot_fd, &event) < 0)
+	event.data.fd = ollama_fd;
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, ollama_fd, &event) < 0)
 	{
-		close(bot_fd);
+		close(ollama_fd);
 		return (false);
 	}
-	this->_requests[bot_fd] = req; // store request in map
+	this->_requests[ollama_fd] = req; // store request in map
 	return (true);
 }
 
-std::string Bot::create_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question)
-{
-	std::string content;
-	std::string request;
-	std::string memory;
+// std::string Bot::create_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question)
+// {
+// 	std::string content;
+// 	std::string request;
+// 	std::string memory;
 
+// 	if (channel.empty())
+// 		memory = this->_user_memory[client_fd];
+// 	else
+// 		memory = this->_chan_memory[channel];
+// 	content = "{\"model\":\"qwen:latest\",";
+// 	content += "\"messages\":[";
+// 	content += "{\"role\":\"system\",\"content\":";
+// 	content += "\"You are Miku, a japanese singer. Remember important facts from previous conversations. ";
+// 	content += "Use previous messages to understand current conversation. ";
+// 	content += "The user's current name is " + convert_json(nick, JSON_ESCAPE) + ". ";
+// 	content += "If you do not know something say Miku Miku Beam.\"}";
+// 	if (!memory.empty())
+// 		content += "," + memory; // if there is previous conversation->add it to request
+// 	content += ",{\"role\":\"user\",\"content\":\"";
+// 	content += convert_json(nick + ": " + question, JSON_ESCAPE) + "\"}],"; // add current user question
+// 	content += "\"stream\":false,\"think\":false,\"keep_alive\":\"10m\",\"options\":{\"num_predict\":512,\"num_ctx\":4096,\"temperature\":0.3}}";
+// 	request = "POST /api/chat HTTP/1.1\r\n"; // http request to send to ollama
+// 	request += "Host: 127.0.0.1:11434\r\n";
+// 	request += "Content-Type: application/json\r\n";
+// 	request += "Content-Length: " + nb_to_str(content.size()) + "\r\n" + "Connection: close\r\n\r\n"; // ollama knows when request ends
+// 	request += content;
+// 	return (request);
+// }
+
+std::string Bot::create_request(Server &server, int bot_fd, int client_fd, const std::string &nick, const std::string &channel, const std::string &question)
+{
+	std::map<int, Client>::iterator bot_it;
+	std::string 					content;
+	std::string 					request;
+	std::string 					memory;
+	std::string 					bot_nick;
+
+	bot_it = server.getClients().find(bot_fd);
+	if (bot_it == server.getClients().end() || !bot_it->second.is_bot())
+		throw std::runtime_error("Bot not found.");
+	bot_nick = bot_it->second.get_nick();
 	if (channel.empty())
 		memory = this->_user_memory[client_fd];
 	else
@@ -136,10 +173,11 @@ std::string Bot::create_request(int client_fd, const std::string &nick, const st
 	content = "{\"model\":\"qwen:latest\",";
 	content += "\"messages\":[";
 	content += "{\"role\":\"system\",\"content\":";
-	content += "\"You are Miku, a japanese singer. Remember important facts from previous conversations. ";
-	content += "Use previous messages to understand current conversation. ";
+	content += "\"You are " + convert_json(bot_nick, JSON_ESCAPE) + ", an IRC bot. ";
+	content += "Remember important facts from previous conversations. ";
+	content += "Use previous messages to understand the current conversation. ";
 	content += "The user's current name is " + convert_json(nick, JSON_ESCAPE) + ". ";
-	content += "If you do not know something say Miku Miku Beam.\"}";
+	content += "Respond clearly and helpfully.\"}";
 	if (!memory.empty())
 		content += "," + memory; // if there is previous conversation->add it to request
 	content += ",{\"role\":\"user\",\"content\":\"";

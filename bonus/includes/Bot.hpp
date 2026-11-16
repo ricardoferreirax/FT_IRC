@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 22:40:06 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 23:18:53 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,6 +38,7 @@ typedef struct	s_request
 	std::string channel;
 	bool		response_complete;
 	int			client_fd;
+	int			bot_fd;
 }	t_request;
 
 class	Bot
@@ -49,14 +50,14 @@ class	Bot
 		std::map<int, std::string>  	   _user_memory;
 		std::map<int, t_request> 		   _requests;
 
-		std::string create_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question);
+		std::string create_request(Server &server, int bot_fd, int client_fd, const std::string &nick, const std::string &channel, const std::string &question);
 		bool		handle_request_data(int bot_fd, int event);
 
 	public:
 		Bot();
 		~Bot();
 
-		bool	start_request(Server &server, int client_fd, const std::string &nick, const std::string &channel, const std::string &question);
+		bool 	start_request(Server &server, int client_fd, int bot_fd, const std::string &nick, const std::string &channel, const std::string &question);
 		void	process_bot_response(t_request &req, Server &server);
 		bool	handle_bot_event(Server &server, int bot_fd, int events);
 		void	close_requests(int bot_fd);

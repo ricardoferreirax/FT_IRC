@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/08 21:20:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 22:30:44 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 23:13:10 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,7 +47,7 @@ int Server::privmsg_cmd(Client &client, const std::vector<std::string> &params)
 			{
 				try
 				{
-					if (!this->_bot.start_request(*this, client.get_client_fd(), client.get_nick(), "", msg))
+					if (!this->_bot.start_request(*this, client.get_client_fd(), it->second.get_client_fd(), client.get_nick(), "", msg))
 						this->send_notice(client, "Bot is unavailable");
 				}
 				catch (const std::exception &e)
