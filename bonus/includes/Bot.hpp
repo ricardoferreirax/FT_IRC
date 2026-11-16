@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 18:50:32 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 20:52:45 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,6 +40,17 @@ typedef struct	s_request
 	int			client_fd;
 }	t_request;
 
+typedef struct	s_bot_client
+{
+	std::string nick;
+	std::string user;
+	std::string send_buffer;
+	std::string recv_buffer;
+	bool        connected;
+	bool        registered;
+	int         fd;
+}	t_bot_client;
+
 typedef	struct	s_chat
 {
     time_t  last_time;
@@ -49,17 +60,11 @@ typedef	struct	s_chat
 class	Bot
 {
 	private:
-		std::string _bot_send_buffer;
-		std::string _bot_recv_buffer;
-		std::string _bot_nick;
-		std::string _bot_user;
-		bool        _bot_connected;
-		bool        _bot_registered;
-		int         _bot_fd;
 		int			_epoll_fd;	
-		
+
 		std::map<std::string, std::string> _chan_memory;
 		std::map<int, std::string>  	   _user_memory;
+		std::map<int, t_bot_client> 	   _bot_clients;
 		std::map<int, t_request> 		   _requests;
 
 		std::string create_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question);
