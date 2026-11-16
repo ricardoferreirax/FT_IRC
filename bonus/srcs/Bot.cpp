@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 23:20:42 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 23:32:41 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -173,11 +173,8 @@ std::string Bot::create_request(Server &server, int bot_fd, int client_fd, const
 	content = "{\"model\":\"qwen:latest\",";
 	content += "\"messages\":[";
 	content += "{\"role\":\"system\",\"content\":";
-	content += "\"You are " + convert_json(bot_nick, JSON_ESCAPE) + ", an IRC bot. ";
-	content += "Remember important facts from previous conversations. ";
-	content += "Use previous messages to understand the current conversation. ";
-	content += "The user's current name is " + convert_json(nick, JSON_ESCAPE) + ". ";
-	content += "Respond clearly and helpfully.\"}";
+	content += "\"" + convert_json(bot_it->second.get_bot_context(), JSON_ESCAPE);
+	content += " The user's current name is " + convert_json(nick, JSON_ESCAPE) + ".\"}";
 	if (!memory.empty())
 		content += "," + memory; // if there is previous conversation->add it to request
 	content += ",{\"role\":\"user\",\"content\":\"";

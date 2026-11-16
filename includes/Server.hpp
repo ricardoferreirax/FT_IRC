@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 22:40:39 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 23:45:34 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -133,7 +133,8 @@ class	Server
 		std::map<std::string, std::string> _opers;
 		std::map<std::string, Channel>	   _channels;
 		std::map<int, Client>			   _clients;
-		std::map<std::string, t_whowas>    _whowas;
+		
+		std::map<std::string, int (Server::*)(Client &, const std::vector<std::string> &)> _cmds;
 
 		void	close_connections(close_type type, int fd);
 		void	accept_client();

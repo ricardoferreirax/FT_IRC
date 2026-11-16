@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 22:50:49 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 23:50:40 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,6 +42,27 @@ Server::Server(const std::string &port, const std::string &pass)
 		this->_date.erase(this->_date.size() - 1);
 	this->_opers["admin"] = "sudo";
 	this->_restart = false;
+	this->_cmds["PASS"] = &Server::pass_cmd;
+	this->_cmds["NICK"] = &Server::nick_cmd;
+	this->_cmds["USER"] = &Server::user_cmd;
+	this->_cmds["FAST"] = &Server::fast_cmd;
+	this->_cmds["JOIN"] = &Server::join_cmd;
+	this->_cmds["INVITE"] = &Server::invite_cmd;
+	this->_cmds["TOPIC"] = &Server::topic_cmd;
+	this->_cmds["MODE"] = &Server::mode_cmd;
+	this->_cmds["PART"] = &Server::part_cmd;
+	this->_cmds["KICK"] = &Server::kick_cmd;
+	this->_cmds["NAMES"] = &Server::names_cmd;
+	this->_cmds["PRIVMSG"] = &Server::privmsg_cmd;
+	this->_cmds["WHO"] = &Server::who_cmd;
+	this->_cmds["WHOIS"] = &Server::whois_cmd;
+	this->_cmds["HELP"] = &Server::help_cmd;
+	this->_cmds["AWAY"] = &Server::away_cmd;
+	this->_cmds["OPER"] = &Server::oper_cmd;
+	this->_cmds["RESTART"] = &Server::restart_cmd;
+	this->_cmds["KILL"] = &Server::kill_cmd;
+	this->_cmds["PING"] = &Server::ping_cmd;
+	this->_cmds["QUIT"] = &Server::quit_cmd;
 }
 
 // close all client connections
@@ -87,7 +108,7 @@ void Server::close_connections(close_type type, int fd)
 				chanit->second.leaveChannel(it->second); // rmv client from all channels
 		}
 		if (this->_epoll_fd != -1)
-			epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL); // rmv socket from epoll and close it
+			epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL); //\ rmv socket from epoll and close it
 		close(fd);
 		this->_clients.erase(it);
 		std::cout << "\n\033[1;31m- Client " << fd << " disconnected\033[0m\n\n";
@@ -295,32 +316,10 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 {
 	typedef int (Server::*Cmd)(Client &, const std::vector<std::string> &);
 	std::map<std::string, Cmd>::iterator it;
-	std::map<std::string, Cmd> 			 cmds;
 	int 								 ret;
 
-	cmds["PASS"] = &Server::pass_cmd;
-	cmds["NICK"] = &Server::nick_cmd;
-	cmds["USER"] = &Server::user_cmd;
-	cmds["FAST"] = &Server::fast_cmd;
-	cmds["JOIN"] = &Server::join_cmd;
-	cmds["INVITE"] = &Server::invite_cmd;
-	cmds["TOPIC"] = &Server::topic_cmd;
-	cmds["MODE"] = &Server::mode_cmd;
-	cmds["PART"] = &Server::part_cmd;
-	cmds["KICK"] = &Server::kick_cmd;
-	cmds["NAMES"] = &Server::names_cmd;
-	cmds["PRIVMSG"] = &Server::privmsg_cmd;
-	cmds["WHO"] = &Server::who_cmd;
-	cmds["WHOIS"] = &Server::whois_cmd;
-	cmds["HELP"] = &Server::help_cmd;
-	cmds["AWAY"] = &Server::away_cmd;
-	cmds["OPER"] = &Server::oper_cmd;
-	cmds["RESTART"] = &Server::restart_cmd;
-	cmds["KILL"] = &Server::kill_cmd;
-	cmds["PING"] = &Server::ping_cmd;
-	cmds["QUIT"] = &Server::quit_cmd;
-	it = cmds.find(cmd);
-	if (it == cmds.end())
+	it = this->_cmds.find(cmd);
+	if (it == this->_cmds.end())
 	{
 		this->send_error(client, ERR_UNKNOWNCOMMAND, cmd);
 		return ;
@@ -344,8 +343,10 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 		client.set_registered(true);
 		if (same_nick(client.get_nick(), "Miku") && same_nick(client.get_user(), "Hatsune"))
 		{
-			this->send_notice(client, "Miku registered :3");
 			client.set_bot(true);
+			client.set_bot_context("You are Miku, a japanese singer. Remember important facts from previous conversations. "
+			"Use previous messages to understand the current conversation. If you do not know something say Miku Miku Beam.");
+			this->send_notice(client, "Miku registered :3");
 		}
 		std::cout << "\n\033[1;36m" << "✓ CLIENT " << client.get_client_fd() << " REGISTERED" << "\033[0m\n\n";
 		this->send_reply(client, RPL_WELCOME, "", "Welcome to the Internet Relay Network " + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip());

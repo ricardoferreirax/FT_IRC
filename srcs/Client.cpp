@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:31:53 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 23:08:45 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 23:50:12 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -84,6 +84,11 @@ const std::string &Client::get_away_msg() const
 	return (this->_away_msg);
 }
 
+const std::string &Client::get_bot_context() const
+{
+	return (this->_bot_context);
+}
+
 void Client::set_nick(const std::string &nick)
 {
 	this->_nick = nick;
@@ -132,6 +137,11 @@ void Client::set_server_op(bool value)
 void Client::set_bot(bool value)
 {
 	this->_is_bot = value;
+}
+
+void Client::set_bot_context(const std::string &context)
+{
+	this->_bot_context = context;
 }
 
 bool Client::can_register() const
