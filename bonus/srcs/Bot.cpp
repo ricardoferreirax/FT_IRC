@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/12 17:23:47 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 18:35:25 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,7 +23,10 @@
 
 Bot::Bot()
 {
+	this->_bot_fd = -1;
 	this->_epoll_fd = -1;
+	this->_bot_connected = false;
+	this->_bot_registered = false;
 }
 
 Bot::~Bot()
@@ -31,9 +34,24 @@ Bot::~Bot()
 	this->cleanup(BOT_SHUTDOWN, -1, NULL); // clear all bot requests and memory
 }
 
+t_request *Bot::get_request(int fd)
+{
+	std::map<int, t_request>::iterator it;
+	
+	it = this->_requests.find(fd);
+	if (it == this->_requests.end())
+		return (NULL);
+	return (&it->second);
+}
+
 void	Bot::set_epoll_fd(int epoll_fd)
 {
 	this->_epoll_fd = epoll_fd;
+}
+
+bool	Bot::is_bot_socket(int fd) const
+{
+	return (this->_bot_fd != -1 && this->_bot_fd == fd);
 }
 
 bool	Bot::has_request(int bot_fd) const
@@ -41,7 +59,7 @@ bool	Bot::has_request(int bot_fd) const
 	return (this->_requests.find(bot_fd) != this->_requests.end());
 }
 
-void Bot::clear_channel(const std::string &channel)
+void 	Bot::clear_channel(const std::string &channel)
 {
     this->_chan_memory.erase(channel);
 }
@@ -59,6 +77,19 @@ void Bot::cleanup(clear_type type, int fd, Server *server)
 	{
 		this->_user_memory.clear();
 		this->_chan_memory.clear();
+		if (this->_bot_fd != -1)
+		{
+			if (this->_epoll_fd != -1)
+				epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, this->_bot_fd, NULL); // if bot socket is open->rmv it from epoll
+			close(this->_bot_fd);
+			this->_bot_fd = -1;
+		}
+		this->_bot_connected = false;
+		this->_bot_registered = false;
+		this->_bot_send_buffer.clear();
+		this->_bot_recv_buffer.clear();
+		this->_bot_nick.clear();
+		this->_bot_user.clear();
 	}
 	it = this->_requests.begin();
 	while (it != this->_requests.end()) // check all active bot requests
@@ -79,19 +110,35 @@ void Bot::cleanup(clear_type type, int fd, Server *server)
 		{
 			client_it = server->getClients().find(client_fd);
 			if (client_it != server->getClients().end())
-				server->send_notice(client_it->second, "Miku is unavailable."); // notify client if request failed
+				server->send_notice(client_it->second, "Bot is unavailable."); // notify client if request failed
 		}
 	}
 }
 
-t_request *Bot::get_request(int fd)
+bool Bot::connect_bot(Server &server, const std::string &pass, const std::string &nick, const std::string &user)
 {
-	std::map<int, t_request>::iterator it;
-	
-	it = this->_requests.find(fd);
-	if (it == this->_requests.end())
-		return (NULL);
-	return (&it->second);
+	epoll_event event;
+
+	if (this->_epoll_fd < 0 || this->_bot_fd != -1)
+		return (false);
+	this->_bot_fd = server.start_socket(server.get_port(), CONNECT_SOCKET);
+	if (this->_bot_fd < 0)
+		return (false);
+	this->_bot_connected = false;
+	this->_bot_registered = false;
+	this->_bot_send_buffer = "PASS " + password + "\r\n";
+	this->_bot_send_buffer += "NICK " + nick + "\r\n";
+	this->_bot_send_buffer += "USER " + user + " 0 * :" + nick + " Bot\r\n";
+	this->_bot_recv_buffer.clear();
+	event.events = EPOLLIN | EPOLLOUT;
+	event.data.fd = this->_bot_fd;
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_bot_fd, &event) < 0)
+	{
+		close(this->_bot_fd);
+		this->_bot_fd = -1;
+		return (false);
+	}
+	return (true);
 }
 
 std::string Bot::create_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question)

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:14:15 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/10/21 18:04:08 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 18:29:10 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,7 +40,6 @@ int	main(int ac, char **av)
 		if (sigaction(SIGINT, &action, NULL) < 0) // set action for sigint to specified handler
 			throw std::runtime_error("IRC: sigaction() failed.");
 		Server server(av[1], av[2]);
-		server.start_socket();
 		server.monitor_epoll_events();
 	}
 	catch (const std::exception &e)

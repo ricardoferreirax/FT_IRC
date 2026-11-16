@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 17:08:47 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 18:26:04 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,7 +49,12 @@ typedef	struct	s_chat
 class	Bot
 {
 	private:
-		int	_epoll_fd;
+		std::string _bot_send_buffer;
+		std::string _bot_recv_buffer;
+		bool        _bot_connected;
+		bool        _bot_registered;
+		int         _bot_fd;
+		int			_epoll_fd;	
 		
 		std::map<std::string, std::string> _chan_memory;
 		std::map<int, std::string>  	   _user_memory;
@@ -63,11 +68,16 @@ class	Bot
 		~Bot();
 
 		void	set_epoll_fd(int epoll_fd);
+		bool 	connect_bot(Server &server, const std::string &pass, const std::string &nick, const std::string &user);
+		
+		bool 	is_bot_socket(int fd) const;
+		bool 	handle_connection_event(int events);
 		bool	has_request(int bot_fd) const;
-		void	close_requests(int bot_fd);
+		
 		bool	start_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question);
 		void	process_bot_response(t_request &req, Server &server);
 		bool	handle_bot_event(Server &server, int bot_fd, int events);
+		void	close_requests(int bot_fd);
 		void 	cleanup(clear_type type, int fd, Server *server);
 		void	clear_channel(const std::string &channel);
 		

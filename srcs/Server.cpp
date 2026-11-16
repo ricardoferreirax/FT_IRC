@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/12 17:28:26 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 18:30:37 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -111,46 +111,59 @@ void Server::close_connections(close_type type, int fd)
 	}
 }
 
-// listen() changes socket into a listening socket ready to accept connections
-void	Server::start_socket()
+int Server::start_socket(int port, e_socket_mode mode)
 {
-	sockaddr_in	server_addr;
-	int			socket_opt;
+	sockaddr_in	addr;
+	int			fd;
+	int			opt;
+	int			res;
 
-	this->_listen_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (this->_listen_fd < 0)
-		throw std::runtime_error("IRC: socket() failed.");
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	server_addr.sin_port = htons(this->_port);
-	socket_opt = 1;
-	if (setsockopt(this->_listen_fd, SOL_SOCKET, SO_REUSEADDR, &socket_opt,
-			sizeof(socket_opt)) < 0)
-		throw std::runtime_error("IRC: setsockopt() failed.");
-	if (fcntl(this->_listen_fd, F_SETFL, O_NONBLOCK) < 0)
-		throw std::runtime_error("IRC: fcntl() failed.");
-	if (bind(this->_listen_fd, (sockaddr *)&server_addr,
-			sizeof(server_addr)) < 0)
-		throw std::runtime_error("IRC: bind() failed.");
-	if (listen(this->_listen_fd, SOMAXCONN) < 0)
-		throw std::runtime_error("IRC: listen() failed.");
-	std::cout << "\n[SERVER] Listening on all interfaces (0.0.0.0:" << this->_port << ")" << std::endl;
+	fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd < 0)
+		return (-1);
+	if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
+		return (close(fd), -1);
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(port);
+	if (mode == LISTEN_SOCKET)
+	{
+		addr.sin_addr.s_addr = htonl(INADDR_ANY);
+		opt = 1;
+		if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0
+			|| bind(fd, (sockaddr *)&addr, sizeof(addr)) < 0 
+			|| listen(fd, SOMAXCONN) < 0)
+			return (close(fd), -1);
+	}
+	else if (mode == CONNECT_SOCKET)
+	{
+		addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+		res = connect(fd, (sockaddr *)&addr, sizeof(addr));
+		if (res < 0 && errno != EINPROGRESS)
+			return (close(fd), -1);
+	}
+	else
+		return (close(fd), -1);
+	return (fd);
 }
 
+// listen() changes socket into a listening socket ready to accept connections
 // give bot same epoll fd used by server, bot registers its sockets w/out creating other epoll
 // epoll_wait wait till at least one registered socket have events -> return nb of ready events
 void Server::monitor_epoll_events()
 {
 	epoll_event event;
 	epoll_event events[10];
-	int 		ready;
-	int			errno;
+	int ready;
 
+	this->_listen_fd = start_socket(this->_port, LISTEN_SOCKET);
+	if (this->_listen_fd < 0)
+		throw std::runtime_error("IRC: start_socket() failed.");
+	std::cout << "\n[SERVER] Listening on all interfaces (0.0.0.0:" << this->_port << ")" << std::endl;
 	this->_epoll_fd = epoll_create1(0);
 	if (this->_epoll_fd < 0)
 		throw std::runtime_error("IRC: epoll_create1() failed.");
 	this->_bot.set_epoll_fd(this->_epoll_fd);
-	event.events = EPOLLIN; // monitor listening socket for incoming connections
+	event.events = EPOLLIN;
 	event.data.fd = this->_listen_fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
@@ -159,7 +172,10 @@ void Server::monitor_epoll_events()
 		if (this->_restart)
 		{
 			this->close_connections(SERVER_RESTART, -1);
-			this->start_socket();
+			this->_listen_fd = start_socket(this->_port, LISTEN_SOCKET);
+			if (this->_listen_fd < 0)
+				throw std::runtime_error("IRC: start_socket() failed.");
+			std::cout << "\n[SERVER] Listening on all interfaces (0.0.0.0:" << this->_port << ")" << std::endl;
 			this->_epoll_fd = epoll_create1(0);
 			if (this->_epoll_fd < 0)
 				throw std::runtime_error("IRC: epoll_create1() failed.");

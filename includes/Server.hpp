@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/12 17:20:40 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 18:10:45 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,12 @@ enum	close_type
 	CLIENT_DISCONNECT,
 	SERVER_SHUTDOWN,
 	SERVER_RESTART
+};
+
+enum	e_socket_mode
+{
+	LISTEN_SOCKET,
+	CONNECT_SOCKET
 };
 
 enum	e_socket_type
@@ -185,7 +191,7 @@ class	Server
 		std::string	getName(void) const;
 		int get_epoll_fd() const;
 		
-		void	start_socket();
+		int 	start_socket(int port, e_socket_mode mode);
 		void	monitor_epoll_events();
 		int		handle_socket_data(int fd, int event, e_socket_type type);
 		void	send_notice(Client &client, const std::string &msg);
