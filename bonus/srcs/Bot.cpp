@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 21:02:08 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 21:36:11 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,6 +37,16 @@ t_request *Bot::get_request(int fd)
 	
 	it = this->_requests.find(fd);
 	if (it == this->_requests.end())
+		return (NULL);
+	return (&it->second);
+}
+
+t_bot_client *Bot::get_bot_client(int fd)
+{
+    std::map<int, t_bot_client>::iterator it;
+
+	it = this->_bot_clients.find(fd);
+	if (it == this->_bot_clients.end())
 		return (NULL);
 	return (&it->second);
 }
@@ -248,46 +258,55 @@ void Bot::process_bot_response(t_request &req, Server &server)
 	*memory += ",{\"role\":\"assistant\",\"content\":\"" + convert_json(answer, JSON_ESCAPE) + "\"}"; // add miku answer to memory
 }
 
-bool Bot::handle_bot_event(Server &server, int bot_fd, int events)
+bool Bot::handle_bot_event(Server &server, int fd, int events)
 {
+	e_socket_type	type;
+	t_request		*req;
+	int				status;
+
+	if (this->is_bot_socket(fd))
+		type = BOT_CLIENT_SOCKET;
+	else if (this->has_request(fd))
+		type = BOT_SOCKET;
+	else
+		return (false);
 	try
 	{
-		std::map<int, t_request>::iterator it;
-		int 							   status;
-
-		it = this->_requests.find(bot_fd);
-		if (it == this->_requests.end())
-			return (false);
 		if (events & EPOLLERR)
-			throw std::runtime_error("Ollama socket error :/");
+			throw std::runtime_error("Bot socket error.");
+		if (type == BOT_CLIENT_SOCKET && (events & EPOLLHUP))
+			throw std::runtime_error("Bot disconnected.");
 		if (events & EPOLLOUT)
 		{
-			status = server.handle_socket_data(bot_fd, EPOLLOUT, BOT_SOCKET); // send http request when socket is ready for writing
+			status = server.handle_socket_data(fd, EPOLLOUT, type); // send http request to bot or ollama when socket is ready for writing
 			if (status == SOCKET_ERROR)
-				throw std::runtime_error("Ollama send error :/");
+				throw std::runtime_error("Bot send error.");
 		}
 		if (events & EPOLLIN)
 		{
-			status = server.handle_socket_data(bot_fd, EPOLLIN, BOT_SOCKET); // receive http response when socket is ready for reading
+			status = server.handle_socket_data(fd, EPOLLIN, type); // receive http response from bot or ollama when socket is ready for reading
 			if (status == SOCKET_ERROR)
-				throw std::runtime_error("Ollama recv error :/");
+				throw std::runtime_error("Bot recv error.");
 		}
-		if (!it->second.response_complete)
+		if (type == BOT_CLIENT_SOCKET)
+			return (true); // wait until bot client is ready to receive data
+		req = this->get_request(fd);
+		if (!req || !req->response_complete)
 			return (true); // wait until entire http response has been received
-		this->process_bot_response(it->second, server);
-		this->cleanup(REQUEST_COMPLETED, bot_fd, &server); // rmv request from map and close bot socket
+		this->process_bot_response(*req, server);
+		this->cleanup(REQUEST_COMPLETED, fd, &server);
 		return (true); // response is complete and processed successfully
 	}
 	catch (const std::exception &e)
 	{
-		std::cerr << "Miku: " << e.what() << std::endl;
-		try
+		std::cerr << "Bot: " << e.what() << std::endl;
+		if (type == BOT_SOCKET)
+			this->cleanup(REQUEST_FAILED, fd, &server); // rmv failed request and notify client
+		else
 		{
-			this->cleanup(REQUEST_FAILED, bot_fd, &server); // rmv failed request and notify client.
-		}
-		catch (const std::exception &error)
-		{
-			std::cerr << "Miku cleanup: " << error.what() << std::endl;
+			epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL); // rmv bot client socket from epoll
+			close(fd);
+			this->_bot_clients.erase(fd);
 		}
 		return (false);
 	}

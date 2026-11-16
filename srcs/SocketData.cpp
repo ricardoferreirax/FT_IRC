@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/05 17:17:06 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/10 20:22:52 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 21:23:30 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,9 +16,10 @@
 
 int Server::handle_socket_data(int fd, int event, e_socket_type type)
 {
-	std::string *recv_buffer;
-	std::string *send_buffer;
-	t_request 	*req;
+	std::string  *recv_buffer;
+	std::string  *send_buffer;
+	t_bot_client *bot;
+	t_request    *req;
 
 	if (type == CLIENT_SOCKET)
 	{
@@ -35,11 +36,19 @@ int Server::handle_socket_data(int fd, int event, e_socket_type type)
 		recv_buffer = &req->recv_buffer;
 		send_buffer = &req->send_buffer;
 	}
+	else if (type == BOT_CLIENT_SOCKET)
+	{
+		bot = this->_bot.get_bot_client(fd);
+		if (!bot)
+			return (SOCKET_ERROR);
+		recv_buffer = &bot->recv_buffer;
+		send_buffer = &bot->send_buffer;
+	}
 	else
 		return (SOCKET_ERROR);
-	if (event == EPOLLIN) // EPOLLIN->socket is ready to receive data.
+	if (event == EPOLLIN) // EPOLLIN->socket is ready to receive data
 		return (this->handle_socket_read(fd, type, *recv_buffer));
-	if (event == EPOLLOUT) // EPOLLOUT->socket is ready to send data.
+	if (event == EPOLLOUT) // EPOLLOUT->socket is ready to send data
 		return (this->handle_socket_write(fd, type, *send_buffer));
 	return (SOCKET_ERROR);
 }
@@ -62,15 +71,15 @@ int Server::handle_socket_read(int fd, e_socket_type type, std::string &buffer)
 		return (SOCKET_PENDING); // recv() fails ->keep connection and wait for another event
 	if (bytes == 0) // peer closed connection
 	{
-		if (type == CLIENT_SOCKET)
-			return (SOCKET_ERROR); // client disconnected ->close connection
+		if (type == CLIENT_SOCKET || type == BOT_CLIENT_SOCKET)
+			return (SOCKET_ERROR); // client or bot disconnected ->close connection
 		else if (type == BOT_SOCKET)
 			this->_bot.get_request(fd)->response_complete = true;
 		return (SOCKET_SUCCESS);
 	}
 	buffer.append(data, bytes); // append received data->tcp may deliver msgs in parts
-	if (type == BOT_SOCKET)
-		return (SOCKET_SUCCESS); // bot responses are processed separately so don't parse bot response here
+	if (type == BOT_SOCKET || type == BOT_CLIENT_SOCKET)
+		return (SOCKET_SUCCESS); // bot responses are processed separately, not here as irc msg
 	log_tcp(TCP_RECEIVE, fd, bytes, std::string(data, bytes));
 	Client &client = this->_clients.find(fd)->second;
 	if (client.get_quit())

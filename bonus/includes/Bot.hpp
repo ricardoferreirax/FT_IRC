@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 20:52:45 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 21:36:31 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -78,7 +78,6 @@ class	Bot
 		bool 	connect_bot(Server &server, const std::string &pass, const std::string &nick, const std::string &user);
 		
 		bool 	is_bot_socket(int fd) const;
-		bool 	handle_connection_event(int events);
 		bool	has_request(int bot_fd) const;
 		
 		bool	start_request(Server &server, int client_fd, const std::string &nick, const std::string &channel, const std::string &question);
@@ -89,6 +88,7 @@ class	Bot
 		void	clear_channel(const std::string &channel);
 		
 		t_request	*get_request(int fd);
+		t_bot_client *get_bot_client(int fd);
 	};
 
 #endif

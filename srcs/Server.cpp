@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 18:52:06 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 21:34:59 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -224,13 +224,14 @@ int Server::handle_epoll_event(int fd, int events)
 			this->accept_client(); // socket has pending data->accept new connection and add to epoll
 		return (SOCKET_SUCCESS);
 	}
-	if (this->_bot.has_request(fd))
+	if (this->_bot.is_bot_socket(fd) || this->_bot.has_request(fd))
 	{
-		this->_bot.handle_bot_event(*this, fd, events); // handle ollama bot socket events
+		if (!this->_bot.handle_bot_event(*this, fd, events)) // handle bot connection events (register, send request and recv response)
+			return (SOCKET_ERROR);
 		return (SOCKET_SUCCESS);
 	}
 	if (this->_clients.find(fd) == this->_clients.end())
-		return (SOCKET_ERROR); // ignore sockets dont belong to clients or bot
+		return (SOCKET_ERROR); // ignore sockets that don't belong to clients or bot
 	if (events & (EPOLLERR | EPOLLHUP))
 	{
 		this->close_connections(CLIENT_DISCONNECT, fd); // disconnect clients with epoll error or hangup
