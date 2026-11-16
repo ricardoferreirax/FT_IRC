@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 18:30:37 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 18:52:06 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,6 +58,11 @@ std::string Server::getName(void) const
 std::map<int, Client> &Server::getClients(void)
 {
 	return (this->_clients);
+}
+
+int Server::get_port() const
+{
+	return (this->_port);
 }
 
 int Server::get_epoll_fd() const

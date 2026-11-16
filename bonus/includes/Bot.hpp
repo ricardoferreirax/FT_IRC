@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 18:26:04 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 18:50:32 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,6 +51,8 @@ class	Bot
 	private:
 		std::string _bot_send_buffer;
 		std::string _bot_recv_buffer;
+		std::string _bot_nick;
+		std::string _bot_user;
 		bool        _bot_connected;
 		bool        _bot_registered;
 		int         _bot_fd;
@@ -74,7 +76,7 @@ class	Bot
 		bool 	handle_connection_event(int events);
 		bool	has_request(int bot_fd) const;
 		
-		bool	start_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question);
+		bool	start_request(Server &server, int client_fd, const std::string &nick, const std::string &channel, const std::string &question);
 		void	process_bot_response(t_request &req, Server &server);
 		bool	handle_bot_event(Server &server, int bot_fd, int events);
 		void	close_requests(int bot_fd);

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 18:10:45 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 18:52:52 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -188,8 +188,10 @@ class	Server
 		~Server();
 		
 		std::map<int, Client> &getClients(void);
+		
 		std::string	getName(void) const;
-		int get_epoll_fd() const;
+		int 		get_epoll_fd() const;
+		int 		get_port() const;
 		
 		int 	start_socket(int port, e_socket_mode mode);
 		void	monitor_epoll_events();

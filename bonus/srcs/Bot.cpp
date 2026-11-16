@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 18:35:25 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 18:53:22 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -126,7 +126,9 @@ bool Bot::connect_bot(Server &server, const std::string &pass, const std::string
 		return (false);
 	this->_bot_connected = false;
 	this->_bot_registered = false;
-	this->_bot_send_buffer = "PASS " + password + "\r\n";
+	this->_bot_nick = nick;
+	this->_bot_user = user;
+	this->_bot_send_buffer = "PASS " + pass + "\r\n";
 	this->_bot_send_buffer += "NICK " + nick + "\r\n";
 	this->_bot_send_buffer += "USER " + user + " 0 * :" + nick + " Bot\r\n";
 	this->_bot_recv_buffer.clear();
@@ -138,6 +140,35 @@ bool Bot::connect_bot(Server &server, const std::string &pass, const std::string
 		this->_bot_fd = -1;
 		return (false);
 	}
+	return (true);
+}
+
+bool Bot::start_request(Server &server, int client_fd, const std::string &nick, const std::string &channel, const std::string &question)
+{
+	epoll_event event;
+	t_request   req;
+	int 		bot_fd;
+
+	if (this->_epoll_fd < 0)
+		return (false);
+	bot_fd = server.start_socket(11434, CONNECT_SOCKET);
+	if (bot_fd < 0)
+		return (false);
+	req.client_fd = client_fd;
+	req.nick = nick;
+	req.channel = channel;
+	req.response_complete = false;
+	req.question = question;
+	req.send_buffer = this->create_request(client_fd, nick, channel, question); // create http request with client nick and channel
+	req.recv_buffer.clear();
+	event.events = EPOLLOUT; // start monitoring socket for writing
+	event.data.fd = bot_fd;
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, bot_fd, &event) < 0)
+	{
+		close(bot_fd);
+		return (false);
+	}
+	this->_requests[bot_fd] = req; // store request in map
 	return (true);
 }
 
@@ -169,52 +200,6 @@ std::string Bot::create_request(int client_fd, const std::string &nick, const st
 	request += "Content-Length: " + nb_to_str(content.size()) + "\r\n" + "Connection: close\r\n\r\n"; // ollama knows when request ends
 	request += content;
 	return (request);
-}
-
-// create socket to connect to ollama
-bool Bot::start_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question)
-{
-	sockaddr_in addr;
-	epoll_event event;
-	t_request 	req;
-	int 		bot_fd;
-	int 		res;
-
-	if (this->_epoll_fd < 0)
-		return (false);
-	bot_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (bot_fd < 0)
-		return (false);
-	if (fcntl(bot_fd, F_SETFL, O_NONBLOCK) < 0)
-	{
-		close(bot_fd);
-		return (false);
-	}
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(11434);
-	addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-	res = connect(bot_fd, (sockaddr *)&addr, sizeof(addr));
-	if (res < 0 && errno != EINPROGRESS)
-	{
-		close(bot_fd);
-		return (false);
-	}
-	req.client_fd = client_fd;
-	req.nick = nick;
-	req.channel = channel;
-	req.response_complete = false;
-	req.question = question;
-	req.send_buffer = this->create_request(client_fd, nick, channel, question); // create http request with client nick and channel
-	req.recv_buffer = "";
-	event.events = EPOLLOUT; // start monitoring socket for writing
-	event.data.fd = bot_fd;
-	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, bot_fd, &event) < 0)
-	{
-		close(bot_fd);
-		return (false);
-	}
-	this->_requests[bot_fd] = req; // store request in map
-	return (true);
 }
 
 void Bot::process_bot_response(t_request &req, Server &server)
