@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:31:53 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 21:29:00 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 22:52:06 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -129,6 +129,11 @@ void Client::set_server_op(bool value)
 	this->_server_op = value;
 }
 
+void Client::set_bot(bool value)
+{
+	this->_is_bot = value;
+}
+
 bool Client::can_register() const
 {
 	return (this->_auth && !this->_nick.empty() && !this->_user.empty());
@@ -142,4 +147,9 @@ bool Client::is_away() const
 bool Client::is_server_op() const
 {
 	return (this->_server_op);
+}
+
+bool Client::is_bot() const
+{
+	return (this->_is_bot);
 }

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/07 12:28:03 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/09 10:47:13 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 22:11:45 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,7 @@ class	Client
 		bool		_registered;
 		bool		_quit;
 		bool		_server_op;
+		bool		_is_bot;
 		int			_client_fd;
 				
 	public:
@@ -56,6 +57,7 @@ class	Client
 		void	set_realname(const std::string &realname);
 		void	set_away_msg(const std::string &msg);
 		void 	set_server_op(bool value);
+		void	set_bot(bool value);
 
 		void	clear_buffers();
 		void	set_auth(bool auth);
@@ -64,6 +66,7 @@ class	Client
 		bool	can_register() const;
 		bool	is_away() const;
 		bool	is_server_op() const;
+		bool	is_bot() const;
 };
 
 #endif

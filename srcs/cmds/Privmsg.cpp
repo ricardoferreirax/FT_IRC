@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/08 21:20:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 18:49:23 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 22:30:44 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,21 +34,6 @@ int Server::privmsg_cmd(Client &client, const std::vector<std::string> &params)
 	while (i < targets.size())
 	{
 		target = targets[i];
-		if (same_nick(target, "Miku"))
-		{
-			try
-			{
-				if (!this->_bot.start_request(*this, client.get_client_fd(), client.get_nick(), "", msg))
-					this->send_notice(client, "Bot is unavailable");
-			}
-			catch (const std::exception &e)
-			{
-				std::cerr << "Miku: " << e.what() << std::endl;
-				this->send_notice(client, "Bot is unavailable");
-			}
-			i++;
-			continue ; // skip to next target->will not search for miku in clients/channels
-		}
 		it = this->_clients.begin();
 		while (it != this->_clients.end())
 		{
@@ -58,9 +43,25 @@ int Server::privmsg_cmd(Client &client, const std::vector<std::string> &params)
 		}
 		if (it != this->_clients.end())
 		{
-			this->send_cmd(client, it->second, "PRIVMSG " + it->second.get_nick() + " :" + msg); // send msg to target client
-			if (it->second.is_away())
-				this->send_reply(client, RPL_AWAY, it->second.get_nick(), it->second.get_away_msg()); // target client is away->send away msg to sender
+			if (it->second.is_bot())
+			{
+				try
+				{
+					if (!this->_bot.start_request(*this, client.get_client_fd(), client.get_nick(), "", msg))
+						this->send_notice(client, "Bot is unavailable");
+				}
+				catch (const std::exception &e)
+				{
+					std::cerr << "Bot: " << e.what() << std::endl;
+					this->send_notice(client, "Bot is unavailable");
+				}
+			}
+			else
+			{
+				this->send_cmd(client, it->second, "PRIVMSG " + it->second.get_nick() + " :" + msg); // send msg to target client
+				if (it->second.is_away())
+					this->send_reply(client, RPL_AWAY, it->second.get_nick(), it->second.get_away_msg()); // target client is away->send away msg to sender
+			}
 			i++;
 			continue ; // skip to next target->will not search for target in channels
 		}

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 21:40:52 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 22:40:06 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,17 +40,6 @@ typedef struct	s_request
 	int			client_fd;
 }	t_request;
 
-typedef struct	s_bot_client
-{
-	std::string nick;
-	std::string user;
-	std::string send_buffer;
-	std::string recv_buffer;
-	bool        connected;
-	bool        registered;
-	int         fd;
-}	t_bot_client;
-
 class	Bot
 {
 	private:
@@ -58,7 +47,6 @@ class	Bot
 
 		std::map<std::string, std::string> _chan_memory;
 		std::map<int, std::string>  	   _user_memory;
-		std::map<int, t_bot_client> 	   _bot_clients;
 		std::map<int, t_request> 		   _requests;
 
 		std::string create_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question);
@@ -68,21 +56,16 @@ class	Bot
 		Bot();
 		~Bot();
 
-		void	set_epoll_fd(int epoll_fd);
-		bool 	connect_bot(Server &server, const std::string &pass, const std::string &nick, const std::string &user);
-		
-		bool 	is_bot_socket(int fd) const;
-		bool	has_request(int bot_fd) const;
-		
 		bool	start_request(Server &server, int client_fd, const std::string &nick, const std::string &channel, const std::string &question);
 		void	process_bot_response(t_request &req, Server &server);
 		bool	handle_bot_event(Server &server, int bot_fd, int events);
 		void	close_requests(int bot_fd);
 		void 	cleanup(clear_type type, int fd, Server *server);
 		void	clear_channel(const std::string &channel);
+		bool	has_request(int bot_fd) const;
 		
+		void		set_epoll_fd(int epoll_fd);
 		t_request	*get_request(int fd);
-		t_bot_client *get_bot_client(int fd);
 	};
 
 #endif

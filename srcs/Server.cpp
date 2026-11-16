@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 21:50:30 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 22:50:49 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -172,8 +172,6 @@ void Server::monitor_epoll_events()
 	event.data.fd = this->_listen_fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
-	if (!this->_bot.connect_bot(*this, this->_pass, "Miku", "Hatsune"))
-		std::cerr << "IRC: Failed to connect Miku bot." << std::endl;
 	while (alive)
 	{
 		if (this->_restart)
@@ -191,8 +189,6 @@ void Server::monitor_epoll_events()
 			event.data.fd = this->_listen_fd;
 			if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0)
 				throw std::runtime_error("IRC: epoll_ctl() failed.");
-			if (!this->_bot.connect_bot(*this, this->_pass, "Miku", "Hatsune"))
-				std::cerr << "IRC: Failed to connect Miku bot." << std::endl;
 			this->_restart = false;
 			std::cout << "[SERVER] Restarted successfully!" << std::endl;
 			continue ;
@@ -228,7 +224,7 @@ int Server::handle_epoll_event(int fd, int events)
 			this->accept_client(); // socket has pending data->accept new connection and add to epoll
 		return (SOCKET_SUCCESS);
 	}
-	if (this->_bot.is_bot_socket(fd) || this->_bot.has_request(fd))
+	if (this->_bot.has_request(fd))
 	{
 		if (!this->_bot.handle_bot_event(*this, fd, events)) // handle bot connection events (register, send request and recv response)
 			return (SOCKET_ERROR);
@@ -346,6 +342,11 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	if (!client.get_registered() && client.can_register())
 	{
 		client.set_registered(true);
+		if (same_nick(client.get_nick(), "Miku") && same_nick(client.get_user(), "Hatsune"))
+		{
+			this->send_notice(client, "Miku registered :3");
+			client.set_bot(true);
+		}
 		std::cout << "\n\033[1;36m" << "✓ CLIENT " << client.get_client_fd() << " REGISTERED" << "\033[0m\n\n";
 		this->send_reply(client, RPL_WELCOME, "", "Welcome to the Internet Relay Network " + client.get_nick() + "!" + client.get_user() + "@" + client.get_host_ip());
 		this->send_reply(client, RPL_YOURHOST, "", "Your host is " + this->_name + ", running version 1.1");

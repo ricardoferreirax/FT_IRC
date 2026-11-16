@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/05 17:17:06 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 21:43:36 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 22:42:14 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,6 @@ int Server::handle_socket_data(int fd, int event, e_socket_type type)
 {
 	std::string  *recv_buffer;
 	std::string  *send_buffer;
-	t_bot_client *bot;
 	t_request    *req;
 
 	if (type == CLIENT_SOCKET)
@@ -35,14 +34,6 @@ int Server::handle_socket_data(int fd, int event, e_socket_type type)
 			return (SOCKET_ERROR);
 		recv_buffer = &req->recv_buffer;
 		send_buffer = &req->send_buffer;
-	}
-	else if (type == BOT_CLIENT_SOCKET)
-	{
-		bot = this->_bot.get_bot_client(fd);
-		if (!bot)
-			return (SOCKET_ERROR);
-		recv_buffer = &bot->recv_buffer;
-		send_buffer = &bot->send_buffer;
 	}
 	else
 		return (SOCKET_ERROR);
@@ -71,14 +62,14 @@ int Server::handle_socket_read(int fd, e_socket_type type, std::string &buffer)
 		return (SOCKET_PENDING); // recv() fails ->keep connection and wait for another event
 	if (bytes == 0) // peer closed connection
 	{
-		if (type == CLIENT_SOCKET || type == BOT_CLIENT_SOCKET)
+		if (type == CLIENT_SOCKET)
 			return (SOCKET_ERROR); // client or bot disconnected ->close connection
 		else if (type == OLLAMA_REQUEST_SOCKET)
 			this->_bot.get_request(fd)->response_complete = true;
 		return (SOCKET_SUCCESS);
 	}
 	buffer.append(data, bytes); // append received data->tcp may deliver msgs in parts
-	if (type == OLLAMA_REQUEST_SOCKET || type == BOT_CLIENT_SOCKET)
+	if (type == OLLAMA_REQUEST_SOCKET)
 		return (SOCKET_SUCCESS); // bot responses are processed separately, not here as irc msg
 	log_tcp(TCP_RECEIVE, fd, bytes, std::string(data, bytes));
 	Client &client = this->_clients.find(fd)->second;
