@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/27 23:58:32 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 21:15:02 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 21:42:52 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,8 +44,8 @@ enum	e_socket_mode
 enum	e_socket_type
 {
 	CLIENT_SOCKET,
-	BOT_SOCKET,
-	BOT_CLIENT_SOCKET
+	BOT_CLIENT_SOCKET,
+	OLLAMA_REQUEST_SOCKET,
 };
 
 enum	e_socket_status

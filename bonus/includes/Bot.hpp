@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 21:36:31 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 21:40:52 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,12 +50,6 @@ typedef struct	s_bot_client
 	bool        registered;
 	int         fd;
 }	t_bot_client;
-
-typedef	struct	s_chat
-{
-    time_t  last_time;
-    int     message;
-}	t_chat;
 
 class	Bot
 {

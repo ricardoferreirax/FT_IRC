@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 21:36:11 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 21:50:18 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -267,7 +267,7 @@ bool Bot::handle_bot_event(Server &server, int fd, int events)
 	if (this->is_bot_socket(fd))
 		type = BOT_CLIENT_SOCKET;
 	else if (this->has_request(fd))
-		type = BOT_SOCKET;
+		type = OLLAMA_REQUEST_SOCKET;
 	else
 		return (false);
 	try
@@ -300,7 +300,7 @@ bool Bot::handle_bot_event(Server &server, int fd, int events)
 	catch (const std::exception &e)
 	{
 		std::cerr << "Bot: " << e.what() << std::endl;
-		if (type == BOT_SOCKET)
+		if (type == OLLAMA_REQUEST_SOCKET)
 			this->cleanup(REQUEST_FAILED, fd, &server); // rmv failed request and notify client
 		else
 		{

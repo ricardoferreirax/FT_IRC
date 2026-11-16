@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/05 17:17:06 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 21:23:30 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 21:43:36 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,7 +28,7 @@ int Server::handle_socket_data(int fd, int event, e_socket_type type)
 		recv_buffer = &this->_clients[fd].get_recv_buffer();
 		send_buffer = &this->_clients[fd].get_send_buffer();
 	}
-	else if (type == BOT_SOCKET)
+	else if (type == OLLAMA_REQUEST_SOCKET)
 	{
 		req = this->_bot.get_request(fd);
 		if (!req)
@@ -73,12 +73,12 @@ int Server::handle_socket_read(int fd, e_socket_type type, std::string &buffer)
 	{
 		if (type == CLIENT_SOCKET || type == BOT_CLIENT_SOCKET)
 			return (SOCKET_ERROR); // client or bot disconnected ->close connection
-		else if (type == BOT_SOCKET)
+		else if (type == OLLAMA_REQUEST_SOCKET)
 			this->_bot.get_request(fd)->response_complete = true;
 		return (SOCKET_SUCCESS);
 	}
 	buffer.append(data, bytes); // append received data->tcp may deliver msgs in parts
-	if (type == BOT_SOCKET || type == BOT_CLIENT_SOCKET)
+	if (type == OLLAMA_REQUEST_SOCKET || type == BOT_CLIENT_SOCKET)
 		return (SOCKET_SUCCESS); // bot responses are processed separately, not here as irc msg
 	log_tcp(TCP_RECEIVE, fd, bytes, std::string(data, bytes));
 	Client &client = this->_clients.find(fd)->second;

@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/28 05:42:35 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/16 21:34:59 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/16 21:50:30 by rmedeiro         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -172,6 +172,8 @@ void Server::monitor_epoll_events()
 	event.data.fd = this->_listen_fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0)
 		throw std::runtime_error("IRC: epoll_ctl() failed.");
+	if (!this->_bot.connect_bot(*this, this->_pass, "Miku", "Hatsune"))
+		std::cerr << "IRC: Failed to connect Miku bot." << std::endl;
 	while (alive)
 	{
 		if (this->_restart)
@@ -189,6 +191,8 @@ void Server::monitor_epoll_events()
 			event.data.fd = this->_listen_fd;
 			if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, this->_listen_fd, &event) < 0)
 				throw std::runtime_error("IRC: epoll_ctl() failed.");
+			if (!this->_bot.connect_bot(*this, this->_pass, "Miku", "Hatsune"))
+				std::cerr << "IRC: Failed to connect Miku bot." << std::endl;
 			this->_restart = false;
 			std::cout << "[SERVER] Restarted successfully!" << std::endl;
 			continue ;
