@@ -18,7 +18,7 @@
 Bot::Bot(std::string name, std::string persona_path)
 	: _epoll_fd(-1), _name(name)
 {	
-	mkdir(".logs", 0755);
+	// mkdir(".logs", 0755);
 	std::ifstream master_file(BOT_MASTER_FILE);
 	if (!master_file.is_open())
 		throw std::runtime_error("could not open master file: " + std::string(BOT_MASTER_FILE));
@@ -112,7 +112,7 @@ std::string Bot::create_request(Client client, const std::string &channel, const
 		memory = this->_user_memory[client.get_client_fd()];
 	else
 		memory = this->_chan_memory[channel];
-	content = "{\"model\":\"qwen:latest\",";
+	content = "{\"model\":\"qwen3.8:latest\",";
 	content += "\"messages\":[";
 	content += "{\"role\":\"system\",\"content\":\"";
 	content += convert_json(this->_personality, JSON_ESCAPE);
