@@ -112,7 +112,7 @@ std::string Bot::create_request(Client client, const std::string &channel, const
 		memory = this->_user_memory[client.get_client_fd()];
 	else
 		memory = this->_chan_memory[channel];
-	content = "{\"model\":\"qwen3:latest\",";
+	content = "{\"model\":\"qwen:latest\",";
 	content += "\"messages\":[";
 	content += "{\"role\":\"system\",\"content\":\"";
 	content += convert_json(this->_personality, JSON_ESCAPE);
