@@ -10,8 +10,8 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../../includes/Server.hpp"
 #include "../../bonus/includes/Bot.hpp"
+#include "../../includes/Server.hpp"
 
 int Server::botadd_cmd(Client &client, const std::vector<std::string> &params)
 {
@@ -48,5 +48,21 @@ int Server::botdel_cmd(Client &client, const std::vector<std::string> &params)
 	botit->second.cleanup(BOT_REMOVED, -1, this);
 	this->_bots.erase(botit);
 	this->send_notice(client, "Bot " + params[0] + " removed.");
+	return (0);
+}
+
+int Server::botlist_cmd(Client &client, const std::vector<std::string> &params)
+{
+	std::string reply;
+	(void)params;
+	std::map<std::string, Bot>::iterator botit = this->_bots.begin();
+	while (botit != this->_bots.end())
+	{
+		reply += botit->second.getName();
+		reply += '\n';
+		botit++;
+	}
+	reply += ":End of /BOTLIST List \n";
+	this->send_notice(client, reply);
 	return (0);
 }

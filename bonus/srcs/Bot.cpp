@@ -113,7 +113,7 @@ std::string Bot::create_request(Client client, const std::string &channel, const
 		memory = this->_user_memory[client.get_client_fd()];
 	else
 		memory = this->_chan_memory[channel];
-	content = "{\"model\":\"qwen3.8:latest\",";
+	content = "{\"model\":\"qwen3:latest\",";
 	content += "\"messages\":[";
 	content += "{\"role\":\"system\",\"content\":\"";
 	content += convert_json(this->_personality, JSON_ESCAPE);
@@ -203,6 +203,7 @@ static bool	is_irc_cmd(const std::string &cmd)
 	cmds.push_back("PING");
 	cmds.push_back("BOTADD");
 	cmds.push_back("BOTDEL");
+	cmds.push_back("BOTLIST");
 	i = 0;
 	while (i < cmds.size())
 	{

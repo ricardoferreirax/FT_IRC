@@ -165,6 +165,7 @@ class Server
 	int topic_cmd(Client &client, const std::vector<std::string> &params);
 	int botadd_cmd(Client &client, const std::vector<std::string> &params);
 	int botdel_cmd(Client &client, const std::vector<std::string> &params);
+	int botlist_cmd(Client &client, const std::vector<std::string> &params);
 
 	bool handle_imode(Client &client, std::string chan_name, t_modecmd flag);
 	bool handle_tmode(Client &client, std::string chan_name, t_modecmd flag);

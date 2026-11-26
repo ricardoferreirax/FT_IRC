@@ -324,6 +324,7 @@ void Server::execute_cmd(Client &client, const std::string &cmd, const std::vect
 	cmds["QUIT"] = &Server::quit_cmd;
 	cmds["BOTADD"] = &Server::botadd_cmd;
 	cmds["BOTDEL"] = &Server::botdel_cmd;
+	cmds["BOTLIST"] = &Server::botlist_cmd;
 	it = cmds.find(cmd);
 	if (it == cmds.end())
 	{
