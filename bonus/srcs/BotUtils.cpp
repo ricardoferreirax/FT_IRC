@@ -31,13 +31,21 @@ std::string nb_to_str(size_t nb)
 void Bot::log_debug(const std::string &name, const std::string &text)
 {
 	std::string log_path = ".logs/" + str_lower(this->_name) + ".log";
-	std::ofstream debug_file(log_path.c_str(), std::ios::app);
+	std::ofstream debug_file;
+	if(name.empty() && text.empty())
+	{
+		debug_file.open(log_path.c_str(), std::ios::out | std::ios::trunc);
+		return;
+	}
+	else
+		debug_file.open(log_path.c_str(), std::ios::app);
 	if (!debug_file.is_open())
 		return ;
 	debug_file << "======== " << name << " ========\n";
 	debug_file << text << "\n\n";
 	debug_file.close();
 }
+
 std::string convert_json(const std::string &text, e_json type)
 {
 	std::string res;

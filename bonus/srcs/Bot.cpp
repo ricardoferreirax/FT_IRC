@@ -30,6 +30,7 @@ Bot::Bot(std::string name, std::string persona_path)
 	if (buffer.str().empty())
 		throw std::runtime_error("personality content is empty");
 	this->_personality = buffer.str();
+	this->log_debug("", "");
 }
 
 Bot::~Bot()
