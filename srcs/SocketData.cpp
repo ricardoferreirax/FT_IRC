@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/05 17:17:06 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/10 20:22:52 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/25 17:51:39 by pedro            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,10 +16,11 @@
 
 int Server::handle_socket_data(int fd, int event, e_socket_type type)
 {
+	t_request	*req;
+	Bot			*bot;
+
 	std::string *recv_buffer;
 	std::string *send_buffer;
-	t_request 	*req;
-
 	if (type == CLIENT_SOCKET)
 	{
 		if (this->_clients.find(fd) == this->_clients.end())
@@ -29,7 +30,10 @@ int Server::handle_socket_data(int fd, int event, e_socket_type type)
 	}
 	else if (type == BOT_SOCKET)
 	{
-		req = this->_bot.get_request(fd);
+		bot = this->findBot_byRequest(fd);
+		if (!bot)
+			return (SOCKET_ERROR);
+		req = bot->get_request(fd);
 		if (!req)
 			return (SOCKET_ERROR);
 		recv_buffer = &req->recv_buffer;
@@ -50,36 +54,46 @@ int Server::handle_socket_data(int fd, int event, e_socket_type type)
 // incomplete msgs remain in client_buffer till more data is received with recv()
 int Server::handle_socket_read(int fd, e_socket_type type, std::string &buffer)
 {
-	std::vector<std::string> 		params;
-	std::string 					msg;
-	std::string 					cmd;
-	ssize_t							bytes;
-	size_t							pos;
-	char							data[1024];
+	ssize_t		bytes;
+	size_t		pos;
+	char		data[1024];
+	Bot			*bot;
+	t_request	*req;
 
+	std::vector<std::string> params;
+	std::string msg;
+	std::string cmd;
 	bytes = recv(fd, data, sizeof(data), 0);
 	if (bytes < 0)
-		return (SOCKET_PENDING); // recv() fails ->keep connection and wait for another event
-	if (bytes == 0) // peer closed connection
+		return (SOCKET_PENDING);
+	if (bytes == 0)
 	{
 		if (type == CLIENT_SOCKET)
-			return (SOCKET_ERROR); // client disconnected ->close connection
+			return (SOCKET_ERROR);
 		else if (type == BOT_SOCKET)
-			this->_bot.get_request(fd)->response_complete = true;
+		{
+			bot = this->findBot_byRequest(fd);
+			if (bot)
+			{
+				req = bot->get_request(fd);
+				if (req)
+					req->response_complete = true;
+			}
+		}
 		return (SOCKET_SUCCESS);
 	}
-	buffer.append(data, bytes); // append received data->tcp may deliver msgs in parts
+	buffer.append(data, bytes);
 	if (type == BOT_SOCKET)
-		return (SOCKET_SUCCESS); // bot responses are processed separately so don't parse bot response here
+		return (SOCKET_SUCCESS);
 	log_tcp(TCP_RECEIVE, fd, bytes, std::string(data, bytes));
 	Client &client = this->_clients.find(fd)->second;
 	if (client.get_quit())
-		return (SOCKET_SUCCESS); // client quit ->don't process any more msgs
+		return (SOCKET_SUCCESS);
 	pos = buffer.find("\r\n");
 	while (pos != std::string::npos)
 	{
-		msg = buffer.substr(0, pos); // extract one complete msg from buffer
-		buffer.erase(0, pos + 2); // rmv processed msg + \r\n
+		msg = buffer.substr(0, pos);
+		buffer.erase(0, pos + 2);
 		if (!msg.empty())
 		{
 			cmd.clear();
@@ -88,7 +102,7 @@ int Server::handle_socket_read(int fd, e_socket_type type, std::string &buffer)
 			if (!cmd.empty())
 				this->execute_cmd(client, cmd, params);
 			if (this->_restart || client.get_quit())
-    			return (SOCKET_SUCCESS);
+				return (SOCKET_SUCCESS);
 		}
 		pos = buffer.find("\r\n");
 	}
@@ -99,10 +113,10 @@ int Server::handle_socket_read(int fd, e_socket_type type, std::string &buffer)
 // send() - send remaining request data TO ollama through bot socket.
 int Server::handle_socket_write(int fd, e_socket_type type, std::string &buffer)
 {
-	std::map<int, Client>::iterator it;
-	epoll_event 					ev;
-	ssize_t 						bytes;
+	epoll_event	ev;
+	ssize_t		bytes;
 
+	std::map<int, Client>::iterator it;
 	if (!buffer.empty()) // there is pending data to send
 	{
 		bytes = send(fd, buffer.c_str(), buffer.size(), MSG_NOSIGNAL);

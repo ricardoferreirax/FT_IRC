@@ -6,7 +6,7 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:03:54 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/05 17:08:47 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/25 17:56:36 by pedro            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,15 @@
 # include <string>
 # include <sys/epoll.h>
 # include <ctime>
+#include <arpa/inet.h>
+#include <cerrno>
+#include <fcntl.h>
+#include <fstream>
+#include <iostream>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#define BOT_MASTER_FILE "./bots/master.txt"
 
 class	Server;
 
@@ -25,6 +34,7 @@ enum	clear_type
 {
 	REQUEST_COMPLETED,
 	REQUEST_FAILED,
+	BOT_REMOVED,
 	CLIENT_DISCONNECTED,
 	BOT_SHUTDOWN
 };
@@ -50,6 +60,8 @@ class	Bot
 {
 	private:
 		int	_epoll_fd;
+		std::string _name;
+		std::string _personality;
 		
 		std::map<std::string, std::string> _chan_memory;
 		std::map<int, std::string>  	   _user_memory;
@@ -59,7 +71,7 @@ class	Bot
 		bool		handle_request_data(int bot_fd, int event);
 
 	public:
-		Bot();
+		Bot(std::string name, std::string filepath);
 		~Bot();
 
 		void	set_epoll_fd(int epoll_fd);
@@ -70,6 +82,8 @@ class	Bot
 		bool	handle_bot_event(Server &server, int bot_fd, int events);
 		void 	cleanup(clear_type type, int fd, Server *server);
 		void	clear_channel(const std::string &channel);
+		void	log_debug(const std::string &name, const std::string &text);
+		std::string getName(void) const;
 		
 		t_request	*get_request(int fd);
 	};

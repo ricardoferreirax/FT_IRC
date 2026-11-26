@@ -90,5 +90,6 @@ std::string generateRandomString(int length);
 
 t_banmask	parseBanMask(std::string banmask);
 t_cmode		default_mode(void);
+std::string str_lower(std::string src);
 
 #endif

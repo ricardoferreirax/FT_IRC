@@ -11,6 +11,8 @@
 /* ************************************************************************** */
 
 #include "../includes/BotUtils.hpp"
+#include "../includes/Bot.hpp"
+#include "../../includes/Utils.hpp"
 
 std::string nb_to_str(size_t nb)
 {
@@ -26,6 +28,16 @@ std::string nb_to_str(size_t nb)
 	return (res);
 }
 
+void Bot::log_debug(const std::string &name, const std::string &text)
+{
+	std::string log_path = ".logs/" + str_lower(this->_name) + ".log";
+	std::ofstream debug_file(log_path.c_str(), std::ios::app);
+	if (!debug_file.is_open())
+		return ;
+	debug_file << "======== " << name << " ========\n";
+	debug_file << text << "\n\n";
+	debug_file.close();
+}
 std::string convert_json(const std::string &text, e_json type)
 {
 	std::string res;

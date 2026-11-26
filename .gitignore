@@ -2,4 +2,5 @@ compile_commands.json
 .cache/
 .objs/
 ircserv
-
+.objs-debug/
+.logs/

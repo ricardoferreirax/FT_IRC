@@ -6,24 +6,30 @@
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 13:13:28 by rmedeiro          #+#    #+#             */
-/*   Updated: 2026/11/12 17:23:47 by rmedeiro         ###   ########.fr       */
+/*   Updated: 2026/11/25 18:07:20 by pedro            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../includes/Server.hpp"
 #include "../../includes/Utils.hpp"
-#include "../includes/BotUtils.hpp"
 #include "../includes/Bot.hpp"
-#include <arpa/inet.h>
-#include <cerrno>
-#include <fcntl.h>
-#include <iostream>
-#include <sys/socket.h>
-#include <unistd.h>
+#include "../includes/BotUtils.hpp"
 
-Bot::Bot()
-{
-	this->_epoll_fd = -1;
+Bot::Bot(std::string name, std::string persona_path)
+	: _epoll_fd(-1), _name(name)
+{	
+	mkdir(".logs", 0755);
+	std::ifstream master_file(BOT_MASTER_FILE);
+	if (!master_file.is_open())
+		throw std::runtime_error("could not open master file: " + std::string(BOT_MASTER_FILE));
+	std::ifstream persona_file(persona_path.c_str());
+	if (!persona_file.is_open())
+		throw std::runtime_error("could not open personality file: " + persona_path);
+	std::ostringstream buffer;
+	buffer << persona_file.rdbuf() << "\n" << master_file.rdbuf();
+	if (buffer.str().empty())
+		throw std::runtime_error("personality content is empty");
+	this->_personality = buffer.str();
 }
 
 Bot::~Bot()
@@ -31,55 +37,59 @@ Bot::~Bot()
 	this->cleanup(BOT_SHUTDOWN, -1, NULL); // clear all bot requests and memory
 }
 
-void	Bot::set_epoll_fd(int epoll_fd)
+void Bot::set_epoll_fd(int epoll_fd)
 {
 	this->_epoll_fd = epoll_fd;
 }
 
-bool	Bot::has_request(int bot_fd) const
+bool Bot::has_request(int bot_fd) const
 {
 	return (this->_requests.find(bot_fd) != this->_requests.end());
 }
 
 void Bot::clear_channel(const std::string &channel)
 {
-    this->_chan_memory.erase(channel);
+	this->_chan_memory.erase(channel);
 }
 
 void Bot::cleanup(clear_type type, int fd, Server *server)
 {
-	std::map<int, t_request>::iterator it;
-	std::map<int, Client>::iterator    client_it;
-	int 							   bot_fd;
-	int 							   client_fd;
-
+	std::map<int, t_request>::iterator requestit;
+	std::map<int, Client>::iterator client_it;
+	int bot_fd, client_fd;
 	if (type == CLIENT_DISCONNECTED)
 		this->_user_memory.erase(fd);
-	else if (type == BOT_SHUTDOWN)
+	else if (type == BOT_SHUTDOWN || type == BOT_REMOVED)
 	{
 		this->_user_memory.clear();
 		this->_chan_memory.clear();
 	}
-	it = this->_requests.begin();
-	while (it != this->_requests.end()) // check all active bot requests
+	requestit = this->_requests.begin();
+	while (requestit != this->_requests.end())
 	{
-		bot_fd = it->first;
-		client_fd = it->second.client_fd;
-		if (type != BOT_SHUTDOWN && !(type == CLIENT_DISCONNECTED && client_fd == fd) 
-			&& !((type == REQUEST_COMPLETED || type == REQUEST_FAILED) && bot_fd == fd))
+		bot_fd = requestit->first;
+		client_fd = requestit->second.client_fd;
+		if (type != BOT_SHUTDOWN && type != BOT_REMOVED && !(type == CLIENT_DISCONNECTED && client_fd == fd) && !((type == REQUEST_COMPLETED || type == REQUEST_FAILED) && bot_fd == fd))
 		{
-			++it;
-			continue ; // skip requests don't need cleanup
+			requestit++;
+			continue ;
 		}
 		if (this->_epoll_fd != -1)
-			epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, bot_fd, NULL); // rmv bot socket from epoll
+			epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, bot_fd, NULL);
 		close(bot_fd);
-		this->_requests.erase(it++); // rmv request from map and move to next request
-		if (type == REQUEST_FAILED && server != NULL)
+		this->_requests.erase(requestit++);
+		if ((type == REQUEST_FAILED || type == BOT_REMOVED) && server != NULL)
 		{
 			client_it = server->getClients().find(client_fd);
 			if (client_it != server->getClients().end())
-				server->send_notice(client_it->second, "Miku is unavailable."); // notify client if request failed
+			{
+				std::string msg;
+				if (type == BOT_REMOVED)
+					msg = this->getName() + " has been removed";
+				else
+					msg = this->getName() + " is unavailable.";
+				server->send_notice(client_it->second, msg);
+			}
 		}
 	}
 }
@@ -87,7 +97,6 @@ void Bot::cleanup(clear_type type, int fd, Server *server)
 t_request *Bot::get_request(int fd)
 {
 	std::map<int, t_request>::iterator it;
-	
 	it = this->_requests.find(fd);
 	if (it == this->_requests.end())
 		return (NULL);
@@ -99,18 +108,15 @@ std::string Bot::create_request(int client_fd, const std::string &nick, const st
 	std::string content;
 	std::string request;
 	std::string memory;
-
 	if (channel.empty())
 		memory = this->_user_memory[client_fd];
 	else
 		memory = this->_chan_memory[channel];
-	content = "{\"model\":\"qwen:latest\",";
+	content = "{\"model\":\"qwen3:latest\",";
 	content += "\"messages\":[";
-	content += "{\"role\":\"system\",\"content\":";
-	content += "\"You are Miku, a japanese singer. Remember important facts from previous conversations. ";
-	content += "Use previous messages to understand current conversation. ";
-	content += "The user's current name is " + convert_json(nick, JSON_ESCAPE) + ". ";
-	content += "If you do not know something say Miku Miku Beam.\"}";
+	content += "{\"role\":\"system\",\"content\":\"";
+	content += convert_json(this->_personality, JSON_ESCAPE);
+	content += " The user's current name is " + convert_json(nick, JSON_ESCAPE) + ".\"}";
 	if (!memory.empty())
 		content += "," + memory; // if there is previous conversation->add it to request
 	content += ",{\"role\":\"user\",\"content\":\"";
@@ -121,17 +127,19 @@ std::string Bot::create_request(int client_fd, const std::string &nick, const st
 	request += "Content-Type: application/json\r\n";
 	request += "Content-Length: " + nb_to_str(content.size()) + "\r\n" + "Connection: close\r\n\r\n"; // ollama knows when request ends
 	request += content;
+	// std::cout << request << std::endl;
+	this->log_debug("Request for " + nick, convert_json(question, JSON_UNESCAPE));
 	return (request);
 }
 
 // create socket to connect to ollama
 bool Bot::start_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question)
 {
-	sockaddr_in addr;
-	epoll_event event;
-	t_request 	req;
-	int 		bot_fd;
-	int 		res;
+	sockaddr_in	addr;
+	epoll_event	event;
+	t_request	req;
+	int			bot_fd;
+	int			res;
 
 	if (this->_epoll_fd < 0)
 		return (false);
@@ -170,15 +178,44 @@ bool Bot::start_request(int client_fd, const std::string &nick, const std::strin
 	return (true);
 }
 
+static bool	is_irc_cmd(const std::string &cmd)
+{
+	size_t	i;
+
+	std::vector<std::string> cmds;
+	cmds.push_back("JOIN");
+	cmds.push_back("INVITE");
+	cmds.push_back("TOPIC");
+	cmds.push_back("MODE");
+	cmds.push_back("PART");
+	cmds.push_back("KICK");
+	cmds.push_back("PRIVMSG");
+	cmds.push_back("WHO");
+	cmds.push_back("WHOIS");
+	cmds.push_back("HELP");
+	cmds.push_back("AWAY");
+	cmds.push_back("PING");
+	cmds.push_back("BOTADD");
+	cmds.push_back("BOTDEL");
+	i = 0;
+	while (i < cmds.size())
+	{
+		if (cmd == cmds[i])
+			return (true);
+		i++;
+	}
+	return (false);
+}
+
 void Bot::process_bot_response(t_request &req, Server &server)
 {
-	std::map<int, Client>::iterator client_it;
-	std::string 				   *memory;
-	std::string 				   answer;
-	epoll_event 				   event;
-	size_t 						   start;
-	size_t 						   end;
+	epoll_event	event;
+	size_t		start;
+	size_t		end;
 
+	std::map<int, Client>::iterator client_it;
+	std::string *memory;
+	std::string answer;
 	if (req.recv_buffer.find("HTTP/1.1 200") != 0)
 		throw std::runtime_error("Ollama HTTP error.");
 	start = req.recv_buffer.find("\"content\":\"");
@@ -186,45 +223,61 @@ void Bot::process_bot_response(t_request &req, Server &server)
 		throw std::runtime_error("No response from Ollama.");
 	start += 11;
 	end = start;
-	while (end < req.recv_buffer.size()) // find where miku answer ends
+	while (end < req.recv_buffer.size())
 	{
 		if (req.recv_buffer[end] == '\\' && end + 1 < req.recv_buffer.size())
-			end += 2; // if is an escape char and not the last char ->skip
+			end += 2;
 		else if (req.recv_buffer[end] == '"')
 			break ;
 		else
-			++end; // move to next char
+			++end;
 	}
-	if (end == req.recv_buffer.size()) // no closing quote found ->incomplete response
+	if (end == req.recv_buffer.size())
 		throw std::runtime_error("Incomplete Ollama response.");
-	answer = convert_json(req.recv_buffer.substr(start, end - start), JSON_UNESCAPE); // extract answer and convert json to normal text
+	answer = convert_json(req.recv_buffer.substr(start, end - start), JSON_UNESCAPE);
+	this->log_debug("Response to " + req.nick, answer);
 	client_it = server.getClients().find(req.client_fd);
 	if (client_it != server.getClients().end())
 	{
 		Client &client = client_it->second;
-		client.get_send_buffer() += ":Miku!Hatsune@127.0.0.1 PRIVMSG " + client.get_nick() + " :\033[1;36m" + answer + "\033[0m\r\n"; // send miku answer to client
+		std::istringstream iss(answer);
+		std::string line;
+		while (std::getline(iss, line))
+		{
+			if (!line.empty() && line[line.size() - 1] == '\r')
+				line.erase(line.size() - 1);
+			if (line.empty())
+				continue ;
+			std::string cmd;
+			std::vector<std::string> params;
+			parse_msg(line, cmd, params);
+			if (!cmd.empty() && is_irc_cmd(cmd))
+				server.execute_cmd(client, cmd, params);
+			else
+				client.get_send_buffer() += ":" + this->_name + "!IRCserv@127.0.0.1 PRIVMSG " + client.get_nick() + " :" + line + "\r\n";
+		}
 		event.events = EPOLLIN | EPOLLOUT;
 		event.data.fd = client.get_client_fd();
 		if (epoll_ctl(server.get_epoll_fd(), EPOLL_CTL_MOD, event.data.fd, &event) < 0)
 			throw std::runtime_error("IRC: epoll_ctl() failed.");
 	}
 	if (req.channel.empty())
-		memory = &this->_user_memory[req.client_fd]; // if no channel ->store memory for this client
+		memory = &this->_user_memory[req.client_fd];
 	else
 		memory = &this->_chan_memory[req.channel];
 	if (!memory->empty())
-		*memory += ","; // separate previous msgs with comma
-	*memory += "{\"role\":\"user\",\"content\":\"" + convert_json(req.nick + ": " + req.question, JSON_ESCAPE) + "\"}"; // add user question to memory
-	*memory += ",{\"role\":\"assistant\",\"content\":\"" + convert_json(answer, JSON_ESCAPE) + "\"}"; // add miku answer to memory
+		*memory += ",";
+	*memory += "{\"role\":\"user\",\"content\":\"" + convert_json(req.nick + ": " + req.question, JSON_ESCAPE) + "\"}";
+	*memory += ",{\"role\":\"assistant\",\"content\":\"" + convert_json(answer, JSON_ESCAPE) + "\"}";
 }
 
 bool Bot::handle_bot_event(Server &server, int bot_fd, int events)
 {
+	int	status;
+
 	try
 	{
 		std::map<int, t_request>::iterator it;
-		int 							   status;
-
 		it = this->_requests.find(bot_fd);
 		if (it == this->_requests.end())
 			return (false);
@@ -246,19 +299,24 @@ bool Bot::handle_bot_event(Server &server, int bot_fd, int events)
 			return (true); // wait until entire http response has been received
 		this->process_bot_response(it->second, server);
 		this->cleanup(REQUEST_COMPLETED, bot_fd, &server); // rmv request from map and close bot socket
-		return (true); // response is complete and processed successfully
+		return (true);                                     // response is complete and processed successfully
 	}
 	catch (const std::exception &e)
 	{
-		std::cerr << "Miku: " << e.what() << std::endl;
+		std::cerr << this->_name + ": " << e.what() << std::endl;
 		try
 		{
 			this->cleanup(REQUEST_FAILED, bot_fd, &server); // rmv failed request and notify client.
 		}
 		catch (const std::exception &error)
 		{
-			std::cerr << "Miku cleanup: " << error.what() << std::endl;
+			std::cerr << this->_name + " cleanup: " << error.what() << std::endl;
 		}
 		return (false);
 	}
+}
+
+std::string Bot::getName(void) const
+{
+	return (this->_name);
 }

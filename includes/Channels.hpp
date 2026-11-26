@@ -15,7 +15,6 @@
 
 #include "Utils.hpp"
 #include "Client.hpp"
-#include "Server.hpp"
 #include <iostream>
 #include <map>
 #include <set>

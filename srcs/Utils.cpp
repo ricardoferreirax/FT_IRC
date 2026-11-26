@@ -332,3 +332,15 @@ bool match_wildcard(std::string pattern, std::string match, size_t pi, size_t mi
 		return(match_wildcard(pattern,  match, pi + 1, mi + 1));
 	return false;
 }
+
+std::string str_lower(std::string src)
+{
+	std::string lower(src);
+	size_t i = 0;
+	while(i < src.size())
+	{
+		lower[i] = std::tolower(src[i]);
+		i++;
+	}
+	return lower;
+}

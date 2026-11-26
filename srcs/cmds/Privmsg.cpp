@@ -34,17 +34,18 @@ int Server::privmsg_cmd(Client &client, const std::vector<std::string> &params)
 	while (i < targets.size())
 	{
 		target = targets[i];
-		if (same_nick(target, "Miku"))
+		Bot *bot = this->findBot(target);
+		if (bot)
 		{
 			try
 			{
-				if (!this->_bot.start_request(client.get_client_fd(), client.get_nick(), "", msg))
-					this->send_notice(client, "Miku is unavailable");
+				if(!bot->start_request(client.get_client_fd(), client.get_nick(), "", msg))
+					this->send_notice(client, bot->getName() + " is unavailable");
 			}
 			catch (const std::exception &e)
 			{
-				std::cerr << "Miku: " << e.what() << std::endl;
-				this->send_notice(client, "Miku is unavailable");
+				std::cerr << bot->getName() << ": " << e.what() << std::endl;
+				this->send_notice(client, bot->getName() + " is unavailable");
 			}
 			i++;
 			continue ; // skip to next target->will not search for miku in clients/channels
