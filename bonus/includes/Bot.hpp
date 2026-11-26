@@ -1,7 +1,5 @@
 /* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Bot.hpp                                            :+:      :+:    :+:   */
+/*                                                                            */ /*                                                        :::      ::::::::   */ /*   Bot.hpp                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: rmedeiro <rmedeiro@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
@@ -26,6 +24,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include "../../includes/Client.hpp"
 #define BOT_MASTER_FILE "./bots/master.txt"
 
 class	Server;
@@ -67,7 +66,7 @@ class	Bot
 		std::map<int, std::string>  	   _user_memory;
 		std::map<int, t_request> 		   _requests;
 
-		std::string create_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question);
+		std::string create_request(Client client, const std::string &channel, const std::string &question);
 		bool		handle_request_data(int bot_fd, int event);
 
 	public:
@@ -77,7 +76,7 @@ class	Bot
 		void	set_epoll_fd(int epoll_fd);
 		bool	has_request(int bot_fd) const;
 		void	close_requests(int bot_fd);
-		bool	start_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question);
+		bool	start_request(Client client, const std::string &channel, const std::string &question);
 		void	process_bot_response(t_request &req, Server &server);
 		bool	handle_bot_event(Server &server, int bot_fd, int events);
 		void 	cleanup(clear_type type, int fd, Server *server);

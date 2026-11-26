@@ -103,24 +103,29 @@ t_request *Bot::get_request(int fd)
 	return (&it->second);
 }
 
-std::string Bot::create_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question)
+std::string Bot::create_request(Client client, const std::string &channel, const std::string &question)
 {
 	std::string content;
 	std::string request;
 	std::string memory;
 	if (channel.empty())
-		memory = this->_user_memory[client_fd];
+		memory = this->_user_memory[client.get_client_fd()];
 	else
 		memory = this->_chan_memory[channel];
 	content = "{\"model\":\"qwen3:latest\",";
 	content += "\"messages\":[";
 	content += "{\"role\":\"system\",\"content\":\"";
 	content += convert_json(this->_personality, JSON_ESCAPE);
-	content += " The user's current name is " + convert_json(nick, JSON_ESCAPE) + ".\"}";
+	content += " The user's current name is " + convert_json(client.get_nick(), JSON_ESCAPE) + ".";
+	if(client.is_server_op())
+		content += " The current user is a Server Operator";
+	else
+		content += " The current user is not a Server Operator";
+	content += ".\"}";
 	if (!memory.empty())
 		content += "," + memory; // if there is previous conversation->add it to request
 	content += ",{\"role\":\"user\",\"content\":\"";
-	content += convert_json(nick + ": " + question, JSON_ESCAPE) + "\"}],"; // add current user question
+	content += convert_json(client.get_nick() + ": " + question, JSON_ESCAPE) + "\"}],"; // add current user question
 	content += "\"stream\":false,\"think\":false,\"keep_alive\":\"10m\",\"options\":{\"num_predict\":512,\"num_ctx\":4096,\"temperature\":0.3}}";
 	request = "POST /api/chat HTTP/1.1\r\n"; // http request to send to ollama
 	request += "Host: 127.0.0.1:11434\r\n";
@@ -128,12 +133,12 @@ std::string Bot::create_request(int client_fd, const std::string &nick, const st
 	request += "Content-Length: " + nb_to_str(content.size()) + "\r\n" + "Connection: close\r\n\r\n"; // ollama knows when request ends
 	request += content;
 	// std::cout << request << std::endl;
-	this->log_debug("Request for " + nick, convert_json(question, JSON_UNESCAPE));
+	this->log_debug("Request for " + client.get_nick(), convert_json(question, JSON_UNESCAPE));
 	return (request);
 }
 
 // create socket to connect to ollama
-bool Bot::start_request(int client_fd, const std::string &nick, const std::string &channel, const std::string &question)
+bool Bot::start_request(Client client, const std::string &channel, const std::string &question)
 {
 	sockaddr_in	addr;
 	epoll_event	event;
@@ -160,12 +165,12 @@ bool Bot::start_request(int client_fd, const std::string &nick, const std::strin
 		close(bot_fd);
 		return (false);
 	}
-	req.client_fd = client_fd;
-	req.nick = nick;
+	req.client_fd = client.get_client_fd();
+	req.nick = client.get_nick();
 	req.channel = channel;
 	req.response_complete = false;
 	req.question = question;
-	req.send_buffer = this->create_request(client_fd, nick, channel, question); // create http request with client nick and channel
+	req.send_buffer = this->create_request(client, channel, question); // create http request with client nick and channel
 	req.recv_buffer = "";
 	event.events = EPOLLOUT; // start monitoring socket for writing
 	event.data.fd = bot_fd;

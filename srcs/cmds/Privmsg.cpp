@@ -39,7 +39,7 @@ int Server::privmsg_cmd(Client &client, const std::vector<std::string> &params)
 		{
 			try
 			{
-				if(!bot->start_request(client.get_client_fd(), client.get_nick(), "", msg))
+				if(!bot->start_request(client, "", msg))
 					this->send_notice(client, bot->getName() + " is unavailable");
 			}
 			catch (const std::exception &e)
